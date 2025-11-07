@@ -4,7 +4,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-const API_BASE_URL = "http://localhost:8080";
+//const API_BASE_URL = "http://localhost:8080";
 
 const app = createApp(App)
 

@@ -1,11 +1,21 @@
-<script setup lang="ts"></script>
-
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <div id="app">
+    <ProjectsList />
+  </div>
 </template>
 
-<style scoped></style>
+<script lang="ts">
+import { defineComponent } from "vue";
+import ProjectsList from "./components/Projects.vue";
+
+export default defineComponent({
+  name: "App",
+  components: {
+    ProjectsList,
+  },
+});
+</script>
+
+<style>
+/* optional global styles */
+</style>
