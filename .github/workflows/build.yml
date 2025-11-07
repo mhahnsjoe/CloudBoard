@@ -32,3 +32,30 @@ jobs:
           else
             echo "No tests directory found, skipping."
           fi
+      
+      #frontend
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+        
+      # Deploy
+      - name: Deploy to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.DEV_RENDERAPIKEY }}
+          RENDER_SITE_ID: ${{ variables.DEV_RENDER_SITE_ID }}
+        run: |
+          curl -X POST "https://api.render.com/deploy/$RENDER_SITE_ID" \
+               -H "Authorization: Bearer $RENDER_API_KEY"
+
+
+  
