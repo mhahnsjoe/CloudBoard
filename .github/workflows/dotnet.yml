@@ -20,10 +20,10 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore ./api/CloudBoard.Api.csproj
+        run: dotnet restore ./api/CloudBoard.Api/CloudBoard.Api.csproj
 
       - name: Build
-        run: dotnet build ./api/CloudBoard.Api.csproj --no-restore --configuration Release
+        run: dotnet build ./api/CloudBoard.Api/CloudBoard.Api.csproj --no-restore --configuration Release
 
       - name: Run tests
         run: |
