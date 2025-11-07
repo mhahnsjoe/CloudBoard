@@ -51,10 +51,10 @@ jobs:
       # Deploy
       - name: Deploy to Render
         env:
-          RENDER_API_KEY: ${{ secrets.DEV_RENDERAPIKEY }}
-          RENDER_SITE_ID: ${{ variables.DEV_RENDER_SITE_ID }}
+          RENDER_API_KEY: ${{ secrets.DEV_RENDER_API_KEY }}
+          RENDER_SITE_ID: ${{ secrets.DEV_RENDER_SERVICE_ID }}
         run: |
-          curl -X POST "https://api.render.com/deploy/$RENDER_SITE_ID" \
+          curl -X POST "https://api.render.com/deploy/$RENDER_SERVICE_ID" \
                -H "Authorization: Bearer $RENDER_API_KEY"
 
 
