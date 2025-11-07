@@ -1,0 +1,61 @@
+name: .NET Build & Test
+
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./api/CloudBoard.Api/CloudBoard.Api.csproj
+
+      - name: Build
+        run: dotnet build ./api/CloudBoard.Api/CloudBoard.Api.csproj --no-restore --configuration Release
+
+      - name: Run tests
+        run: |
+          if [ -d "./tests" ]; then
+            dotnet test ./tests --no-build --verbosity normal
+          else
+            echo "No tests directory found, skipping."
+          fi
+      
+      #frontend
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+        
+      # Deploy
+      - name: Deploy to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.DEV_RENDER_API_KEY }}
+          RENDER_SITE_ID: ${{ secrets.DEV_RENDER_SERVICE_ID }}
+        run: |
+          curl -X POST "https://api.render.com/deploy/$RENDER_SERVICE_ID" \
+               -H "Authorization: Bearer $RENDER_API_KEY"
+
+
+  
