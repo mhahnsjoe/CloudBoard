@@ -28,8 +28,10 @@ jobs:
       - name: Apply EF Updates
         env:
           ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
-        run: dotnet tool run dotnet-ef database update ./api/CloudBoard.Api/CloudBoard.Api.csproj
-
+        run: |
+          cd ./api/CloudBoard.Api
+          dotnet tool run dotnet-ef database update CloudBoard.Api.csproj
+      
       - name: Run tests
         run: |
           if [ -d "./tests" ]; then
