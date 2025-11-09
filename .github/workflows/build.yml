@@ -25,6 +25,14 @@ jobs:
       - name: Build
         run: dotnet build ./api/CloudBoard.Api/CloudBoard.Api.csproj --no-restore --configuration Release
 
+      - name: Apply EF Updates
+        env:
+          ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
+        run: |
+          cd ./api/CloudBoard.Api
+          dotnet tool restore
+          dotnet tool run dotnet-ef database update 
+     
       - name: Run tests
         run: |
           if [ -d "./tests" ]; then

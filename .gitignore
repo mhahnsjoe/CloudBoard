@@ -1,0 +1,15 @@
+# Local environment variables
+*.env
+
+# .NET build folders
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+*.sourcelink.json
+
+
+# Node.js / frontend
+node_modules/
+dist/
