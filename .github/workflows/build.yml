@@ -25,6 +25,13 @@ jobs:
       - name: Build
         run: dotnet build ./api/CloudBoard.Api/CloudBoard.Api.csproj --no-restore --configuration Release
 
+      #Apply EF model updates to DB
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+     
+      - name: Add dotnet tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
       - name: Apply EF Updates
         env:
           ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
