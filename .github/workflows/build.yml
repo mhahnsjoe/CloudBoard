@@ -70,7 +70,7 @@ jobs:
         env:
           ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
         run: |
-          cd ../../api/CloudBoard.Api
+          cd api/CloudBoard.Api
           dotnet tool restore
           dotnet tool run dotnet-ef database update
 
