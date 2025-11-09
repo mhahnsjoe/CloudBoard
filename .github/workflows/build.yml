@@ -61,6 +61,7 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.DEV_RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.DEV_RENDER_SERVICE_ID }}
+          DB_CONNECTIONSTRING: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
         run: |
           curl -X PATCH "https://api.render.com/v1/services/$RENDER_SERVICE_ID" \
             -H "Authorization: Bearer $RENDER_API_KEY" \
@@ -69,8 +70,7 @@ jobs:
               \"envVars\": [
                 {
                   \"key\": \"ConnectionStrings__Default\",
-                  \"value\": \"$DB_CONNECTIONSTRING\",
-                  \"scope\": \"RUN_TIME\"
+                  \"value\": \"$DB_CONNECTIONSTRING\"
                 }
               ]
             }"
@@ -78,10 +78,10 @@ jobs:
       - name: Deploy to Render
         env:
           RENDER_API_KEY: ${{ secrets.DEV_RENDER_API_KEY }}
-          RENDER_SITE_ID: ${{ secrets.DEV_RENDER_SERVICE_ID }}
+          RENDER_SERVICE_ID: ${{ secrets.DEV_RENDER_SERVICE_ID }}
         run: |
           curl -X POST "https://api.render.com/deploy/$RENDER_SERVICE_ID" \
-               -H "Authorization: Bearer $RENDER_API_KEY"
+              -H "Authorization: Bearer $RENDER_API_KEY"
 
 
   
