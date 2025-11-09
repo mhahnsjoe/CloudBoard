@@ -23,7 +23,14 @@ jobs:
         run: dotnet restore ./api/CloudBoard.Api/CloudBoard.Api.csproj
 
       - name: Build
+        env:
+          ConnectionStrings__Default:: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
         run: dotnet build ./api/CloudBoard.Api/CloudBoard.Api.csproj --no-restore --configuration Release
+
+        - name: Apply EF migrations
+        env:
+          ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
+        run: dotnet ef database update ./api/CloudBoard.Api/CloudBoard.Api.csproj
 
       - name: Run tests
         run: |
