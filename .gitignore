@@ -1,0 +1,12 @@
+# Local environment variables
+*.env
+
+# .NET build folders
+bin/
+obj/
+*.user
+*.vs/
+
+# Node.js / frontend
+node_modules/
+dist/
