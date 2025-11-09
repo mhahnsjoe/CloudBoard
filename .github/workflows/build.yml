@@ -65,15 +65,15 @@ jobs:
           curl -X PATCH "https://api.render.com/v1/services/$RENDER_SERVICE_ID" \
             -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Content-Type: application/json" \
-            -d '{
-              "envVars": [
+            -d "{
+              \"envVars\": [
                 {
-                  "key": "ConnectionStrings__Default",
-                  "value": "'"${{ secrets.DEV_DB_CONNECTIONSTRING }}"'",
-                  "scope": "RUN_TIME"
+                  \"key\": \"ConnectionStrings__Default\",
+                  \"value\": \"$DB_CONNECTIONSTRING\",
+                  \"scope\": \"RUN_TIME\"
                 }
               ]
-            }'
+            }"
             
       - name: Deploy to Render
         env:
