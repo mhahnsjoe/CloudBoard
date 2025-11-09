@@ -23,7 +23,6 @@ jobs:
         run: dotnet restore ./api/CloudBoard.Api/CloudBoard.Api.csproj
 
       - name: Build
-        env:
         run: dotnet build ./api/CloudBoard.Api/CloudBoard.Api.csproj --no-restore --configuration Release
 
       - name: Apply EF Updates
