@@ -30,8 +30,9 @@ jobs:
           ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
         run: |
           cd ./api/CloudBoard.Api
+          dotnet tool restore
           dotnet tool run dotnet-ef database update CloudBoard.Api.csproj
-      
+     
       - name: Run tests
         run: |
           if [ -d "./tests" ]; then
