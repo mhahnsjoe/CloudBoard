@@ -1,9 +1,8 @@
 import axios from "axios";
 import type { Project, TaskItem } from "../types/dbo";
 
-
-const API_URL = "http://localhost:5154/api";
-
+// Use relative URL so it works both locally (with proxy) and in production
+const API_URL = "/api";
 
 // Projects
 export const getProjects = () => axios.get<Project[]>(`${API_URL}/projects`);

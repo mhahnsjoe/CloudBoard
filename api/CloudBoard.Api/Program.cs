@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -16,7 +15,7 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-//Adding DbContext
+//Add DbContext
 builder.Services.AddDbContext<CloudBoardContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
@@ -47,11 +46,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseDefaultFiles();
+app.UseStaticFiles(); 
+  
 //Commented out for dev TODO: Implement HTTPS for both
 //app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
 app.MapControllers(); 
+
+app.MapFallbackToFile("index.html");
+
 
 app.Run();
