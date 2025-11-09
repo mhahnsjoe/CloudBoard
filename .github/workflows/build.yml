@@ -31,7 +31,7 @@ jobs:
         run: |
           cd ./api/CloudBoard.Api
           dotnet tool restore
-          dotnet tool run dotnet-ef database update CloudBoard.Api.csproj
+          dotnet tool run dotnet-ef database update 
      
       - name: Run tests
         run: |
