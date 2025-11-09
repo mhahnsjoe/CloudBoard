@@ -67,10 +67,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Apply EF Updates
+        working-directory: api/CloudBoard.Api
         env:
           ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
         run: |
-          cd api/CloudBoard.Api
           dotnet tool restore
           dotnet tool run dotnet-ef database update
 
