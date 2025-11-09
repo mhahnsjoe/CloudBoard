@@ -7,32 +7,30 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  backend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+      
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
+      
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
       - name: Restore dependencies
         run: dotnet restore ./api/CloudBoard.Api/CloudBoard.Api.csproj
-
+     
       - name: Build
         run: dotnet build ./api/CloudBoard.Api/CloudBoard.Api.csproj --no-restore --configuration Release
-
-      - name: Apply EF Updates
-        env:
-          ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
-        run: |
-          cd ./api/CloudBoard.Api
-          dotnet tool restore
-          dotnet tool run dotnet-ef database update 
-     
+      
       - name: Run tests
         run: |
           if [ -d "./tests" ]; then
@@ -40,23 +38,42 @@ jobs:
           else
             echo "No tests directory found, skipping."
           fi
-      
-      #frontend
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '24'
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
 
-      - name: Build frontend
+  frontend:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+
+        - name: Setup Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: '24'
+            cache: 'npm'
+            cache-dependency-path: frontend/package-lock.json
+
+        - name: Install frontend dependencies
+          run: |
+            cd frontend
+            npm ci
+
+        - name: Build frontend
+          run: |
+            cd frontend
+            npm run build
+  deploy:
+    needs: [backend, frontend]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply EF Updates
+        env:
+          ConnectionStrings__Default: ${{ secrets.DEV_DB_CONNECTIONSTRING }}
         run: |
-          cd frontend
-          npm run build
-      
-      # Deploy
+          cd ./api/CloudBoard.Api
+          dotnet tool restore
+          dotnet tool run dotnet-ef database update
+
       - name: Set connectionstring var
         env:
           RENDER_API_KEY: ${{ secrets.DEV_RENDER_API_KEY }}
@@ -74,8 +91,9 @@ jobs:
                 }
               ]
             }"
-            
+    
       - name: Deploy to Render
+        if: github.ref == 'refs/heads/main'
         env:
           RENDER_API_KEY: ${{ secrets.DEV_RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.DEV_RENDER_SERVICE_ID }}
