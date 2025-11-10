@@ -25,8 +25,7 @@
         </div>
       </li>
     </ul>
-
-     <!-- Create/Edit Modal -->
+    <!-- Create/Edit Modal -->
     <div v-if="showModal" class="modal-overlay">
       <div class="modal">
         <h2>{{ isEditing ? "Edit Project" : "Create Project" }}</h2>

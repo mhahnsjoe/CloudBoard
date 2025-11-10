@@ -50,6 +50,25 @@
           </button>
         </div>
       </div>
+      <!-- Create/Edit Modal -->
+        <div v-if="showModal" class="modal-overlay">
+            <div class="modal">
+                <h2>{{ isEditing ? "Edit Project" : "Create Project" }}</h2>
+                <input
+                v-model="form.name"
+                type="text"
+                placeholder="Project name"
+                class="input"
+                />
+
+                <div class="modal-actions">
+                <button class="btn btn-light" @click="closeModal">Cancel</button>
+                <button class="btn btn-primary" @click="submitForm">
+                    {{ isEditing ? "Update" : "Create" }}
+                </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Empty state -->
