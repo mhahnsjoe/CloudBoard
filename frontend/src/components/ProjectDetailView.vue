@@ -94,20 +94,21 @@ export default defineComponent({
     const modal = useModal<TaskItemType>();
     const { confirm } = useConfirm();
 
-    const form = ref<{ id?: number; title: string; status: string }>({
+    const form = ref<{ id?: number; title: string; status: string; priority: string }>({
       title: "",
-      status: "To Do"
+      status: "To Do",
+      priority: "Medium"
     });
 
     const statusOptions = ["To Do", "In Progress", "Done"];
 
     const openCreateModal = () => {
-      form.value = { title: "", status: "To Do" };
+      form.value = { title: "", status: "To Do" , priority: "Medium"};
       modal.open();
     };
 
     const editTask = (task: TaskItemType) => {
-      form.value = { id: task.id, title: task.title, status: task.status };
+      form.value = { id: task.id, title: task.title, status: task.status, priority: task.priority };
       modal.open(task);
     };
 
@@ -118,13 +119,15 @@ export default defineComponent({
             id: form.value.id,
             title: form.value.title,
             status: form.value.status,
-            projectId: projectId.value
+            projectId: projectId.value,
+            priority: form.value.priority
           });
         } else {
           await addTask({
             title: form.value.title,
             status: form.value.status,
-            projectId: projectId.value
+            projectId: projectId.value,
+            priority: form.value.priority
           });
         }
         modal.close();

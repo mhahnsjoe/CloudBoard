@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Project, TaskItem, TaskCreate, ProjectCreate } from "../types/Project";
+import type { Project, TaskItem, TaskCreate, ProjectCreate, TaskEdit } from "../types/Project";
 
 // Projects
 export const getProjects = () => axios.get<Project[]>('/api/projects');
@@ -12,5 +12,5 @@ export const deleteProject = (id: number) => axios.delete(`/api/projects/${id}`)
 export const getTasks = () => axios.get<TaskItem[]>('/api/taskitem');
 export const getTask = (id: number) => axios.get<TaskItem>(`/api/taskitem/${id}`);
 export const createTask = (task: TaskCreate) => axios.post<TaskItem>('/api/taskitem', task);
-export const updateTask = (id: number, task: TaskItem) => axios.put(`/api/taskitem/${id}`, task);
+export const updateTask = (id: number, task: TaskEdit) => axios.put(`/api/taskitem/${id}`, task);
 export const deleteTask = (id: number) => axios.delete(`/api/taskitem/${id}`);
