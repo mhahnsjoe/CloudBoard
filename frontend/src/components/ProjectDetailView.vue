@@ -1,217 +1,187 @@
 <template>
   <div class="container">
-    <button class="btn btn-light" @click="$router.push('/')">← Back</button>
+    <button class="btn btn-light flex items-center gap-2" @click="$router.push('/')">
+      <ArrowLeftIcon />
+      Back to Projects
+    </button>
 
-    <div v-if="loading" class="loading">Loading project...</div>
+    <div v-if="loading" class="loading flex items-center justify-center gap-2 mt-8">
+      <LoadingIcon className="h-5 w-5 text-blue-600" />
+      Loading project...
+    </div>
 
     <div v-else>
-      <h1>{{ project?.name }}</h1>
+      <h1 class="text-3xl font-bold text-gray-800 mt-6 mb-2">{{ project?.name }}</h1>
+      <p v-if="project?.description" class="text-gray-600 mb-6">{{ project.description }}</p>
 
-      <div class="header">
-        <h2>Tasks</h2>
-        <button class="btn btn-primary" @click="openCreateModal">
-          + New Task
-        </button>
-      </div>
+      <ProjectHeader 
+        title="Tasks" 
+        buttonText="New Task"
+        @create="openCreateModal"
+      />
 
       <ul v-if="tasks.length" class="task-list">
-        <li v-for="task in tasks" :key="task.id" class="task-item">
-          <div class="task-info">
-            <h3>{{ task.title }}</h3>
-            <p>Status: {{ task.status }}</p>
-          </div>
-
-          <div class="actions">
-            <button class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200 transition" @click="editTask(task)">
-              Edit
-            </button>
-
-            <button @click="deleteTaskConfirm(task.id)" class="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition"> 
-              Delete
-            </button>
-          </div>
-        </li>
+        <TaskItem
+          v-for="task in tasks"
+          :key="task.id"
+          :task="task"
+          :statusOptions="statusOptions"
+          @edit="editTask"
+          @delete="handleDeleteTask"
+          @statusChange="handleStatusChange"
+        />
       </ul>
 
-      <p v-else>No tasks found for this project.</p>
+      <EmptyState
+        v-else
+        :icon="ClipboardIcon"
+        message="No tasks yet. Create your first one!"
+      />
     </div>
 
-    <!-- Create/Edit Modal -->
-    <div v-if="showModal" class="modal-overlay">
-      <div class="modal">
-        <h2>{{ isEditing ? "Edit Task" : "Create Task" }}</h2>
-        <input
-          v-model="form.title"
-          type="text"
-          placeholder="Task title"
-          class="input"
-        />
-        <select v-model="form.status" class="input">
-            <option v-for="s in statusOptions" :key="s">{{ s }}</option>
-        </select>
-
-
-        <div class="modal-actions">
-          <button class="btn btn-light" @click="closeModal">Cancel</button>
-          <button class="btn btn-primary" @click="submitForm">
-            {{ isEditing ? "Update" : "Create" }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Modal -->
+    <Modal
+      :show="modal.isOpen.value"
+      :title="modal.isEditing.value ? 'Edit Task' : 'Create Task'"
+      :submitText="modal.isEditing.value ? 'Update' : 'Create'"
+      @close="modal.close"
+      @submit="submitForm"
+    >
+      <input
+        v-model="form.title"
+        type="text"
+        placeholder="Task title"
+        class="input"
+      />
+      <select v-model="form.status" class="input">
+        <option v-for="s in statusOptions" :key="s">{{ s }}</option>
+      </select>
+    </Modal>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
-import {
-  getProject,
-  createTask,
-  updateTask,
-  deleteTask,
-} from "../services/api";
-import type { Project, TaskItem } from "../types/Project";
+import { useTasks } from "@/composables/useTasks";
+import { useModal } from "@/composables/useModal";
+import { useConfirm } from "@/composables/useConfirm";
+import type { TaskItem as TaskItemType } from "@/types/Project";
+
+import ProjectHeader from "@/components/project/ProjectHeader.vue";
+import TaskItem from "@/components/task/TaskItem.vue";
+import Modal from "@/components/common/Modal.vue";
+import EmptyState from "@/components/common/EmptyState.vue";
+import { ArrowLeftIcon, LoadingIcon, SearchIcon } from "@/components/icons";
+
+// Placeholder for ClipboardIcon
+const ClipboardIcon = SearchIcon; // Replace with actual ClipboardIcon
 
 export default defineComponent({
   name: "ProjectDetail",
+  components: {
+    ProjectHeader,
+    TaskItem,
+    Modal,
+    EmptyState,
+    ArrowLeftIcon,
+    LoadingIcon
+  },
   setup() {
     const route = useRoute();
-    const projectId = Number(route.params.id);
-    const project = ref<Project>();
-    const tasks = ref<TaskItem[]>([]);
-    const loading = ref(true);
+    const projectId = ref(Number(route.params.id));
+    const { project, tasks, loading, fetchTasks, addTask, modifyTask, removeTask, updateTaskStatus } = useTasks(projectId.value);
+    const modal = useModal<TaskItemType>();
+    const { confirm } = useConfirm();
 
-    const showModal = ref(false);
-    const isEditing = ref(false);
     const form = ref<{ id?: number; title: string; status: string }>({
       title: "",
-      status: "Pending",
+      status: "To Do"
     });
 
     const statusOptions = ["To Do", "In Progress", "Done"];
 
-
-    const fetchData = async () => {
-        loading.value = true;
-        const projectRes = await getProject(projectId);
-        project.value = projectRes.data;
-        tasks.value = project.value?.tasks || [];
-        loading.value = false;
-    };
-
     const openCreateModal = () => {
-      isEditing.value = false;
-      form.value = { title: "", status: "Pending" };
-      showModal.value = true;
+      form.value = { title: "", status: "To Do" };
+      modal.open();
     };
 
-    const editTask = (task: TaskItem) => {
-      isEditing.value = true;
+    const editTask = (task: TaskItemType) => {
       form.value = { id: task.id, title: task.title, status: task.status };
-      showModal.value = true;
+      modal.open(task);
     };
 
     const submitForm = async () => {
-        if (isEditing.value && form.value.id) {
-            await updateTask(form.value.id, {
-                id: form.value.id,
-                title: form.value.title,
-                status: form.value.status,
-                projectId: projectId
-            });
+      try {
+        if (modal.isEditing.value && form.value.id) {
+          await modifyTask(form.value.id, {
+            id: form.value.id,
+            title: form.value.title,
+            status: form.value.status,
+            projectId: projectId.value
+          });
         } else {
-            await createTask({
-            title : form.value.title,
-            status : form.value.status,
-            projectId : projectId,
-        } as TaskItem);
+          await addTask({
+            title: form.value.title,
+            status: form.value.status,
+            projectId: projectId.value
+          });
         }
-        await fetchData();
-        closeModal();
-    };
-
-    const deleteTaskConfirm = async (id: number) => {
-      if (confirm("Delete this task?")) {
-        await deleteTask(id);
-        await fetchData();
+        modal.close();
+      } catch (error) {
+        console.error('Failed to submit form:', error);
       }
     };
 
-    const closeModal = () => (showModal.value = false);
+    const handleDeleteTask = async (id: number) => {
+      if (confirm("Are you sure you want to delete this task?")) {
+        await removeTask(id);
+      }
+    };
 
-    form.value = { title: "", status: "To Do" };
+    const handleStatusChange = async (task: TaskItemType, newStatus: string) => {
+      await updateTaskStatus(task, newStatus);
+    };
 
+    onMounted(fetchTasks);
 
-    onMounted(fetchData);
-    
     watch(
-        () => route.params.id,
-        () => {
-            fetchData();
-        }
+      () => route.params.id,
+      (newId) => {
+        projectId.value = Number(newId);
+        fetchTasks();
+      }
     );
+
     return {
       project,
       tasks,
       loading,
-      showModal,
-      isEditing,
+      modal,
       form,
       statusOptions,
       openCreateModal,
       editTask,
-      deleteTaskConfirm,
+      handleDeleteTask,
+      handleStatusChange,
       submitForm,
-      closeModal,
+      ClipboardIcon
     };
-  },
+  }
 });
 </script>
 
 <style scoped>
 .container {
-  max-width: 800px;
+  max-width: 900px;
   margin: 2rem auto;
   padding: 1rem;
   font-family: Arial, sans-serif;
-  background: #fafafa;
-  border-radius: 8px;
 }
 
-/* Header */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-/* Task list */
 .task-list {
   list-style: none;
   padding: 0;
   margin: 0;
-}
-
-.task-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.task-info h3 {
-  margin: 0;
-}
-
-.task-info p {
-  margin: 0.2rem 0 0;
-  color: #666;
-  font-size: 0.9rem;
 }
 </style>
