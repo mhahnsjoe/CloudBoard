@@ -46,10 +46,9 @@
           class="input"
         />
         <select v-model="form.status" class="input">
-          <option value="Pending">Pending</option>
-          <option value="InProgress">In Progress</option>
-          <option value="Completed">Completed</option>
+            <option v-for="s in statusOptions" :key="s">{{ s }}</option>
         </select>
+
 
         <div class="modal-actions">
           <button class="btn btn-light" @click="closeModal">Cancel</button>
@@ -63,10 +62,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from "vue";
+import { defineComponent, ref, onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
 import {
   getProject,
-  getTasks,
   createTask,
   updateTask,
   deleteTask,
@@ -75,14 +74,10 @@ import type { Project, TaskItem } from "../types/Project";
 
 export default defineComponent({
   name: "ProjectDetail",
-  props: {
-    id: {
-      type: Number,
-      required: true,
-    },
-  },
-  setup(props) {
-    const project = ref<Project | null>(null);
+  setup() {
+    const route = useRoute();
+    const projectId = Number(route.params.id);
+    const project = ref<Project>();
     const tasks = ref<TaskItem[]>([]);
     const loading = ref(true);
 
@@ -93,17 +88,15 @@ export default defineComponent({
       status: "Pending",
     });
 
-    const fetchData = async () => {
-      loading.value = true;
-      const projectRes = await getProject(props.id);
-      project.value = projectRes.data;
+    const statusOptions = ["To Do", "In Progress", "Done"];
 
-      const taskRes = await getTasks();
-      // Filter tasks that belong to this project (assuming task.projectId exists)
-      tasks.value = taskRes.data.filter(
-        (t) => t.projectId === project.value?.id
-      );
-      loading.value = false;
+
+    const fetchData = async () => {
+        loading.value = true;
+        const projectRes = await getProject(projectId);
+        project.value = projectRes.data;
+        tasks.value = project.value?.tasks || [];
+        loading.value = false;
     };
 
     const openCreateModal = () => {
@@ -119,16 +112,22 @@ export default defineComponent({
     };
 
     const submitForm = async () => {
-      if (isEditing.value && form.value.id) {
-        await updateTask(form.value.id, form.value as TaskItem);
-      } else {
-        await createTask({
-          ...form.value,
-          projectId: project.value?.id,
+        if (isEditing.value && form.value.id) {
+            await updateTask(form.value.id, {
+                id: form.value.id,
+                title: form.value.title,
+                status: form.value.status,
+                projectId: project.value.id!
+            });
+        } else {
+            await createTask({
+            title : form.value.title,
+            status : form.value.status,
+            projectId : projectId,
         } as TaskItem);
-      }
-      await fetchData();
-      closeModal();
+        }
+        await fetchData();
+        closeModal();
     };
 
     const deleteTaskConfirm = async (id: number) => {
@@ -140,8 +139,17 @@ export default defineComponent({
 
     const closeModal = () => (showModal.value = false);
 
-    onMounted(fetchData);
+    form.value = { title: "", status: "To Do" };
 
+
+    onMounted(fetchData);
+    
+    watch(
+        () => route.params.id,
+        () => {
+            fetchData();
+        }
+    );
     return {
       project,
       tasks,
@@ -149,6 +157,7 @@ export default defineComponent({
       showModal,
       isEditing,
       form,
+      statusOptions,
       openCreateModal,
       editTask,
       deleteTaskConfirm,

@@ -30,6 +30,10 @@
   gap: 0.5rem;
 }
 
+.modal-actions button {
+  margin-left: 0.5rem;
+}
+
 .loading {
   color: #555;
 }

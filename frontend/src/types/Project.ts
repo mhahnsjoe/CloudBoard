@@ -5,6 +5,12 @@ export interface TaskItem {
   projectId: number;
 }
 
+export interface TaskCreate {
+  title: string;
+  status: string;
+  projectId: number;  
+}
+
 export interface Project {
   id: number;
   name: string;
