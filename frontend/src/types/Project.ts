@@ -11,3 +11,8 @@ export interface Project {
   description: string;
   tasks?: TaskItem[];
 }
+
+export interface ProjectCreate {
+  name: string;
+  description: string;
+}

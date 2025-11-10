@@ -71,7 +71,7 @@ import {
   updateTask,
   deleteTask,
 } from "../services/api";
-import type { Project, TaskItem } from "../types/dbo";
+import type { Project, TaskItem } from "../types/Project";
 
 export default defineComponent({
   name: "ProjectDetail",

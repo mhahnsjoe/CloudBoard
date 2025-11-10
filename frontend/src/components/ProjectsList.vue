@@ -1,67 +1,51 @@
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Projects</h1>
-      <button class="btn btn-primary" @click="openCreateModal">
-        + New Project
-      </button>
-    </div>
+  <div>
+    <h1>Projects</h1>
 
-    <div v-if="loading" class="loading">Loading projects...</div>
+    <button @click="openCreateModal">+ New Project</button>
 
-    <ul v-else class="project-list">
-      <li v-for="project in projectsList" :key="project.id" class="project-item">
-        <div class="project-info">
-          <h2>{{ project.name }}</h2>
-          <p>{{ project.tasks.length }} tasks</p>
-        </div>
+    <div v-if="loading">Loading projects...</div>
 
-        <div class="actions">
-          <button class="btn btn-light" @click="viewProject(project.id)">
-            View
-          </button>
-          <button class="btn btn-warning" @click="editProject(project)">
-            Edit
-          </button>
-          <button class="btn btn-danger" @click="deleteProjectConfirm(project.id)">
-            Delete
-          </button>
-        </div>
+    <ul v-else>
+      <li v-for="project in projectsList" :key="project.id">
+        <strong>{{ project.name }}</strong> — {{ project.description }}
+        <button @click="viewProject(project.id)">View</button>
+        <button @click="editProject(project)">Edit</button>
+        <button @click="deleteProjectConfirm(project.id)">Delete</button>
       </li>
     </ul>
 
-    <!-- Create/Edit Modal -->
-    <div v-if="showModal" class="modal-overlay">
-      <div class="modal">
+    <!-- Modal -->
+    <div v-if="showModal" class="modal">
+      <div class="modal-content">
         <h2>{{ isEditing ? "Edit Project" : "Create Project" }}</h2>
-        <input
-          v-model="form.name"
-          type="text"
-          placeholder="Project name"
-          class="input"
-        />
-
-        <div class="modal-actions">
-          <button class="btn btn-light" @click="closeModal">Cancel</button>
-          <button class="btn btn-primary" @click="submitForm">
-            {{ isEditing ? "Update" : "Create" }}
-          </button>
-        </div>
+        <form @submit.prevent="submitForm">
+          <div>
+            <label>Name</label>
+            <input v-model="form.name" required />
+          </div>
+          <div>
+            <label>Description</label>
+            <textarea v-model="form.description"></textarea>
+          </div>
+          <button type="submit">{{ isEditing ? "Update" : "Create" }}</button>
+          <button type="button" @click="closeModal">Cancel</button>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from "vue";
+import { ref, onMounted, defineComponent } from "vue";
+import { useRouter } from "vue-router";
 import {
   getProjects,
   createProject,
   updateProject,
   deleteProject,
 } from "../services/api";
-import type { Project } from "../types/dbo";
-import { useRouter } from "vue-router";
+import type { Project } from "../types/Project";
 
 export default defineComponent({
   name: "ProjectsList",
@@ -70,7 +54,14 @@ export default defineComponent({
     const loading = ref(true);
     const showModal = ref(false);
     const isEditing = ref(false);
-    const form = ref<{ id?: number; name: string }>({ name: "" });
+
+    const form = ref<{
+      id?: number;
+      name: string;
+      description: string;
+    }>({ name: "", description: "" });
+
+    const router = useRouter();
 
     const fetchProjects = async () => {
       loading.value = true;
@@ -81,21 +72,32 @@ export default defineComponent({
 
     const openCreateModal = () => {
       isEditing.value = false;
-      form.value = { name: "" };
+      form.value = { name: "", description: "" };
       showModal.value = true;
     };
 
     const editProject = (project: Project) => {
       isEditing.value = true;
-      form.value = { id: project.id, name: project.name };
+      form.value = {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+      };
       showModal.value = true;
     };
 
     const submitForm = async () => {
-      if (isEditing.value && form.value.id) {
-        await updateProject(form.value.id, form.value as Project);
+      if (isEditing.value && form.value.id != null) {
+        await updateProject(form.value.id, {
+          id: form.value.id,
+          name: form.value.name,
+          description: form.value.description,
+        });
       } else {
-        await createProject(form.value as Project);
+        await createProject({
+          name: form.value.name,
+          description: form.value.description,
+        });
       }
       await fetchProjects();
       closeModal();
@@ -108,9 +110,8 @@ export default defineComponent({
       }
     };
 
-    const router = useRouter();
-      const viewProject = (id: number) => {
-        router.push(`/projects/${id}`);
+    const viewProject = (id: number) => {
+      router.push(`/projects/${id}`);
     };
 
     const closeModal = () => (showModal.value = false);
@@ -135,50 +136,35 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Layout */
-.container {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 1rem;
-  font-family: Arial, sans-serif;
-  background: #fafafa;
-  border-radius: 8px;
-}
-
-/* Header */
-.header {
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 1.5rem;
 }
 
-/* Project list */
-.project-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.project-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.modal-content {
   background: white;
-  padding: 1rem;
+  padding: 1.5rem;
   border-radius: 6px;
-  margin-bottom: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-width: 300px;
 }
 
-.project-info h2 {
-  margin: 0;
-  font-size: 1.1rem;
+button {
+  margin: 0 0.3rem;
 }
 
-.project-info p {
-  margin: 0.2rem 0 0;
-  color: #666;
-  font-size: 0.9rem;
+input,
+textarea {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 </style>
