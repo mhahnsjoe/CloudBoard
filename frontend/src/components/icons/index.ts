@@ -5,3 +5,7 @@ export { default as SearchIcon } from './SearchIcon.vue';
 export { default as ArrowLeftIcon } from './ArrowLeftIcon.vue';
 export { default as EyeIcon } from './EyeIcon.vue';
 export { default as LoadingIcon } from './LoadingIcon.vue';
+export { default as FolderIcon } from './FolderIcon.vue';
+export { default as ClipboardIcon } from './ClipboardIcon.vue';
+export { default as ClockIcon } from './ClockIcon.vue';
+export { default as CalendarIcon } from './CalendarIcon.vue';

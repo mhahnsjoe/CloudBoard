@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { getProject, createTask, updateTask, deleteTask } from '@/services/api';
-import type { Project, TaskItem, TaskCreate } from '@/types/Project';
+import type { Project, TaskItem, TaskCreate, TaskEdit } from '@/types/Project';
 
 export function useTasks(projectId: number) {
   const project = ref<Project>();
@@ -34,7 +34,7 @@ export function useTasks(projectId: number) {
     }
   };
 
-  const modifyTask = async (id: number, task: TaskItem) => {
+  const modifyTask = async (id: number, task: TaskEdit) => {
     try {
       await updateTask(id, task);
       await fetchTasks();

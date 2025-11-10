@@ -16,14 +16,12 @@ namespace CloudBoard.Api.Controllers
             _context = context;
         }
 
-        // GET: api/taskitem
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TaskItem>>> GetTasks()
         {
             return await _context.Tasks.Include(t => t.Project).ToListAsync();
         }
 
-        // GET: api/taskitem/5
         [HttpGet("{id}")]
         public async Task<ActionResult<TaskItem>> GetTask(int id)
         {
@@ -33,7 +31,6 @@ namespace CloudBoard.Api.Controllers
             return task;
         }
 
-        // POST: api/taskitem
         [HttpPost]
         public async Task<ActionResult<TaskItem>> CreateTask(TaskItemCreateDto newTaskItem)
         {
@@ -41,7 +38,12 @@ namespace CloudBoard.Api.Controllers
             {
                 Title = newTaskItem.Title,
                 Status = newTaskItem.Status,
-                ProjectId = newTaskItem.ProjectId
+                Priority = newTaskItem.Priority,
+                Description = newTaskItem.Description,
+                DueDate = newTaskItem.DueDate,
+                EstimatedHours = newTaskItem.EstimatedHours,
+                ProjectId = newTaskItem.ProjectId,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Tasks.Add(task);
@@ -50,8 +52,6 @@ namespace CloudBoard.Api.Controllers
             return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
         }
 
-
-        // PUT: api/taskitem/5
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(int id, TaskItemUpdateDto updatedTask)
         {
@@ -61,6 +61,11 @@ namespace CloudBoard.Api.Controllers
 
             task.Title = updatedTask.Title;
             task.Status = updatedTask.Status;
+            task.Priority = updatedTask.Priority;
+            task.Description = updatedTask.Description;
+            task.DueDate = updatedTask.DueDate;
+            task.EstimatedHours = updatedTask.EstimatedHours;
+            task.ActualHours = updatedTask.ActualHours;
             task.ProjectId = updatedTask.ProjectId;
             
             try
@@ -75,8 +80,6 @@ namespace CloudBoard.Api.Controllers
             return NoContent();
         }
 
-
-        // DELETE: api/taskitem/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
