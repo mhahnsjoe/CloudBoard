@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ProjectDetail from "../components/ProjectDetail.vue";
+import ProjectDetailView from "../components/ProjectDetailView.vue";
 import ProjectsView from '@/components/ProjectsView.vue';
 
 const routes = [
@@ -11,7 +11,7 @@ const routes = [
   {
     path: "/projects/:id",
     name: "ProjectDetail",
-    component: ProjectDetail,
+    component: ProjectDetailView,
     props: true, // Pass route param `id` as prop
   },
 ];
