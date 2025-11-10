@@ -1,36 +1,48 @@
 <template>
-  <div>
-    <h1>Projects</h1>
+  <div class="container">
+    <div class="header">
+      <h1>Projects</h1>
+      <button @click="openCreateModal">+ New Project</button>
+    </div>
+    <div v-if="loading" class="loading">Loading projects...</div>
 
-    <button @click="openCreateModal">+ New Project</button>
-
-    <div v-if="loading">Loading projects...</div>
-
-    <ul v-else>
-      <li v-for="project in projectsList" :key="project.id">
-        <strong>{{ project.name }}</strong> — {{ project.description }}
-        <button @click="viewProject(project.id)">View</button>
-        <button @click="editProject(project)">Edit</button>
-        <button @click="deleteProjectConfirm(project.id)">Delete</button>
+    <ul v-else class="project-list">
+      <li v-for="project in projectsList" :key="project.id" class="project-item">
+        <div class="project-info">
+          <h2>{{ project.name }}</h2>
+          <p>{{ project.tasks?.length ?? 0 }} tasks</p>
+        </div>
+        <div class="actions">
+          <button class="btn btn-light" @click="viewProject(project.id)">
+            View
+          </button>
+          <button class="btn btn-light" @click="editProject(project)">
+            Edit
+          </button>
+          <button class="btn btn-danger" @click="deleteProjectConfirm(project.id)">
+            Delete
+          </button>
+        </div>
       </li>
     </ul>
 
-    <!-- Modal -->
-    <div v-if="showModal" class="modal">
-      <div class="modal-content">
+     <!-- Create/Edit Modal -->
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal">
         <h2>{{ isEditing ? "Edit Project" : "Create Project" }}</h2>
-        <form @submit.prevent="submitForm">
-          <div>
-            <label>Name</label>
-            <input v-model="form.name" required />
-          </div>
-          <div>
-            <label>Description</label>
-            <textarea v-model="form.description"></textarea>
-          </div>
-          <button type="submit">{{ isEditing ? "Update" : "Create" }}</button>
-          <button type="button" @click="closeModal">Cancel</button>
-        </form>
+        <input
+          v-model="form.name"
+          type="text"
+          placeholder="Project name"
+          class="input"
+        />
+
+        <div class="modal-actions">
+          <button class="btn btn-light" @click="closeModal">Cancel</button>
+          <button class="btn btn-primary" @click="submitForm">
+            {{ isEditing ? "Update" : "Create" }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -136,35 +148,19 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.4);
+.container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+  font-family: Arial, sans-serif;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.header {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-}
-
-.modal-content {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 6px;
-  min-width: 300px;
-}
-
-button {
-  margin: 0 0.3rem;
-}
-
-input,
-textarea {
-  width: 100%;
-  padding: 0.4rem 0.6rem;
-  margin-bottom: 0.8rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  margin-bottom: 1.5rem;
 }
 </style>
