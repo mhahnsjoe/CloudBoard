@@ -117,7 +117,7 @@ export default defineComponent({
                 id: form.value.id,
                 title: form.value.title,
                 status: form.value.status,
-                projectId: project.value.id!
+                projectId: projectId
             });
         } else {
             await createTask({
