@@ -22,10 +22,11 @@
           </div>
 
           <div class="actions">
-            <button class="btn btn-warning" @click="editTask(task)">
+            <button class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200 transition" @click="editTask(task)">
               Edit
             </button>
-            <button class="btn btn-danger" @click="deleteTaskConfirm(task.id)">
+
+            <button @click="deleteTaskConfirm(task.id)" class="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition"> 
               Delete
             </button>
           </div>

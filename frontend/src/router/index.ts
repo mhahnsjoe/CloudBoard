@@ -1,17 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ProjectsList from "../components/ProjectsList.vue";
-import ProjectDetail from "../components/ProjectDetail.vue";
+import ProjectDetailView from "../components/ProjectDetailView.vue";
+import ProjectsView from '@/components/ProjectsView.vue';
 
 const routes = [
   {
     path: "/",
     name: "ProjectsList",
-    component: ProjectsList,
+    component: ProjectsView,
   },
   {
     path: "/projects/:id",
     name: "ProjectDetail",
-    component: ProjectDetail,
+    component: ProjectDetailView,
     props: true, // Pass route param `id` as prop
   },
 ];
