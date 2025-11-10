@@ -13,44 +13,26 @@
 
     <!-- Projects grid -->
     <div v-if="projectsList.length" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div
-        v-for="project in projectsList"
-        :key="project.id"
-        class="bg-white shadow-sm hover:shadow-md rounded-2xl p-5 border border-gray-100 transition"
-      >
-        <div class="flex justify-between items-start">
-          <h2 class="text-xl font-semibold text-gray-800">
-            {{ project.name }}
-          </h2>
-          <span
-            class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg"
-          >
-            {{ project.tasks?.length ?? 0 }} tasks
-          </span>
-        </div>
+        <btn v-for="project in projectsList" :key="project.id" @click="viewProject(project.id)" class="bg-white shadow-sm hover:shadow-md rounded-2xl p-5 border border-gray-100 transition cursor-pointer">
+            <div class="flex justify-between items-start">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    {{ project.name }}
+                </h2>
+                <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+                    {{ project.tasks?.length ?? 0 }} tasks
+                </span>
+            </div>
 
-        <div class="mt-4 flex gap-2">
-          <button
-            @click="viewProject(project.id)"
-            class="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition"
-          >
-            View
-          </button>
-          <button
-            @click="editProject(project)"
-            class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200 transition"
-          >
-            Edit
-          </button>
-          <button
-            @click="deleteProjectConfirm(project.id)"
-            class="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-      <!-- Create/Edit Modal -->
+            <div class="mt-4 flex gap-2">
+                <button @click="editProject(project)" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200 transition">
+                    Edit
+                </button>
+                <button @click="deleteProjectConfirm(project.id)" class="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition">
+                    Delete
+                </button>
+            </div>
+        </btn>
+        <!-- Create/Edit Modal -->
         <div v-if="showModal" class="modal-overlay">
             <div class="modal">
                 <h2>{{ isEditing ? "Edit Project" : "Create Project" }}</h2>
