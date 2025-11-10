@@ -6,6 +6,6 @@ namespace CloudBoard.Api.Models
         public string Title { get; set; } = null!;
         public string Status { get; set; } = "To Do"; // To Do / In Progress / Done
         public int ProjectId { get; set; }
-        public Project Project { get; set; } = null!;
+        public Project? Project { get; set; }
     }
 }

@@ -35,22 +35,46 @@ namespace CloudBoard.Api.Controllers
 
         // POST: api/taskitem
         [HttpPost]
-        public async Task<ActionResult<TaskItem>> CreateTask(TaskItem task)
+        public async Task<ActionResult<TaskItem>> CreateTask(TaskItemCreateDto newTaskItem)
         {
+            var task = new TaskItem
+            {
+                Title = newTaskItem.Title,
+                Status = newTaskItem.Status,
+                ProjectId = newTaskItem.ProjectId
+            };
+
             _context.Tasks.Add(task);
             await _context.SaveChangesAsync();
+
             return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
         }
 
+
         // PUT: api/taskitem/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTask(int id, TaskItem task)
+        public async Task<IActionResult> UpdateTask(int id, TaskItemUpdateDto updatedTask)
         {
-            if (id != task.Id) return BadRequest();
-            _context.Entry(task).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var task = await _context.Tasks.FindAsync(id);
+            if (task == null)
+                return NotFound();
+
+            task.Title = updatedTask.Title;
+            task.Status = updatedTask.Status;
+            task.ProjectId = updatedTask.ProjectId;
+            
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+
             return NoContent();
         }
+
 
         // DELETE: api/taskitem/5
         [HttpDelete("{id}")]
