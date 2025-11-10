@@ -11,7 +11,7 @@
       <router-link
         to="/"
         class="nav-item"
-        :class="{ 'active': $route.path === '/' }"
+        :class="{ 'active': route.path === '/' }"
       >
         <FolderIcon className="w-5 h-5" />
         <span>Boards</span>
@@ -20,7 +20,7 @@
       <router-link
         to="/work-items"
         class="nav-item"
-        :class="{ 'active': $route.path === '/work-items' }"
+        :class="{ 'active': route.path === '/work-items' }"
       >
         <ClipboardIcon className="w-5 h-5" />
         <span>Work Items</span>
@@ -37,12 +37,17 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { FolderIcon, ClipboardIcon } from '@/components/icons';
+import { useRoute } from 'vue-router';
 
 export default defineComponent({
   name: 'SidebarComponent',
   components: {
     FolderIcon,
     ClipboardIcon
+  },
+  setup() {
+    const route = useRoute();
+    return { route };
   }
 });
 </script>
