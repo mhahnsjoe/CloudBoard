@@ -119,7 +119,6 @@ export default defineComponent({
       try {
         if (modal.isEditing.value && form.value.id != null) {
           await modifyProject(form.value.id, {
-            id: form.value.id,
             name: form.value.name,
             description: form.value.description
           });

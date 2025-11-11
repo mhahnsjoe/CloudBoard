@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ProjectDetailView from "../components/ProjectDetailView.vue";
 import ProjectsView from '@/components/ProjectsView.vue';
-import WorkItemsView from '@/components/WorkItemsView.vue';
+// import WorkItemsView from '@/components/WorkItemsView.vue';
 import BoardDetailView from '@/components/BoardDetailView.vue';
 
 const routes = [
@@ -10,11 +10,11 @@ const routes = [
     name: "ProjectsList",
     component: ProjectsView,
   },
-  {
-    path: "/work-items",
-    name: "WorkItems",
-    component: WorkItemsView,
-  },
+  // {
+  //   path: "/work-items",
+  //   name: "WorkItems",
+  //   component: WorkItemsView,
+  // },
   {
     path: "/projects/:id",
     name: "ProjectDetail",

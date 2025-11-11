@@ -1,9 +1,9 @@
-<template>
+<!-- <template>
   <div class="min-h-screen bg-gray-50 p-8">
     <div class="flex flex-col gap-4 mb-8">
       <h1 class="text-3xl font-bold text-gray-800">Work Items</h1>
       
-      <!-- Filters -->
+      <!-- Filters 
       <div class="flex gap-4 items-center">
         <SearchBar 
           v-model="searchQuery" 
@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <!-- Tasks Table -->
+    <!-- Tasks Table 
     <div v-if="loading" class="flex items-center justify-center gap-2 mt-8">
       <LoadingIcon className="h-5 w-5 text-blue-600" />
       <span>Loading tasks...</span>
@@ -117,7 +117,7 @@
       message="No tasks found. Create tasks in your projects!"
     />
 
-    <!-- Edit Modal -->
+    <!-- Edit Modal 
     <TaskModal
       v-if="showModal"
       :task="selectedTask"
@@ -126,9 +126,9 @@
       @save="handleSave"
     />
   </div>
-</template>
+</template> -->
 
-<script lang="ts">
+<!-- <script lang="ts">
 import { defineComponent, ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getTasks, getProjects, updateTask, deleteTask } from '@/services/api';
@@ -287,4 +287,4 @@ export default defineComponent({
     };
   }
 });
-</script>
+</script> -->
