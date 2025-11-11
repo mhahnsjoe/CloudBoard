@@ -1,5 +1,6 @@
 using CloudBoard.Api.Data;
 using CloudBoard.Api.Models;
+using CloudBoard.Api.Models.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,35 +21,76 @@ namespace CloudBoard.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-            return await _context.Projects.Include(p => p.Tasks).ToListAsync();
+            return await _context.Projects
+                .Include(p => p.Boards)
+                    .ThenInclude(b => b.Tasks)
+                .ToListAsync();
         }
 
         // GET: api/projects/1
         [HttpGet("{id}")]
         public async Task<ActionResult<Project>> GetProject(int id)
         {
-            var project = await _context.Projects.Include(p => p.Tasks)
-                                                 .FirstOrDefaultAsync(p => p.Id == id);
-            if (project == null) return NotFound();
+            var project = await _context.Projects
+                .Include(p => p.Boards)
+                    .ThenInclude(b => b.Tasks)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            
+            if (project == null) 
+                return NotFound();
+            
             return project;
         }
 
         // POST: api/projects
         [HttpPost]
-        public async Task<ActionResult<Project>> CreateProject(Project project)
+        public async Task<ActionResult<Project>> CreateProject(ProjectCreateDto projectDto)
         {
+            var project = new Project
+            {
+                Name = projectDto.Name,
+                Description = projectDto.Description,
+                CreatedAt = DateTime.UtcNow
+            };
+
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
+
+            // Automatically create a default Kanban board for the project
+            var defaultBoard = new Board
+            {
+                Name = "Main Board",
+                Description = "Default Kanban board",
+                Type = BoardType.Kanban,
+                ProjectId = project.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Boards.Add(defaultBoard);
+            await _context.SaveChangesAsync();
+
+            // Reload project with board
+            var createdProject = await _context.Projects
+                .Include(p => p.Boards)
+                .FirstOrDefaultAsync(p => p.Id == project.Id);
+
+            return CreatedAtAction(nameof(GetProject), new { id = project.Id }, createdProject);
         }
 
         // PUT: api/projects/1
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProject(int id, Project project)
+        public async Task<IActionResult> UpdateProject(int id, ProjectUpdateDto projectDto)
         {
-            if (id != project.Id) return BadRequest();
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+                return NotFound();
+
+            project.Name = projectDto.Name;
+            project.Description = projectDto.Description;
+
             _context.Entry(project).State = EntityState.Modified;
             await _context.SaveChangesAsync();
+            
             return NoContent();
         }
 
@@ -57,9 +99,12 @@ namespace CloudBoard.Api.Controllers
         public async Task<IActionResult> DeleteProject(int id)
         {
             var project = await _context.Projects.FindAsync(id);
-            if (project == null) return NotFound();
+            if (project == null) 
+                return NotFound();
+            
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
+            
             return NoContent();
         }
     }

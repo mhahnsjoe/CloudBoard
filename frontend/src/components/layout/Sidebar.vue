@@ -14,7 +14,7 @@
         :class="{ 'active': route.path === '/' }"
       >
         <FolderIcon className="w-5 h-5" />
-        <span>Boards</span>
+        <span>Projects</span>
       </router-link>
 
       <router-link

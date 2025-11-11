@@ -22,6 +22,37 @@ namespace CloudBoard.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("CloudBoard.Api.Models.Board", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("Boards");
+                });
+
             modelBuilder.Entity("CloudBoard.Api.Models.Project", b =>
                 {
                     b.Property<int>("Id")
@@ -29,6 +60,9 @@ namespace CloudBoard.Api.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -54,6 +88,9 @@ namespace CloudBoard.Api.Migrations
                     b.Property<decimal?>("ActualHours")
                         .HasColumnType("numeric");
 
+                    b.Property<int>("BoardId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -70,9 +107,6 @@ namespace CloudBoard.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -81,17 +115,20 @@ namespace CloudBoard.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ProjectId");
+                    b.HasIndex("BoardId");
 
                     b.ToTable("Tasks");
                 });
 
-            modelBuilder.Entity("CloudBoard.Api.Models.TaskItem", b =>
+            modelBuilder.Entity("CloudBoard.Api.Models.Board", b =>
                 {
                     b.HasOne("CloudBoard.Api.Models.Project", "Project")
-                        .WithMany("Tasks")
+                        .WithMany("Boards")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -99,9 +136,25 @@ namespace CloudBoard.Api.Migrations
                     b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("CloudBoard.Api.Models.Project", b =>
+            modelBuilder.Entity("CloudBoard.Api.Models.TaskItem", b =>
+                {
+                    b.HasOne("CloudBoard.Api.Models.Board", "Board")
+                        .WithMany("Tasks")
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Board");
+                });
+
+            modelBuilder.Entity("CloudBoard.Api.Models.Board", b =>
                 {
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("CloudBoard.Api.Models.Project", b =>
+                {
+                    b.Navigation("Boards");
                 });
 #pragma warning restore 612, 618
         }

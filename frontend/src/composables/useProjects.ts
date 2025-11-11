@@ -33,7 +33,7 @@ export function useProjects() {
     }
   };
 
-  const modifyProject = async (id: number, project: Project) => {
+  const modifyProject = async (id: number, project: ProjectCreate) => {
     try {
       await updateProject(id, project);
       await fetchProjects();

@@ -20,7 +20,6 @@
         :key="project.id"
         :project="project"
         @view="viewProject"
-        @kanban="viewKanban"
         @edit="editProject"
         @delete="handleDelete"
       />
@@ -107,10 +106,6 @@ export default defineComponent({
       modal.open();
     };
 
-    const viewKanban = (id: number) => {
-      router.push(`/projects/${id}/kanban`);
-    };
-
     const editProject = (project: Project) => {
       form.value = {
         id: project.id,
@@ -124,7 +119,6 @@ export default defineComponent({
       try {
         if (modal.isEditing.value && form.value.id != null) {
           await modifyProject(form.value.id, {
-            id: form.value.id,
             name: form.value.name,
             description: form.value.description
           });
@@ -163,7 +157,6 @@ export default defineComponent({
       handleDelete,
       submitForm,
       viewProject,
-      viewKanban,
       SearchIcon,
       FolderIcon
     };

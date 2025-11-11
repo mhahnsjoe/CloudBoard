@@ -1,9 +1,9 @@
 <template>
   <div class="min-h-screen bg-gray-50 p-8">
     <div class="mb-6">
-      <button class="btn btn-light flex items-center gap-2" @click="$router.push('/')">
+      <button class="btn btn-light flex items-center gap-2" @click="$router.push(`/projects/${projectId}`)">
         <ArrowLeftIcon />
-        Back to Projects
+        Back to Project
       </button>
     </div>
 
@@ -15,8 +15,8 @@
     <div v-else>
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-3xl font-bold text-gray-800">{{ project?.name }}</h1>
-          <p v-if="project?.description" class="text-gray-600 mt-1">{{ project.description }}</p>
+          <h1 class="text-3xl font-bold text-gray-800">{{ board?.name }}</h1>
+          <p v-if="board?.description" class="text-gray-600 mt-1">{{ board.description }}</p>
         </div>
       </div>
 
@@ -122,8 +122,7 @@
     <TaskModal
       v-if="showModal"
       :task="selectedTask"
-      :projects="[project!].filter(Boolean)"
-      :defaultProjectId="projectId"
+      :boardId="boardId"
       :defaultStatus="defaultStatus"
       @close="closeModal"
       @save="handleSave"
@@ -134,9 +133,9 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useTasks } from '@/composables/useTasks';
+import { getBoard, createTask, updateTask, deleteTask } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
-import type { TaskItem } from '@/types/Project';
+import type { TaskItem, Board, TaskCreate } from '@/types/Project';
 import { STATUSES } from '@/types/Project';
 
 import TaskModal from './task/TaskModal.vue';
@@ -152,7 +151,7 @@ import {
 } from './icons';
 
 export default defineComponent({
-  name: 'KanbanBoard',
+  name: 'BoardDetailView',
   components: {
     TaskModal,
     DropdownMenu,
@@ -166,14 +165,30 @@ export default defineComponent({
   },
   setup() {
     const route = useRoute();
-    const projectId = ref(Number(route.params.id));
-    const { project, tasks, loading, fetchTasks, modifyTask, removeTask, addTask } = useTasks(projectId.value);
+    const projectId = ref(Number(route.params.projectId));
+    const boardId = ref(Number(route.params.boardId));
     const { confirm } = useConfirm();
 
+    const board = ref<Board>();
+    const tasks = ref<TaskItem[]>([]);
+    const loading = ref(false);
     const showModal = ref(false);
     const selectedTask = ref<TaskItem | null>(null);
     const draggedTask = ref<TaskItem | null>(null);
     const defaultStatus = ref<string>('To Do');
+
+    const fetchBoard = async () => {
+      loading.value = true;
+      try {
+        const res = await getBoard(projectId.value, boardId.value);
+        board.value = res.data;
+        tasks.value = res.data.tasks || [];
+      } catch (error) {
+        console.error('Failed to fetch board:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
 
     const getTasksByStatus = (status: string) => {
       return tasks.value.filter(task => task.status === status);
@@ -214,21 +229,6 @@ export default defineComponent({
       }
     };
 
-    const onDrop = async (event: DragEvent, newStatus: string) => {
-      event.preventDefault();
-      if (draggedTask.value && draggedTask.value.status !== newStatus) {
-        try {
-          await modifyTask(draggedTask.value.id, {
-            ...draggedTask.value,
-            status: newStatus
-          });
-        } catch (error) {
-          console.error('Failed to update task status:', error);
-        }
-      }
-      draggedTask.value = null;
-    };
-
     const openCreateModal = () => {
       selectedTask.value = null;
       defaultStatus.value = 'To Do';
@@ -251,14 +251,31 @@ export default defineComponent({
       selectedTask.value = null;
     };
 
-    const handleSave = async (taskData: TaskItem) => {
+    const onDrop = async (event: DragEvent, newStatus: string) => {
+      event.preventDefault();
+      if (draggedTask.value && draggedTask.value.status !== newStatus) {
+        try {
+          await updateTask(boardId.value, draggedTask.value.id, {
+            ...draggedTask.value,
+            status: newStatus
+          });
+          await fetchBoard();
+        } catch (error) {
+          console.error('Failed to update task status:', error);
+        }
+      }
+      draggedTask.value = null;
+    };
+
+    const handleSave = async (taskData: TaskItem | TaskCreate) => {
       try {
-        if (taskData.id) {
-          await modifyTask(taskData.id, taskData);
-        }else{
-          await addTask(taskData)
+        if ('id' in taskData && taskData.id) {
+          await updateTask(boardId.value, taskData.id, taskData as TaskItem);
+        } else {
+          await createTask(boardId.value, taskData as TaskCreate);
         }
         closeModal();
+        await fetchBoard();
       } catch (error) {
         console.error('Failed to save task:', error);
       }
@@ -267,26 +284,28 @@ export default defineComponent({
     const handleDelete = async (id: number) => {
       if (confirm('Are you sure you want to delete this task?')) {
         try {
-          await removeTask(id);
+          await deleteTask(boardId.value, id);
+          await fetchBoard();
         } catch (error) {
           console.error('Failed to delete task:', error);
         }
       }
     };
 
-    onMounted(fetchTasks);
+    onMounted(fetchBoard);
 
     watch(
-      () => route.params.id,
-      (newId) => {
-        projectId.value = Number(newId);
-        fetchTasks();
+      () => route.params.boardId,
+      (newBoardId) => {
+        boardId.value = Number(newBoardId);
+        fetchBoard();
       }
     );
 
     return {
-      project,
       projectId,
+      boardId,
+      board,
       tasks,
       loading,
       showModal,

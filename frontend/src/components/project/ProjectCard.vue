@@ -7,10 +7,11 @@
       >
         {{ project.name }}
       </h2>
-      <span class="text-sm text-gray-500 bg-blue-50 px-3 py-1 rounded-full">
-        {{ project.tasks?.length ?? 0 }} tasks
-      </span>
-      <DropdownMenu>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-500 bg-blue-50 px-3 py-1 rounded-full">
+          {{ project.boards?.length ?? 0 }} {{ project.boards?.length === 1 ? 'board' : 'boards' }}
+        </span>
+        <DropdownMenu>
           <button
             @click="$emit('edit', project)"
             class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-700"
@@ -26,6 +27,7 @@
             Delete
           </button>
         </DropdownMenu>
+      </div>
     </div>
 
     <p v-if="project.description" class="text-gray-600 text-sm mb-4 line-clamp-2">
@@ -38,13 +40,7 @@
         class="flex-1 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-all font-medium flex items-center justify-center gap-2"
       >
         <EyeIcon />
-        List
-      </button>
-      <button
-        @click.stop="$emit('kanban', project.id)"
-        class="flex-1 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-all font-medium flex items-center justify-center gap-2"
-      >
-        Board
+        Boards
       </button>
     </div>
   </div>
@@ -65,7 +61,7 @@ export default defineComponent({
       required: true
     }
   },
-  emits: ['view', 'edit', 'delete', 'kanban']
+  emits: ['view', 'edit', 'delete']
 });
 </script>
 
