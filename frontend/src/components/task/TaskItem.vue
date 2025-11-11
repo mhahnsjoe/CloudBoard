@@ -15,23 +15,22 @@
       </div>
     </div>
 
-    <div class="actions">
-      <button
-        class="px-4 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-all font-medium flex items-center gap-2"
-        @click="$emit('edit', task)"
-      >
-        <EditIcon />
-        Edit
-      </button>
-
-      <button
-        @click="$emit('delete', task.id)"
-        class="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-all font-medium flex items-center gap-2"
-      >
-        <DeleteIcon />
-        Delete
-      </button>
-    </div>
+    <DropdownMenu>
+          <button
+            @click="$emit('edit', task)"
+            class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-700"
+          >
+            <EditIcon className="w-4 h-4" />
+            Edit
+          </button>
+          <button
+            @click="$emit('delete', task.id)"
+            class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-red-600"
+          >
+            <DeleteIcon className="w-4 h-4" />
+            Delete
+          </button>
+        </DropdownMenu>
   </li>
 </template>
 
@@ -39,10 +38,11 @@
 import { defineComponent, type PropType } from 'vue';
 import type { TaskItem as TaskItemType } from '@/types/Project';
 import { EditIcon, DeleteIcon } from '@/components/icons';
+import DropdownMenu from '../common/DropdownMenu.vue';
 
 export default defineComponent({
   name: 'TaskItem',
-  components: { EditIcon, DeleteIcon },
+  components: { EditIcon, DeleteIcon, DropdownMenu},
   props: {
     task: {
       type: Object as PropType<TaskItemType>,

@@ -9,3 +9,4 @@ export { default as FolderIcon } from './FolderIcon.vue';
 export { default as ClipboardIcon } from './ClipboardIcon.vue';
 export { default as ClockIcon } from './ClockIcon.vue';
 export { default as CalendarIcon } from './CalendarIcon.vue';
+export { default as MenuIcon } from './MenuIcon.vue';
