@@ -40,7 +40,9 @@ namespace CloudBoard.Api.Controllers
                 Status = newTaskItem.Status,
                 Priority = newTaskItem.Priority,
                 Description = newTaskItem.Description,
-                DueDate = newTaskItem.DueDate,
+                DueDate = newTaskItem.DueDate.HasValue 
+                    ? DateTime.SpecifyKind(newTaskItem.DueDate.Value, DateTimeKind.Utc)
+                    : null,
                 EstimatedHours = newTaskItem.EstimatedHours,
                 ProjectId = newTaskItem.ProjectId,
                 CreatedAt = DateTime.UtcNow
@@ -63,7 +65,9 @@ namespace CloudBoard.Api.Controllers
             task.Status = updatedTask.Status;
             task.Priority = updatedTask.Priority;
             task.Description = updatedTask.Description;
-            task.DueDate = updatedTask.DueDate;
+            task.DueDate = updatedTask.DueDate.HasValue 
+                ? DateTime.SpecifyKind(updatedTask.DueDate.Value, DateTimeKind.Utc)
+                : null;
             task.EstimatedHours = updatedTask.EstimatedHours;
             task.ActualHours = updatedTask.ActualHours;
             task.ProjectId = updatedTask.ProjectId;
