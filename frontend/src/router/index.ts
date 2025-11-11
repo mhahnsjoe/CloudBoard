@@ -20,6 +20,12 @@ const routes = [
     component: ProjectDetailView,
     props: true,
   },
+  {
+    path: "/projects/:id/kanban",
+    name: "KanbanBoard",
+    component: KanbanBoardView,
+    props: true,
+  }
 ];
 
 const router = createRouter({

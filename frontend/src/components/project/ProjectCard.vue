@@ -22,7 +22,13 @@
         class="flex-1 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-all font-medium flex items-center justify-center gap-2"
       >
         <EyeIcon />
-        View
+        List
+      </button>
+      <button
+        @click.stop="$emit('kanban', project.id)"
+        class="flex-1 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-all font-medium flex items-center justify-center gap-2"
+      >
+        Board
       </button>
       <button
         @click.stop="$emit('edit', project)"
@@ -54,7 +60,7 @@ export default defineComponent({
       required: true
     }
   },
-  emits: ['view', 'edit', 'delete']
+  emits: ['view', 'edit', 'delete', 'kanban']
 });
 </script>
 
