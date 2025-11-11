@@ -6,6 +6,12 @@
         
         <div class="space-y-4">
           <!-- Title -->
+           <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <select v-model="form.type" class="input">
+                <option v-for="taskTypeName in TASK_TYPES" :key="taskTypeName">{{ taskTypeName }}</option>
+              </select>
+            </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
             <input
@@ -47,14 +53,14 @@
 
           <!-- Row: Project, Due Date -->
           <div class="grid grid-cols-2 gap-4">
-            <div v-if="projects.length">
+            <!-- <div v-if="projects.length">
               <label class="block text-sm font-medium text-gray-700 mb-1">Project</label>
               <select v-model="form.projectId" class="input">
                 <option v-for="project in projects" :key="project.id" :value="project.id">
                   {{ project.name }}
                 </option>
               </select>
-            </div>
+            </div> -->
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
@@ -117,8 +123,8 @@
 
 <script lang="ts">
 import { defineComponent, ref, watch, type PropType } from 'vue';
-import type { TaskItem, Project } from '@/types/Project';
-import { PRIORITIES, STATUSES } from '@/types/Project';
+import type { TaskItem } from '@/types/Project';
+import { PRIORITIES, STATUSES, TASK_TYPES , TaskType} from '@/types/Project';
 import { ClockIcon, CalendarIcon } from '@/components/icons';
 
 export default defineComponent({
@@ -132,13 +138,13 @@ export default defineComponent({
       type: Object as PropType<TaskItem | null>,
       default: null
     },
-    projects: {
-      type: Array as PropType<Project[]>,
-      default: () => []
-    },
-    defaultProjectId: {
+    boardId: {
       type: Number,
-      default: null
+      required: true
+    },
+    defaultStatus: {
+      type: String,
+      default: 'To Do'
     }
   },
   emits: ['close', 'save'],
@@ -148,13 +154,14 @@ export default defineComponent({
     const form = ref({
       id: props.task?.id || 0,
       title: props.task?.title || '',
+      type: props.task?.type ? TaskType[props.task.type] : 'Task',
       description: props.task?.description || '',
-      status: props.task?.status || 'To Do',
+      status: props.task?.status || props.defaultStatus || 'To Do',
       priority: props.task?.priority || 'Medium',
       dueDate: props.task?.dueDate ? props.task.dueDate.split('T')[0] : '',
       estimatedHours: props.task?.estimatedHours || null,
       actualHours: props.task?.actualHours || null,
-      projectId: props.task?.projectId || props.defaultProjectId || (props.projects[0]?.id || 0)
+      boardId: props.boardId
     });
 
     watch(() => props.task, (newTask) => {
@@ -163,14 +170,18 @@ export default defineComponent({
         form.value = {
           id: newTask.id,
           title: newTask.title,
+          type: newTask.priority,
           description: newTask.description || '',
           status: newTask.status,
           priority: newTask.priority,
           dueDate: newTask.dueDate ? newTask.dueDate.split('T')[0] : '',
           estimatedHours: newTask.estimatedHours || null,
           actualHours: newTask.actualHours || null,
-          projectId: newTask.projectId
+          boardId: props.boardId
         };
+      } else {
+        isEditing.value = false;
+        form.value.status = props.defaultStatus || 'To Do';
       }
     });
 
@@ -186,10 +197,11 @@ export default defineComponent({
         description: form.value.description || undefined,
         status: form.value.status,
         priority: form.value.priority,
+        type: TaskType[form.value.type as keyof typeof TaskType],
         dueDate: form.value.dueDate || undefined,
         estimatedHours: form.value.estimatedHours || undefined,
         actualHours: form.value.actualHours || undefined,
-        projectId: form.value.projectId,
+        boardId: props.boardId,
         createdAt: props.task?.createdAt || new Date().toISOString()
       };
 
@@ -201,6 +213,7 @@ export default defineComponent({
       form,
       PRIORITIES,
       STATUSES,
+      TASK_TYPES,
       handleSave
     };
   }

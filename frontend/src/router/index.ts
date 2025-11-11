@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ProjectDetailView from "../components/ProjectDetailView.vue";
 import ProjectsView from '@/components/ProjectsView.vue';
 import WorkItemsView from '@/components/WorkItemsView.vue';
-import KanbanBoardView from '@/components/KanbanBoardView.vue';
+import BoardDetailView from '@/components/BoardDetailView.vue';
 
 const routes = [
   {
@@ -22,9 +22,9 @@ const routes = [
     props: true,
   },
   {
-    path: "/projects/:id/kanban",
-    name: "KanbanBoard",
-    component: KanbanBoardView,
+    path: "/projects/:projectId/boards/:boardId",
+    name: "BoardDetail",
+    component: BoardDetailView,
     props: true,
   }
 ];
