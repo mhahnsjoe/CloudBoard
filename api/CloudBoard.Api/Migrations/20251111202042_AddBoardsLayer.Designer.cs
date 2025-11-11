@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CloudBoard.Api.Migrations
 {
     [DbContext(typeof(CloudBoardContext))]
-    [Migration("20251111193718_AddBoardsLayer")]
+    [Migration("20251111202042_AddBoardsLayer")]
     partial class AddBoardsLayer
     {
         /// <inheritdoc />
