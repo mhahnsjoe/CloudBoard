@@ -15,16 +15,9 @@
     <div v-else>
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-3xl font-bold text-gray-800">{{ project?.name + ' Board'}}</h1>
+          <h1 class="text-3xl font-bold text-gray-800">{{ project?.name }}</h1>
           <p v-if="project?.description" class="text-gray-600 mt-1">{{ project.description }}</p>
         </div>
-        <button
-          @click="openCreateModal"
-          class="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
-        >
-          <PlusIcon />
-          New Task
-        </button>
       </div>
 
       <!-- Kanban Board -->
@@ -40,9 +33,18 @@
               <span :class="getStatusIconClass(status)">●</span>
               {{ status }}
             </h2>
-            <span class="text-sm text-gray-500 bg-white px-2 py-1 rounded-full">
-              {{ getTasksByStatus(status).length }}
-            </span>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500 bg-white px-2 py-1 rounded-full">
+                {{ getTasksByStatus(status).length }}
+              </span>
+              <button
+                @click="openCreateModalWithStatus(status)"
+                class="p-1 hover:bg-white rounded transition-colors text-gray-600 hover:text-blue-600"
+                title="Add task"
+              >
+                <PlusIcon className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <!-- Drop Zone -->
@@ -60,48 +62,48 @@
               @dragstart="onDragStart($event, task)"
               class="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-move border border-gray-200"
             >
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-semibold text-gray-800 flex-1">{{ task.title }}</h3>
-                    <DropdownMenu iconSize="w-4 h-4">
-                        <button
-                        @click="editTask(task)"
-                        class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-700"
-                        >
-                        <EditIcon className="w-4 h-4" />
-                        Edit
-                        </button>
-                        <button
-                        @click="handleDelete(task.id)"
-                        class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-red-600"
-                        >
-                        <DeleteIcon className="w-4 h-4" />
-                        Delete
-                        </button>
-                    </DropdownMenu>
-                </div>
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="font-semibold text-gray-800 flex-1">{{ task.title }}</h3>
+                <DropdownMenu iconSize="w-4 h-4">
+                  <button
+                    @click="editTask(task)"
+                    class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-700"
+                  >
+                    <EditIcon className="w-4 h-4" />
+                    Edit
+                  </button>
+                  <button
+                    @click="handleDelete(task.id)"
+                    class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-red-600"
+                  >
+                    <DeleteIcon className="w-4 h-4" />
+                    Delete
+                  </button>
+                </DropdownMenu>
+              </div>
 
-                <p v-if="task.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {{ task.description }}
-                </p>
+              <p v-if="task.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
+                {{ task.description }}
+              </p>
 
-                <div class="flex flex-wrap gap-2 items-center">
+              <div class="flex flex-wrap gap-2 items-center">
                 <!-- Priority Badge -->
                 <span :class="getPriorityClass(task.priority)" class="text-xs font-medium px-2 py-1 rounded">
-                    {{ task.priority }}
+                  {{ task.priority }}
                 </span>
 
                 <!-- Due Date -->
                 <div v-if="task.dueDate" class="flex items-center gap-1 text-xs text-gray-500">
-                    <CalendarIcon className="w-3 h-3" />
-                    {{ formatDate(task.dueDate) }}
+                  <CalendarIcon className="w-3 h-3" />
+                  {{ formatDate(task.dueDate) }}
                 </div>
 
                 <!-- Time Estimate -->
                 <div v-if="task.estimatedHours" class="flex items-center gap-1 text-xs text-gray-500">
-                    <ClockIcon className="w-3 h-3" />
-                    {{ task.estimatedHours }}h
+                  <ClockIcon className="w-3 h-3" />
+                  {{ task.estimatedHours }}h
                 </div>
-                </div>
+              </div>
             </div>
 
             <!-- Empty State -->
@@ -122,6 +124,7 @@
       :task="selectedTask"
       :projects="[project!].filter(Boolean)"
       :defaultProjectId="projectId"
+      :defaultStatus="defaultStatus"
       @close="closeModal"
       @save="handleSave"
     />
@@ -135,9 +138,9 @@ import { useTasks } from '@/composables/useTasks';
 import { useConfirm } from '@/composables/useConfirm';
 import type { TaskItem } from '@/types/Project';
 import { STATUSES } from '@/types/Project';
-import DropdownMenu from '@/components/common/DropdownMenu.vue';
 
 import TaskModal from './task/TaskModal.vue';
+import DropdownMenu from './common/DropdownMenu.vue';
 import { 
   ArrowLeftIcon, 
   LoadingIcon, 
@@ -149,27 +152,28 @@ import {
 } from './icons';
 
 export default defineComponent({
-  name: 'KanbanBoardView',
+  name: 'KanbanBoard',
   components: {
     TaskModal,
+    DropdownMenu,
     ArrowLeftIcon,
     LoadingIcon,
     PlusIcon,
     EditIcon,
     DeleteIcon,
     CalendarIcon,
-    ClockIcon,
-    DropdownMenu
+    ClockIcon
   },
   setup() {
     const route = useRoute();
     const projectId = ref(Number(route.params.id));
-    const { project, tasks, loading, fetchTasks, modifyTask, removeTask } = useTasks(projectId.value);
+    const { project, tasks, loading, fetchTasks, modifyTask, removeTask, addTask } = useTasks(projectId.value);
     const { confirm } = useConfirm();
 
     const showModal = ref(false);
     const selectedTask = ref<TaskItem | null>(null);
     const draggedTask = ref<TaskItem | null>(null);
+    const defaultStatus = ref<string>('To Do');
 
     const getTasksByStatus = (status: string) => {
       return tasks.value.filter(task => task.status === status);
@@ -227,6 +231,13 @@ export default defineComponent({
 
     const openCreateModal = () => {
       selectedTask.value = null;
+      defaultStatus.value = 'To Do';
+      showModal.value = true;
+    };
+
+    const openCreateModalWithStatus = (status: string) => {
+      selectedTask.value = null;
+      defaultStatus.value = status;
       showModal.value = true;
     };
 
@@ -244,6 +255,8 @@ export default defineComponent({
       try {
         if (taskData.id) {
           await modifyTask(taskData.id, taskData);
+        }else{
+          await addTask(taskData)
         }
         closeModal();
       } catch (error) {
@@ -278,6 +291,7 @@ export default defineComponent({
       loading,
       showModal,
       selectedTask,
+      defaultStatus,
       STATUSES,
       getTasksByStatus,
       getStatusIconClass,
@@ -286,6 +300,7 @@ export default defineComponent({
       onDragStart,
       onDrop,
       openCreateModal,
+      openCreateModalWithStatus,
       editTask,
       closeModal,
       handleSave,
