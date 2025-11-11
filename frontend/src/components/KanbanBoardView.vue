@@ -60,46 +60,48 @@
               @dragstart="onDragStart($event, task)"
               class="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-move border border-gray-200"
             >
-              <div class="flex justify-between items-start mb-2">
-                <h3 class="font-semibold text-gray-800 flex-1">{{ task.title }}</h3>
-                <div class="flex gap-1">
-                  <button
-                    @click="editTask(task)"
-                    class="text-blue-600 hover:text-blue-800 p-1"
-                  >
-                    <EditIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    @click="handleDelete(task.id)"
-                    class="text-red-600 hover:text-red-800 p-1"
-                  >
-                    <DeleteIcon className="w-4 h-4" />
-                  </button>
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-semibold text-gray-800 flex-1">{{ task.title }}</h3>
+                    <DropdownMenu iconSize="w-4 h-4">
+                        <button
+                        @click="editTask(task)"
+                        class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-700"
+                        >
+                        <EditIcon className="w-4 h-4" />
+                        Edit
+                        </button>
+                        <button
+                        @click="handleDelete(task.id)"
+                        class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-red-600"
+                        >
+                        <DeleteIcon className="w-4 h-4" />
+                        Delete
+                        </button>
+                    </DropdownMenu>
                 </div>
-              </div>
 
-              <p v-if="task.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
-                {{ task.description }}
-              </p>
+                <p v-if="task.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
+                    {{ task.description }}
+                </p>
 
-              <div class="flex flex-wrap gap-2 items-center">
+                <div class="flex flex-wrap gap-2 items-center">
                 <!-- Priority Badge -->
                 <span :class="getPriorityClass(task.priority)" class="text-xs font-medium px-2 py-1 rounded">
-                  {{ task.priority }}
+                    {{ task.priority }}
                 </span>
 
                 <!-- Due Date -->
                 <div v-if="task.dueDate" class="flex items-center gap-1 text-xs text-gray-500">
-                  <CalendarIcon className="w-3 h-3" />
-                  {{ formatDate(task.dueDate) }}
+                    <CalendarIcon className="w-3 h-3" />
+                    {{ formatDate(task.dueDate) }}
                 </div>
 
                 <!-- Time Estimate -->
                 <div v-if="task.estimatedHours" class="flex items-center gap-1 text-xs text-gray-500">
-                  <ClockIcon className="w-3 h-3" />
-                  {{ task.estimatedHours }}h
+                    <ClockIcon className="w-3 h-3" />
+                    {{ task.estimatedHours }}h
                 </div>
-              </div>
+                </div>
             </div>
 
             <!-- Empty State -->
@@ -133,6 +135,7 @@ import { useTasks } from '@/composables/useTasks';
 import { useConfirm } from '@/composables/useConfirm';
 import type { TaskItem } from '@/types/Project';
 import { STATUSES } from '@/types/Project';
+import DropdownMenu from '@/components/common/DropdownMenu.vue';
 
 import TaskModal from './task/TaskModal.vue';
 import { 
@@ -146,7 +149,7 @@ import {
 } from './icons';
 
 export default defineComponent({
-  name: 'KanbanBoard',
+  name: 'KanbanBoardView',
   components: {
     TaskModal,
     ArrowLeftIcon,
@@ -155,7 +158,8 @@ export default defineComponent({
     EditIcon,
     DeleteIcon,
     CalendarIcon,
-    ClockIcon
+    ClockIcon,
+    DropdownMenu
   },
   setup() {
     const route = useRoute();
