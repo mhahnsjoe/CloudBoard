@@ -16,7 +16,7 @@
       <div class="flex justify-between items-center mb-6">
         <div>
           <h1 class="text-3xl font-bold text-gray-800">{{ board?.name }}</h1>
-          <p v-if="board?.description" class="text-gray-600 mt-1">{{ board.description }}</p>
+          <!-- <p v-if="board?.description" class="text-gray-600 mt-1">{{ board.description }}</p> -->
         </div>
       </div>
 
@@ -54,58 +54,14 @@
             @dragenter.prevent
             class="min-h-[500px] space-y-3"
           >
-            <!-- Task Cards -->
-            <div
+            <KanbanCard
               v-for="task in getTasksByStatus(status)"
               :key="task.id"
-              draggable="true"
+              :task="task"
               @dragstart="onDragStart($event, task)"
-              class="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-move border border-gray-200"
-            >
-              <div class="flex justify-between items-start mb-2">
-                <h3 class="font-semibold text-gray-800 flex-1">{{ task.title }}</h3>
-                <DropdownMenu iconSize="w-4 h-4">
-                  <button
-                    @click="editTask(task)"
-                    class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-700"
-                  >
-                    <EditIcon className="w-4 h-4" />
-                    Edit
-                  </button>
-                  <button
-                    @click="handleDelete(task.id)"
-                    class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-red-600"
-                  >
-                    <DeleteIcon className="w-4 h-4" />
-                    Delete
-                  </button>
-                </DropdownMenu>
-              </div>
-
-              <p v-if="task.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
-                {{ task.description }}
-              </p>
-
-              <div class="flex flex-wrap gap-2 items-center">
-                <!-- Priority Badge -->
-                <span :class="getPriorityClass(task.priority)" class="text-xs font-medium px-2 py-1 rounded">
-                  {{ task.priority }}
-                </span>
-
-                <!-- Due Date -->
-                <div v-if="task.dueDate" class="flex items-center gap-1 text-xs text-gray-500">
-                  <CalendarIcon className="w-3 h-3" />
-                  {{ formatDate(task.dueDate) }}
-                </div>
-
-                <!-- Time Estimate -->
-                <div v-if="task.estimatedHours" class="flex items-center gap-1 text-xs text-gray-500">
-                  <ClockIcon className="w-3 h-3" />
-                  {{ task.estimatedHours }}h
-                </div>
-              </div>
-            </div>
-
+              @edit="editTask(task)"
+              @delete="handleDelete(task.id)"
+            />
             <!-- Empty State -->
             <div
               v-if="getTasksByStatus(status).length === 0"
@@ -138,30 +94,22 @@ import { useConfirm } from '@/composables/useConfirm';
 import type { TaskItem, Board, TaskCreate } from '@/types/Project';
 import { STATUSES } from '@/types/Project';
 
+import KanbanCard from './kanban/KanbanCard.vue'
 import TaskModal from './task/TaskModal.vue';
-import DropdownMenu from './common/DropdownMenu.vue';
 import { 
   ArrowLeftIcon, 
   LoadingIcon, 
   PlusIcon, 
-  EditIcon, 
-  DeleteIcon,
-  CalendarIcon,
-  ClockIcon
 } from './icons';
 
 export default defineComponent({
   name: 'BoardDetailView',
   components: {
     TaskModal,
-    DropdownMenu,
     ArrowLeftIcon,
     LoadingIcon,
     PlusIcon,
-    EditIcon,
-    DeleteIcon,
-    CalendarIcon,
-    ClockIcon
+    KanbanCard
   },
   setup() {
     const route = useRoute();
