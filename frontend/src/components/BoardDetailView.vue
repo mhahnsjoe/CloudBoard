@@ -5,6 +5,24 @@
       Loading board...
     </div>
 
+    <!-- Empty State: No Boards -->
+    <div v-else-if="!board && projectBoards.length === 0" class="flex items-center justify-center min-h-[60vh]">
+      <div class="text-center max-w-md">
+        <ClipboardIcon className="w-20 h-20 mx-auto mb-4 text-gray-300" />
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">No Boards Yet</h2>
+        <p class="text-gray-600 mb-6">
+          Get started by creating your first board for this project.
+        </p>
+        <button
+          @click="openCreateBoardModal"
+          class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow-md flex items-center gap-2 mx-auto"
+        >
+          <PlusIcon className="w-5 h-5" />
+          Create First Board
+        </button>
+      </div>
+    </div>
+
     <div v-else>
       <!-- Board Header with Selector -->
       <div class="flex justify-between items-center mb-6">
@@ -17,7 +35,7 @@
             >
               <FolderIcon className="w-5 h-5 text-gray-600" />
               <span class="text-xl font-bold text-gray-800">{{ board?.name }}</span>
-              <svg class="w-5 h-5 text-gray-500" :class="{ 'rotate-180': showBoardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-gray-500 transition-transform duration-200" :class="{ 'rotate-180': showBoardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
               </svg>
             </button>
@@ -230,7 +248,7 @@ export default defineComponent({
     const boardId = ref(Number(route.params.boardId));
     const { confirm } = useConfirm();
 
-    const board = ref<Board>();
+    const board = ref<Board | null>(null);
     const projectBoards = ref<Board[]>([]);
     const tasks = ref<TaskItem[]>([]);
     const loading = ref(false);
@@ -258,6 +276,8 @@ export default defineComponent({
         tasks.value = res.data.tasks || [];
       } catch (error) {
         console.error('Failed to fetch board:', error);
+        board.value = null;
+        tasks.value = [];
       } finally {
         loading.value = false;
       }
@@ -269,6 +289,7 @@ export default defineComponent({
         projectBoards.value = res.data;
       } catch (error) {
         console.error('Failed to fetch project boards:', error);
+        projectBoards.value = [];
       }
     };
 
@@ -402,6 +423,7 @@ export default defineComponent({
             projectId: projectId.value
           });
           await fetchBoard();
+          await fetchProjectBoards();
         } else {
           const response = await createBoard(projectId.value, {
             name: boardForm.value.name,
@@ -411,7 +433,6 @@ export default defineComponent({
           // Navigate to the newly created board
           router.push(`/projects/${projectId.value}/boards/${response.data.id}`);
         }
-        await fetchProjectBoards();
         closeBoardModal();
       } catch (error) {
         console.error('Failed to save board:', error);
@@ -426,17 +447,23 @@ export default defineComponent({
         try {
           await deleteBoard(projectId.value, board.value.id);
           
-          // Navigate to another board or summary
+          // Refresh the boards list
           await fetchProjectBoards();
+          
+          // Navigate to another board or stay if no boards
           if (projectBoards.value.length > 0) {
             const nextBoard = projectBoards.value.find(b => b.id !== board.value!.id);
             if (nextBoard) {
               router.push(`/projects/${projectId.value}/boards/${nextBoard.id}`);
             } else {
-              router.push('/');
+              // This was the last board, stay on the page to show empty state
+              board.value = null;
+              tasks.value = [];
             }
           } else {
-            router.push('/');
+            // No boards left, clear the board
+            board.value = null;
+            tasks.value = [];
           }
         } catch (error) {
           console.error('Failed to delete board:', error);
@@ -454,8 +481,8 @@ export default defineComponent({
     };
 
     onMounted(() => {
-      fetchBoard();
       fetchProjectBoards();
+      fetchBoard();
       document.addEventListener('click', handleClickOutside);
     });
 
@@ -466,10 +493,21 @@ export default defineComponent({
     watch(
       () => route.params.boardId,
       (newBoardId) => {
-        boardId.value = Number(newBoardId);
-        projectId.value = Number(route.params.projectId);
-        fetchBoard();
-        fetchProjectBoards();
+        if (newBoardId) {
+          boardId.value = Number(newBoardId);
+          projectId.value = Number(route.params.projectId);
+          fetchBoard();
+        }
+      }
+    );
+
+    watch(
+      () => route.params.projectId,
+      (newProjectId) => {
+        if (newProjectId) {
+          projectId.value = Number(newProjectId);
+          fetchProjectBoards();
+        }
       }
     );
 
@@ -517,6 +555,5 @@ export default defineComponent({
 
 .rotate-180 {
   transform: rotate(180deg);
-  transition: transform 0.2s;
 }
 </style>

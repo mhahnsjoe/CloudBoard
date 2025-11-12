@@ -9,31 +9,70 @@
     <!-- Project Selector -->
     <div class="px-4 py-3 border-b border-gray-700">
       <label class="text-xs text-gray-400 uppercase tracking-wide mb-2 block">Project</label>
-      <div class="relative">
-        <select
-          v-model="selectedProjectId"
-          @change="handleProjectChange"
-          class="w-full bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer appearance-none pr-8"
+      <div class="relative" ref="projectSelectorRef">
+        <button
+          @click="showProjectDropdown = !showProjectDropdown"
+          class="w-full bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-700 hover:border-gray-600 focus:border-blue-500 outline-none cursor-pointer transition-all flex items-center justify-between"
         >
-          <option v-for="project in projects" :key="project.id" :value="project.id">
-            {{ project.name }}
-          </option>
-        </select>
-        <div class="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span class="truncate">{{ currentProjectName || 'Select Project' }}</span>
+          <svg 
+            class="w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0" 
+            :class="{ 'rotate-180': showProjectDropdown }" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
+        </button>
+
+        <!-- Project Dropdown Menu -->
+        <div
+          v-if="showProjectDropdown"
+          class="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-2 z-50"
+        >
+          <!-- <div class="px-3 py-2 text-xs text-gray-400 uppercase tracking-wide border-b border-gray-700">
+            Switch Project
+          </div> -->
+          
+          <!-- Project List -->
+          <div class="max-h-64 overflow-y-auto">
+            <button
+              v-for="project in projects"
+              :key="project.id"
+              @click="handleProjectChange(project.id)"
+              class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors flex items-center justify-between group"
+              :class="{ 'bg-gray-700': project.id === selectedProjectId }"
+            >
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <FolderIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <div class="min-w-0 flex-1">
+                  <div class="font-medium text-white truncate" :class="{ 'text-blue-400': project.id === selectedProjectId }">
+                    {{ project.name }}
+                  </div>
+                  <div class="text-xs text-gray-400">
+                    {{ project.boards?.length || 0 }} boards
+                  </div>
+                </div>
+              </div>
+              <span v-if="project.id === selectedProjectId" class="text-blue-400 text-xs font-medium flex-shrink-0">
+                Current
+              </span>
+            </button>
+          </div>
+
+          <!-- Add New Project -->
+          <div class="border-t border-gray-700 mt-2">
+            <button
+              @click="openCreateProjectModal"
+              class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors flex items-center gap-3 text-blue-400 font-medium"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span>Create New Project</span>
+            </button>
+          </div>
         </div>
       </div>
-      
-      <!-- Add Project Button -->
-      <button
-        @click="showAddProjectModal = true"
-        class="w-full mt-2 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 rounded-lg transition-all flex items-center justify-center gap-2"
-      >
-        <PlusIcon className="w-3 h-3" />
-        New Project
-      </button>
     </div>
 
     <!-- Navigation -->
@@ -91,7 +130,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, watch } from 'vue';
+import { defineComponent, ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { FolderIcon, PlusIcon } from '@/components/icons';
 import Modal from '@/components/common/Modal.vue';
@@ -111,6 +150,8 @@ export default defineComponent({
     const projects = ref<Project[]>([]);
     const selectedProjectId = ref<number | null>(null);
     const showAddProjectModal = ref(false);
+    const showProjectDropdown = ref(false);
+    const projectSelectorRef = ref<HTMLElement | null>(null);
     const newProjectName = ref('');
     const newProjectDescription = ref('');
 
@@ -139,25 +180,35 @@ export default defineComponent({
       }
     };
 
-    const handleProjectChange = async () => {
-      if (!selectedProjectId.value) return;
+    const handleProjectChange = async (projectId: number) => {
+      showProjectDropdown.value = false;
+      
+      if (projectId === selectedProjectId.value) {
+        return; // Already on this project
+      }
+
+      selectedProjectId.value = projectId;
 
       try {
         // Fetch the project to get its boards
-        const project = projects.value.find(p => p.id === selectedProjectId.value);
+        const project = projects.value.find(p => p.id === projectId);
         
         if (project && project.boards && project.boards.length > 0) {
           // Navigate to the first board
           const firstBoard = project.boards[0];
-          router.push(`/projects/${selectedProjectId.value}/boards/${firstBoard.id}`);
+          router.push(`/projects/${projectId}/boards/${firstBoard.id}`);
         } else {
-          // If no boards exist, stay on current page or go to summary
-          console.warn('No boards found for this project');
-          alert('This project has no boards. Please create a board first.');
+          // If no boards exist, navigate to the project with boardId 0 (will show empty state)
+          router.push(`/projects/${projectId}/boards/0`);
         }
       } catch (error) {
         console.error('Failed to navigate to project:', error);
       }
+    };
+
+    const openCreateProjectModal = () => {
+      showProjectDropdown.value = false;
+      showAddProjectModal.value = true;
     };
 
     const handleCreateProject = async () => {
@@ -182,11 +233,18 @@ export default defineComponent({
         if (response.data && response.data.boards && response.data.boards.length > 0) {
           selectedProjectId.value = response.data.id;
           const firstBoard = response.data.boards[0];
-          router.push(`/projects/${response.data.id}/boards/${firstBoard.id}`);
+          router.push(`/projects/${response.data.id}/boards/${firstBoard!.id}`);
         }
       } catch (error) {
         console.error('Failed to create project:', error);
         alert('Failed to create project');
+      }
+    };
+
+    // Close dropdown when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      if (projectSelectorRef.value && !projectSelectorRef.value.contains(event.target as Node)) {
+        showProjectDropdown.value = false;
       }
     };
 
@@ -197,7 +255,14 @@ export default defineComponent({
       }
     });
 
-    onMounted(fetchProjects);
+    onMounted(() => {
+      fetchProjects();
+      document.addEventListener('click', handleClickOutside);
+    });
+
+    onBeforeUnmount(() => {
+      document.removeEventListener('click', handleClickOutside);
+    });
 
     return { 
       route,
@@ -206,9 +271,12 @@ export default defineComponent({
       currentProjectName,
       isOnProjectBoard,
       showAddProjectModal,
+      showProjectDropdown,
+      projectSelectorRef,
       newProjectName,
       newProjectDescription,
       handleProjectChange,
+      openCreateProjectModal,
       handleCreateProject
     };
   }
@@ -222,5 +290,9 @@ export default defineComponent({
 
 .nav-item.active {
   @apply bg-blue-600 text-white;
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
 }
 </style>
