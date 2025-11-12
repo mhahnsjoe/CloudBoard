@@ -230,7 +230,7 @@ export default defineComponent({
       activeBoardMenu.value = null;
       if (confirm("Are you sure you want to delete this board? All tasks in this board will be deleted.")) {
         try {
-          await deleteBoard(id);
+          await deleteBoard(projectId.value, id);
           await fetchProject();
         } catch (error) {
           console.error('Failed to delete board:', error);

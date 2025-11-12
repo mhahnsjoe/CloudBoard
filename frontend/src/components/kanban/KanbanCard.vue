@@ -7,7 +7,7 @@
   >
     <!-- Task Type Badge -->
     <div class="flex items-center justify-between mb-2">
-      <TaskTypeBadge :type="task.type" />
+      <TaskTypeBadge :type="task.type as TaskType" />
       <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           @click.stop="$emit('edit', task)"
@@ -60,7 +60,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
-import type { TaskItem } from '@/types/Project';
+import type { TaskItem, TaskType } from '@/types/Project';
 import TaskTypeBadge from '../task/TaskTypeBadge.vue';
 import { EditIcon, DeleteIcon, CalendarIcon, ClockIcon } from '@/components/icons';
 
