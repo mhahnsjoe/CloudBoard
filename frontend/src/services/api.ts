@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Project, ProjectCreate, Board, BoardCreate, TaskItem, TaskCreate, TaskEdit } from "../types/Project";
+import type { Project, ProjectCreate, Board, BoardCreate, WorkItem, WorkItemCreate, WorkItemEdit } from "../types/Project";
 
 // Projects
 export const getProjects = () => axios.get<Project[]>('/api/projects');
@@ -15,10 +15,10 @@ export const createBoard = (projectId: number, board: BoardCreate) => axios.post
 export const updateBoard = (projectId: number, boardId: number, board: BoardCreate) => axios.put(`/api/projects/${projectId}/boards/${boardId}`, board);
 export const deleteBoard = (projectId: number, boardId: number) => axios.delete(`/api/projects/${projectId}/boards/${boardId}`);
 
-// Tasks
-export const getTasks = (boardId: number) => axios.get<TaskItem[]>(`/api/boards/${boardId}/tasks`);
-export const getAllTasks = () => axios.get<TaskItem[]>('/api/tasks');
-export const getTask = (boardId: number, taskId: number) => axios.get<TaskItem>(`/api/boards/${boardId}/tasks/${taskId}`);
-export const createTask = (boardId: number, task: TaskCreate) => axios.post<TaskItem>(`/api/boards/${boardId}/tasks`, task);
-export const updateTask = (boardId: number, taskId: number, task: TaskEdit) => axios.put(`/api/boards/${boardId}/tasks/${taskId}`, task);
-export const deleteTask = (boardId: number, taskId: number) => axios.delete(`/api/boards/${boardId}/tasks/${taskId}`);
+// WorkItems
+export const getWorkItems = (boardId: number) => axios.get<WorkItem[]>(`/api/boards/${boardId}/WorkItems`);
+export const getAllWorkItems = () => axios.get<WorkItem[]>('/api/WorkItems');
+export const getWorkItem = (boardId: number, workItemId: number) => axios.get<WorkItem>(`/api/boards/${boardId}/WorkItems/${workItemId}`);
+export const createWorkItem = (boardId: number, workItem: WorkItemCreate) => axios.post<WorkItem>(`/api/boards/${boardId}/WorkItems`, workItem);
+export const updateWorkItem = (boardId: number, workItemId: number, workItem: WorkItemEdit) => axios.put(`/api/boards/${boardId}/WorkItems/${workItemId}`, workItem);
+export const deleteWorkItem = (boardId: number, workItemId: number) => axios.delete(`/api/boards/${boardId}/WorkItems/${workItemId}`);

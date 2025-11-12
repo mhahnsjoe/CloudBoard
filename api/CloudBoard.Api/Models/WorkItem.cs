@@ -1,12 +1,12 @@
 namespace CloudBoard.Api.Models
 {
-    public class TaskItem
+    public class WorkItem
     {
         public int Id { get; set; }
         public string Title { get; set; } = null!;
         public string Status { get; set; } = "To Do";
         public string Priority { get; set; } = "Medium";
-        public TaskType Type { get; set; } = TaskType.Task;
+        public WorkItemType Type { get; set; } = WorkItemType.Task;
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? DueDate { get; set; }
@@ -18,7 +18,7 @@ namespace CloudBoard.Api.Models
         public Board? Board { get; set; }
     }
 
-    public enum TaskType
+    public enum WorkItemType
     {
         Task,
         Bug,

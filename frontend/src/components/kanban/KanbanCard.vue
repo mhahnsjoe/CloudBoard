@@ -2,21 +2,21 @@
   <div
     class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-3 cursor-move hover:shadow-md transition-all group"
     draggable="true"
-    @dragstart="$emit('dragstart', task)"
-    @click="$emit('click', task)"
+    @dragstart="$emit('dragstart', workItem)"
+    @click="$emit('click', workItem)"
   >
-    <!-- Task Type Badge -->
+    <!-- WorkItem Type Badge -->
     <div class="flex items-center justify-between mb-2">
-      <TaskTypeBadge :type="task.type as TaskType" />
+      <WorkItemTypeBadge :type="workItem.type as WorkItemType" />
       <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          @click.stop="$emit('edit', task)"
+          @click.stop="$emit('edit', workItem)"
           class="p-1 hover:bg-gray-100 rounded transition"
         >
           <EditIcon className="w-4 h-4 text-gray-600" />
         </button>
         <button
-          @click.stop="$emit('delete', task.id)"
+          @click.stop="$emit('delete', workItem.id)"
           class="p-1 hover:bg-red-50 rounded transition"
         >
           <DeleteIcon className="w-4 h-4 text-red-600" />
@@ -24,35 +24,35 @@
       </div>
     </div>
 
-    <!-- Task Title -->
+    <!-- WorkItem Title -->
     <h3 class="text-sm font-medium text-gray-800 mb-2">
-      {{ task.title }}
+      {{ workItem.title }}
     </h3>
 
-    <!-- Task Description (if exists) -->
-    <p v-if="task.description" class="text-xs text-gray-600 mb-3 line-clamp-2">
-      {{ task.description }}
+    <!-- WorkItem Description (if exists) -->
+    <p v-if="workItem.description" class="text-xs text-gray-600 mb-3 line-clamp-2">
+      {{ workItem.description }}
     </p>
 
-    <!-- Task Meta Information -->
+    <!-- WorkItem Meta Information -->
     <div class="flex items-center justify-between text-xs text-gray-500">
       <!-- Priority Badge -->
-      <span :class="getPriorityClass(task.priority)" class="px-2 py-1 rounded">
-        {{ task.priority }}
+      <span :class="getPriorityClass(workItem.priority)" class="px-2 py-1 rounded">
+        {{ workItem.priority }}
       </span>
 
       <!-- Due Date (if exists and with overdue warning) -->
-      <div v-if="task.dueDate" class="flex items-center gap-1">
+      <div v-if="workItem.dueDate" class="flex items-center gap-1">
         <CalendarIcon className="w-3 h-3" />
-        <span :class="{ 'text-red-600 font-medium': isOverdue(task.dueDate) }">
-          {{ formatDueDate(task.dueDate) }}
+        <span :class="{ 'text-red-600 font-medium': isOverdue(workItem.dueDate) }">
+          {{ formatDueDate(workItem.dueDate) }}
         </span>
       </div>
 
       <!-- Time Tracking (if exists) -->
-      <div v-if="task.estimatedHours || task.actualHours" class="flex items-center gap-1">
+      <div v-if="workItem.estimatedHours || workItem.actualHours" class="flex items-center gap-1">
         <ClockIcon className="w-3 h-3" />
-        <span>{{ task.actualHours || 0 }}/{{ task.estimatedHours || 0 }}h</span>
+        <span>{{ workItem.actualHours || 0 }}/{{ workItem.estimatedHours || 0 }}h</span>
       </div>
     </div>
   </div>
@@ -60,22 +60,22 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
-import type { TaskItem, TaskType } from '@/types/Project';
-import TaskTypeBadge from '../task/TaskTypeBadge.vue';
+import type { WorkItem, WorkItemType } from '@/types/Project';
+import WorkItemTypeBadge from '../workItem/WorkItemTypeBadge.vue';
 import { EditIcon, DeleteIcon, CalendarIcon, ClockIcon } from '@/components/icons';
 
 export default defineComponent({
   name: 'KanbanCard',
   components: {
-    TaskTypeBadge,
+    WorkItemTypeBadge,
     EditIcon,
     DeleteIcon,
     CalendarIcon,
     ClockIcon
   },
   props: {
-    task: {
-      type: Object as PropType<TaskItem>,
+    workItem: {
+      type: Object as PropType<WorkItem>,
       required: true
     }
   },
