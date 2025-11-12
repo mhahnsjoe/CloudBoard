@@ -1,13 +1,13 @@
 <template>
-  <li class="task-item">
-    <div class="task-info">
-      <h3 class="text-lg font-semibold text-gray-800">{{ task.title }}</h3>
+  <li class="workItem-item">
+    <div class="workItem-info">
+      <h3 class="text-lg font-semibold text-gray-800">{{ workItem.title }}</h3>
       <div class="flex items-center gap-2 mt-2">
         <span class="text-sm text-gray-600">Status:</span>
         <select
-          :value="task.status"
-          @change="$emit('statusChange', task, ($event.target as HTMLSelectElement).value)"
-          :class="getStatusClass(task.status)"
+          :value="workItem.status"
+          @change="$emit('statusChange', workItem, ($event.target as HTMLSelectElement).value)"
+          :class="getStatusClass(workItem.status)"
           class="px-3 py-1 rounded-md font-medium text-sm border-0 cursor-pointer transition-all focus:ring-2 focus:ring-offset-1"
         >
           <option v-for="s in statusOptions" :key="s">{{ s }}</option>
@@ -17,14 +17,14 @@
 
     <DropdownMenu>
           <button
-            @click="$emit('edit', task)"
+            @click="$emit('edit', workItem)"
             class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-700"
           >
             <EditIcon className="w-4 h-4" />
             Edit
           </button>
           <button
-            @click="$emit('delete', task.id)"
+            @click="$emit('delete', workItem.id)"
             class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-red-600"
           >
             <DeleteIcon className="w-4 h-4" />
@@ -36,16 +36,16 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
-import type { TaskItem as TaskItemType } from '@/types/Project';
+import type { WorkItem as WorkItemType } from '@/types/Project';
 import { EditIcon, DeleteIcon } from '@/components/icons';
 import DropdownMenu from '../common/DropdownMenu.vue';
 
 export default defineComponent({
-  name: 'TaskItem',
+  name: 'WorkItem',
   components: { EditIcon, DeleteIcon, DropdownMenu},
   props: {
-    task: {
-      type: Object as PropType<TaskItemType>,
+    workItem: {
+      type: Object as PropType<WorkItemType>,
       required: true
     },
     statusOptions: {
@@ -72,7 +72,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.task-item {
+.workItem-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -84,11 +84,11 @@ export default defineComponent({
   transition: box-shadow 0.2s;
 }
 
-.task-item:hover {
+.workItem-item:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.task-info {
+.workItem-info {
   flex: 1;
 }
 

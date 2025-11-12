@@ -2,14 +2,14 @@
   <Teleport to="body">
     <div v-if="true" class="modal-overlay" @click.self="$emit('close')">
       <div class="modal max-w-2xl">
-        <h2 class="text-2xl font-bold mb-6">{{ isEditing ? 'Edit Task' : 'Create Task' }}</h2>
+        <h2 class="text-2xl font-bold mb-6">{{ isEditing ? 'Edit WorkItem' : 'Create WorkItem' }}</h2>
         
         <div class="space-y-4">
           <!-- Title -->
            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
               <select v-model="form.type" class="input">
-                <option v-for="taskTypeName in TASK_TYPES" :key="taskTypeName">{{ taskTypeName }}</option>
+                <option v-for="workItemTypeName in WORKITEM_TYPES" :key="workItemTypeName">{{ workItemTypeName }}</option>
               </select>
             </div>
           <div>
@@ -17,7 +17,7 @@
             <input
               v-model="form.title"
               type="text"
-              placeholder="Task title"
+              placeholder="WorkItem title"
               class="input"
               required
             />
@@ -28,7 +28,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea
               v-model="form.description"
-              placeholder="Task description..."
+              placeholder="WorkItem description..."
               class="input min-h-[100px]"
               rows="4"
             />
@@ -123,19 +123,19 @@
 
 <script lang="ts">
 import { defineComponent, ref, watch, type PropType } from 'vue';
-import type { TaskItem } from '@/types/Project';
-import { PRIORITIES, STATUSES, TASK_TYPES } from '@/types/Project';
+import type { WorkItem } from '@/types/Project';
+import { PRIORITIES, STATUSES, WORKITEM_TYPES } from '@/types/Project';
 import { ClockIcon, CalendarIcon } from '@/components/icons';
 
 export default defineComponent({
-  name: 'TaskModal',
+  name: 'WorkItemModal',
   components: {
     ClockIcon,
     CalendarIcon
   },
   props: {
-    task: {
-      type: Object as PropType<TaskItem | null>,
+    workItem: {
+      type: Object as PropType<WorkItem | null>,
       default: null
     },
     boardId: {
@@ -149,34 +149,34 @@ export default defineComponent({
   },
   emits: ['close', 'save'],
   setup(props, { emit }) {
-    const isEditing = ref(!!props.task);
+    const isEditing = ref(!!props.workItem);
     
     const form = ref({
-      id: props.task?.id || 0,
-      title: props.task?.title || '',
-      type: props.task?.type || 'Task',
-      description: props.task?.description || '',
-      status: props.task?.status || props.defaultStatus || 'To Do',
-      priority: props.task?.priority || 'Medium',
-      dueDate: props.task?.dueDate ? props.task.dueDate.split('T')[0] : '',
-      estimatedHours: props.task?.estimatedHours || null,
-      actualHours: props.task?.actualHours || null,
+      id: props.workItem?.id || 0,
+      title: props.workItem?.title || '',
+      type: props.workItem?.type || 'WorkItem',
+      description: props.workItem?.description || '',
+      status: props.workItem?.status || props.defaultStatus || 'To Do',
+      priority: props.workItem?.priority || 'Medium',
+      dueDate: props.workItem?.dueDate ? props.workItem.dueDate.split('T')[0] : '',
+      estimatedHours: props.workItem?.estimatedHours || null,
+      actualHours: props.workItem?.actualHours || null,
       boardId: props.boardId
     });
 
-    watch(() => props.task, (newTask) => {
-      if (newTask) {
+    watch(() => props.workItem, (newWorkItem) => {
+      if (newWorkItem) {
         isEditing.value = true;
         form.value = {
-          id: newTask.id,
-          title: newTask.title,
-          type: newTask.priority,
-          description: newTask.description || '',
-          status: newTask.status,
-          priority: newTask.priority,
-          dueDate: newTask.dueDate ? newTask.dueDate.split('T')[0] : '',
-          estimatedHours: newTask.estimatedHours || null,
-          actualHours: newTask.actualHours || null,
+          id: newWorkItem.id,
+          title: newWorkItem.title,
+          type: newWorkItem.priority,
+          description: newWorkItem.description || '',
+          status: newWorkItem.status,
+          priority: newWorkItem.priority,
+          dueDate: newWorkItem.dueDate ? newWorkItem.dueDate.split('T')[0] : '',
+          estimatedHours: newWorkItem.estimatedHours || null,
+          actualHours: newWorkItem.actualHours || null,
           boardId: props.boardId
         };
       } else {
@@ -191,7 +191,7 @@ export default defineComponent({
         return;
       }
 
-      const taskData: TaskItem = {
+      const workItemData: WorkItem = {
         id: form.value.id,
         title: form.value.title,
         description: form.value.description || undefined,
@@ -202,10 +202,10 @@ export default defineComponent({
         estimatedHours: form.value.estimatedHours || undefined,
         actualHours: form.value.actualHours || undefined,
         boardId: props.boardId,
-        createdAt: props.task?.createdAt || new Date().toISOString()
+        createdAt: props.workItem?.createdAt || new Date().toISOString()
       };
 
-      emit('save', taskData);
+      emit('save', workItemData);
     };
 
     return {
@@ -213,7 +213,7 @@ export default defineComponent({
       form,
       PRIORITIES,
       STATUSES,
-      TASK_TYPES,
+      WORKITEM_TYPES,
       handleSave
     };
   }

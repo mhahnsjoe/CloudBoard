@@ -38,8 +38,8 @@
         <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600 mb-1">Total Tasks</p>
-              <p class="text-3xl font-bold text-gray-800">{{ totalTasks }}</p>
+              <p class="text-sm text-gray-600 mb-1">Total WorkItems</p>
+              <p class="text-3xl font-bold text-gray-800">{{ totalWorkItems }}</p>
             </div>
             <svg class="w-12 h-12 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
@@ -84,7 +84,7 @@
                 <div class="flex items-center gap-4 text-sm text-gray-500">
                   <span class="flex items-center gap-1">
                     <ClipboardIcon className="w-4 h-4" />
-                    {{ getProjectTaskCount(project) }} tasks
+                    {{ getProjectWorkItemCount(project) }} WorkItems
                   </span>
                 </div>
               </div>
@@ -126,12 +126,12 @@ export default defineComponent({
       return projects.value.reduce((sum, project) => sum + (project.boards?.length || 0), 0);
     });
 
-    const totalTasks = computed(() => {
+    const totalWorkItems = computed(() => {
       return projects.value.reduce((sum, project) => {
-        const projectTasks = project.boards?.reduce((boardSum, board) => {
-          return boardSum + (board.tasks?.length || 0);
+        const projectWorkItems = project.boards?.reduce((boardSum, board) => {
+          return boardSum + (board.workItems?.length || 0);
         }, 0) || 0;
-        return sum + projectTasks;
+        return sum + projectWorkItems;
       }, 0);
     });
 
@@ -147,9 +147,9 @@ export default defineComponent({
       }
     };
 
-    const getProjectTaskCount = (project: Project) => {
+    const getProjectWorkItemCount = (project: Project) => {
       return project.boards?.reduce((sum, board) => {
-        return sum + (board.tasks?.length || 0);
+        return sum + (board.workItems?.length || 0);
       }, 0) || 0;
     };
 
@@ -171,8 +171,8 @@ export default defineComponent({
       projects,
       loading,
       totalBoards,
-      totalTasks,
-      getProjectTaskCount,
+      totalWorkItems,
+      getProjectWorkItemCount,
       navigateToProject,
       FolderIcon
     };

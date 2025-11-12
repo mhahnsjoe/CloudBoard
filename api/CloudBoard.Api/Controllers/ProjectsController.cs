@@ -23,7 +23,7 @@ namespace CloudBoard.Api.Controllers
         {
             return await _context.Projects
                 .Include(p => p.Boards)
-                    .ThenInclude(b => b.Tasks)
+                    .ThenInclude(b => b.WorkItems)
                 .ToListAsync();
         }
 
@@ -33,7 +33,7 @@ namespace CloudBoard.Api.Controllers
         {
             var project = await _context.Projects
                 .Include(p => p.Boards)
-                    .ThenInclude(b => b.Tasks)
+                    .ThenInclude(b => b.WorkItems)
                 .FirstOrDefaultAsync(p => p.Id == id);
             
             if (project == null) 

@@ -28,25 +28,25 @@ namespace CloudBoard.Api.Models.DTO
         public BoardType Type { get; set; }
     }
 
-    // ==================== TASK DTOs ====================
-    public class TaskItemCreateDto
+    // ==================== WorkItem DTOs ====================
+    public class WorkItemCreateDto
     {
         public string Title { get; set; } = null!;
         public string Status { get; set; } = "To Do";
         public string Priority { get; set; } = "Medium";
-        public TaskType Type { get; set; } = TaskType.Task;
+        public WorkItemType Type { get; set; } = WorkItemType.Task;
         public string? Description { get; set; }
         public DateTime? DueDate { get; set; }
         public decimal? EstimatedHours { get; set; }
         public int BoardId { get; set; }
     }
 
-    public class TaskItemUpdateDto
+    public class WorkItemUpdateDto
     {
         public string Title { get; set; } = null!;
         public string Status { get; set; } = "To Do";
         public string Priority { get; set; } = "Medium";
-        public TaskType Type { get; set; } = TaskType.Task;
+        public WorkItemType Type { get; set; } = WorkItemType.Task;
         public string? Description { get; set; }
         public DateTime? DueDate { get; set; }
         public decimal? EstimatedHours { get; set; }

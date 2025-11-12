@@ -10,7 +10,7 @@ namespace CloudBoard.Api.Data
 
         public DbSet<Project> Projects => Set<Project>();
         public DbSet<Board> Boards => Set<Board>();
-        public DbSet<TaskItem> Tasks => Set<TaskItem>();
+        public DbSet<WorkItem> WorkItems => Set<WorkItem>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -23,9 +23,9 @@ namespace CloudBoard.Api.Data
                 .HasForeignKey(b => b.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Board -> Tasks relationship
+            // Board -> WorkItems relationship
             modelBuilder.Entity<Board>()
-                .HasMany(b => b.Tasks)
+                .HasMany(b => b.WorkItems)
                 .WithOne(t => t.Board)
                 .HasForeignKey(t => t.BoardId)
                 .OnDelete(DeleteBehavior.Cascade);

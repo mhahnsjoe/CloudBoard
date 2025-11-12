@@ -23,7 +23,7 @@ namespace CloudBoard.Api.Controllers
         {
             var boards = await _context.Boards
                 .Where(b => b.ProjectId == projectId)
-                .Include(b => b.Tasks)
+                .Include(b => b.WorkItems)
                 .ToListAsync();
             
             return Ok(boards);
@@ -34,7 +34,7 @@ namespace CloudBoard.Api.Controllers
         public async Task<ActionResult<Board>> GetBoard(int projectId, int id)
         {
             var board = await _context.Boards
-                .Include(b => b.Tasks)
+                .Include(b => b.WorkItems)
                 .FirstOrDefaultAsync(b => b.Id == id && b.ProjectId == projectId);
 
             if (board == null)

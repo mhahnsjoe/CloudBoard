@@ -65,7 +65,7 @@
                         {{ b.name }}
                       </div>
                       <div class="text-xs text-gray-500">
-                        {{ b.tasks?.length || 0 }} tasks
+                        {{ b.workItems?.length || 0 }} WorkItems
                       </div>
                     </div>
                   </div>
@@ -128,12 +128,12 @@
             </h2>
             <div class="flex items-center gap-2">
               <span class="text-sm text-gray-500 bg-white px-2 py-1 rounded-full">
-                {{ getTasksByStatus(status).length }}
+                {{ getWorkItemsByStatus(status).length }}
               </span>
               <button
                 @click="openCreateModalWithStatus(status)"
                 class="p-1 hover:bg-white rounded transition-colors text-gray-600 hover:text-blue-600"
-                title="Add task"
+                title="Add WorkItem"
               >
                 <PlusIcon className="w-4 h-4" />
               </button>
@@ -148,33 +148,33 @@
             class="min-h-[500px] space-y-3"
           >
             <KanbanCard
-              v-for="task in getTasksByStatus(status)"
-              :key="task.id"
-              :task="task"
-              @dragstart="onDragStart($event, task)"
-              @edit="editTask(task)"
-              @delete="handleDelete(task.id)"
+              v-for="workItem in getWorkItemsByStatus(status)"
+              :key="workItem.id"
+              :workItem="workItem"
+              @dragstart="onDragStart($event, workItem)"
+              @edit="editWorkItem(workItem)"
+              @delete="handleDelete(workItem.id)"
             />
             <!-- Empty State -->
             <div
-              v-if="getTasksByStatus(status).length === 0"
+              v-if="getWorkItemsByStatus(status).length === 0"
               class="flex items-center justify-center h-32 text-gray-400 text-sm"
             >
-              Drop tasks here
+              Drop WorkItems here
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Task Modal -->
-    <TaskModal
-      v-if="showTaskModal"
-      :task="selectedTask"
+    <!-- WorkItem Modal -->
+    <WorkItemModal
+      v-if="showWorkItemModal"
+      :workItem="selectedWorkItem"
       :boardId="boardId"
       :defaultStatus="defaultStatus"
-      @close="closeTaskModal"
-      @save="handleSaveTask"
+      @close="closeWorkItemModal"
+      @save="handleSaveWorkItem"
     />
 
     <!-- Board Modal -->
@@ -211,13 +211,13 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getBoard, getBoards, createBoard, updateBoard, deleteBoard, createTask, updateTask, deleteTask } from '@/services/api';
+import { getBoard, getBoards, createBoard, updateBoard, deleteBoard, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
-import type { TaskItem, Board, TaskCreate } from '@/types/Project';
+import type { WorkItem, Board, WorkItemCreate } from '@/types/Project';
 import { STATUSES, BOARD_TYPES } from '@/types/Project';
 
 import KanbanCard from './kanban/KanbanCard.vue';
-import TaskModal from './task/TaskModal.vue';
+import WorkItemModal from './workItem/WorkItemModal.vue';
 import Modal from './common/Modal.vue';
 import { 
   LoadingIcon, 
@@ -231,7 +231,7 @@ import {
 export default defineComponent({
   name: 'BoardDetailView',
   components: {
-    TaskModal,
+    WorkItemModal,
     Modal,
     LoadingIcon,
     PlusIcon,
@@ -250,14 +250,14 @@ export default defineComponent({
 
     const board = ref<Board | null>(null);
     const projectBoards = ref<Board[]>([]);
-    const tasks = ref<TaskItem[]>([]);
+    const workItems = ref<WorkItem[]>([]);
     const loading = ref(false);
     
-    // Task Modal
-    const showTaskModal = ref(false);
-    const selectedTask = ref<TaskItem | null>(null);
+    // WorkItem Modal
+    const showWorkItemModal = ref(false);
+    const selectedWorkItem = ref<WorkItem | null>(null);
     const defaultStatus = ref<string>('To Do');
-    const draggedTask = ref<TaskItem | null>(null);
+    const draggedWorkItem = ref<WorkItem | null>(null);
 
     // Board Management
     const showBoardDropdown = ref(false);
@@ -273,11 +273,11 @@ export default defineComponent({
       try {
         const res = await getBoard(projectId.value, boardId.value);
         board.value = res.data;
-        tasks.value = res.data.tasks || [];
+        workItems.value = res.data.WorkItems || [];
       } catch (error) {
         console.error('Failed to fetch board:', error);
         board.value = null;
-        tasks.value = [];
+        workItems.value = [];
       } finally {
         loading.value = false;
       }
@@ -307,8 +307,8 @@ export default defineComponent({
       return classes[type] || 'bg-gray-100 text-gray-700';
     };
 
-    const getTasksByStatus = (status: string) => {
-      return tasks.value.filter(task => task.status === status);
+    const getWorkItemsByStatus = (status: string) => {
+      return workItems.value.filter(workItem => workItem.status === status);
     };
 
     const getStatusIconClass = (status: string) => {
@@ -320,9 +320,9 @@ export default defineComponent({
       return classes[status] || 'text-gray-500';
     };
 
-    // Task Management
-    const onDragStart = (event: DragEvent, task: TaskItem) => {
-      draggedTask.value = task;
+    // WorkItem Management
+    const onDragStart = (event: DragEvent, workItem: WorkItem) => {
+      draggedWorkItem.value = workItem;
       if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move';
       }
@@ -330,57 +330,57 @@ export default defineComponent({
 
     const onDrop = async (event: DragEvent, newStatus: string) => {
       event.preventDefault();
-      if (draggedTask.value && draggedTask.value.status !== newStatus) {
+      if (draggedWorkItem.value && draggedWorkItem.value.status !== newStatus) {
         try {
-          await updateTask(boardId.value, draggedTask.value.id, {
-            ...draggedTask.value,
+          await updateWorkItem(boardId.value, draggedWorkItem.value.id, {
+            ...draggedWorkItem.value,
             status: newStatus
           });
           await fetchBoard();
         } catch (error) {
-          console.error('Failed to update task status:', error);
+          console.error('Failed to update WorkItem status:', error);
         }
       }
-      draggedTask.value = null;
+      draggedWorkItem.value = null;
     };
 
     const openCreateModalWithStatus = (status: string) => {
-      selectedTask.value = null;
+      selectedWorkItem.value = null;
       defaultStatus.value = status;
-      showTaskModal.value = true;
+      showWorkItemModal.value = true;
     };
 
-    const editTask = (task: TaskItem) => {
-      selectedTask.value = task;
-      showTaskModal.value = true;
+    const editWorkItem = (workItem: WorkItem) => {
+      selectedWorkItem.value = workItem;
+      showWorkItemModal.value = true;
     };
 
-    const closeTaskModal = () => {
-      showTaskModal.value = false;
-      selectedTask.value = null;
+    const closeWorkItemModal = () => {
+      showWorkItemModal.value = false;
+      selectedWorkItem.value = null;
     };
 
-    const handleSaveTask = async (taskData: TaskItem | TaskCreate) => {
+    const handleSaveWorkItem = async (workItemData: WorkItem | WorkItemCreate) => {
       try {
-        if ('id' in taskData && taskData.id) {
-          await updateTask(boardId.value, taskData.id, taskData as TaskItem);
+        if ('id' in workItemData && workItemData.id) {
+          await updateWorkItem(boardId.value, workItemData.id, workItemData as WorkItem);
         } else {
-          await createTask(boardId.value, taskData as TaskCreate);
+          await createWorkItem(boardId.value, workItemData as WorkItemCreate);
         }
-        closeTaskModal();
+        closeWorkItemModal();
         await fetchBoard();
       } catch (error) {
-        console.error('Failed to save task:', error);
+        console.error('Failed to save WorkItem:', error);
       }
     };
 
     const handleDelete = async (id: number) => {
-      if (confirm('Are you sure you want to delete this task?')) {
+      if (confirm('Are you sure you want to delete this WorkItem?')) {
         try {
-          await deleteTask(boardId.value, id);
+          await deleteWorkItem(boardId.value, id);
           await fetchBoard();
         } catch (error) {
-          console.error('Failed to delete task:', error);
+          console.error('Failed to delete WorkItem:', error);
         }
       }
     };
@@ -443,7 +443,7 @@ export default defineComponent({
     const handleDeleteCurrentBoard = async () => {
       if (!board.value) return;
       
-      if (confirm("Are you sure you want to delete this board? All tasks in this board will be deleted.")) {
+      if (confirm("Are you sure you want to delete this board? All WorkItems in this board will be deleted.")) {
         try {
           await deleteBoard(projectId.value, board.value.id);
           
@@ -458,12 +458,12 @@ export default defineComponent({
             } else {
               // This was the last board, stay on the page to show empty state
               board.value = null;
-              tasks.value = [];
+              workItems.value = [];
             }
           } else {
             // No boards left, clear the board
             board.value = null;
-            tasks.value = [];
+            workItems.value = [];
           }
         } catch (error) {
           console.error('Failed to delete board:', error);
@@ -516,11 +516,11 @@ export default defineComponent({
       boardId,
       board,
       projectBoards,
-      tasks,
+      workItems,
       loading,
       showBoardDropdown,
-      showTaskModal,
-      selectedTask,
+      showWorkItemModal,
+      selectedWorkItem,
       defaultStatus,
       showBoardModal,
       isEditingBoard,
@@ -528,15 +528,15 @@ export default defineComponent({
       STATUSES,
       BOARD_TYPES,
       getBoardTypeClass,
-      getTasksByStatus,
+      getWorkItemsByStatus,
       getStatusIconClass,
       switchBoard,
       onDragStart,
       onDrop,
       openCreateModalWithStatus,
-      editTask,
-      closeTaskModal,
-      handleSaveTask,
+      editWorkItem,
+      closeWorkItemModal,
+      handleSaveWorkItem,
       handleDelete,
       openCreateBoardModal,
       editCurrentBoard,

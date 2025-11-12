@@ -13,7 +13,7 @@ namespace CloudBoard.Api.Models
         public Project? Project { get; set; }
         
         // Navigation
-        public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
+        public ICollection<WorkItem> WorkItems { get; set; } = new List<WorkItem>();
     }
 
     public enum BoardType
