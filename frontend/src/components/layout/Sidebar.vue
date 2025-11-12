@@ -196,7 +196,7 @@ export default defineComponent({
         if (project && project.boards && project.boards.length > 0) {
           // Navigate to the first board
           const firstBoard = project.boards[0];
-          router.push(`/projects/${projectId}/boards/${firstBoard.id}`);
+          router.push(`/projects/${projectId}/boards/${firstBoard!.id}`);
         } else {
           // If no boards exist, navigate to the project with boardId 0 (will show empty state)
           router.push(`/projects/${projectId}/boards/0`);
