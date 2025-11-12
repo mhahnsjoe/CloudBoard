@@ -1,22 +1,20 @@
 <template>
   <div class="min-h-screen bg-gray-50 p-8">
-    <div class="mb-6">
-      <button class="btn btn-light flex items-center gap-2" @click="$router.push('/')">
-        <ArrowLeftIcon />
-        Back to Projects
-      </button>
-    </div>
+    <button class="btn btn-light flex items-center gap-2 mb-6" @click="$router.push('/')">
+      <ArrowLeftIcon />
+      Back to Dashboard
+    </button>
 
-    <div v-if="loading" class="flex items-center justify-center gap-2 mt-8">
+    <div v-if="loading" class="loading flex items-center justify-center gap-2 mt-8">
       <LoadingIcon className="h-5 w-5 text-blue-600" />
       Loading project...
     </div>
 
-    <div v-else-if="project">
-      <div class="flex justify-between items-center mb-6">
+    <div v-else>
+      <div class="flex justify-between items-start mb-8">
         <div>
-          <h1 class="text-3xl font-bold text-gray-800">{{ project.name }}</h1>
-          <p v-if="project.description" class="text-gray-600 mt-1">{{ project.description }}</p>
+          <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ project?.name }}</h1>
+          <p v-if="project?.description" class="text-gray-600">{{ project.description }}</p>
         </div>
         <button
           @click="openCreateBoardModal"
@@ -28,55 +26,70 @@
       </div>
 
       <!-- Boards Grid -->
-      <div v-if="project.boards && project.boards.length > 0" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-if="boards.length" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <div
-          v-for="board in project.boards"
+          v-for="board in boards"
           :key="board.id"
-          class="bg-white shadow-sm hover:shadow-lg rounded-2xl p-6 border border-gray-100 transition-all duration-200 cursor-pointer"
           @click="navigateToBoard(board.id)"
+          class="bg-white shadow-sm hover:shadow-lg rounded-2xl p-6 border border-gray-100 transition-all duration-200 cursor-pointer group"
         >
           <div class="flex justify-between items-start mb-4">
-            <h2 class="text-xl font-semibold text-gray-800">{{ board.name }}</h2>
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-500 bg-purple-50 px-3 py-1 rounded-full">
-                {{ board.tasks?.length ?? 0 }} tasks
+            <div class="flex-1">
+              <h2 class="text-xl font-semibold text-gray-800 group-hover:text-blue-600 transition mb-2">
+                {{ board.name }}
+              </h2>
+              <span :class="getBoardTypeClass(board.type)" class="text-xs px-2 py-1 rounded-full">
+                {{ board.type }}
               </span>
-              <DropdownMenu @click.stop>
+            </div>
+            <div class="relative">
+              <button
+                @click.stop="toggleBoardMenu(board.id)"
+                class="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                </svg>
+              </button>
+              <!-- Dropdown Menu -->
+              <div
+                v-if="activeBoardMenu === board.id"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10"
+              >
                 <button
-                  @click="editBoard(board)"
-                  class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-700"
+                  @click.stop="editBoard(board)"
+                  class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                 >
                   <EditIcon className="w-4 h-4" />
-                  Edit
+                  Edit Board
                 </button>
                 <button
-                  @click="deleteBoard(board.id)"
-                  class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-red-600"
+                  @click.stop="handleDeleteBoard(board.id)"
+                  class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"
                 >
                   <DeleteIcon className="w-4 h-4" />
-                  Delete
+                  Delete Board
                 </button>
-              </DropdownMenu>
+              </div>
             </div>
           </div>
 
-          <p v-if="board.description" class="text-gray-600 text-sm mb-4">
-            {{ board.description }}
-          </p>
-
-          <div class="flex items-center gap-2 text-sm text-gray-500">
-            <span class="px-2 py-1 bg-gray-100 rounded">{{ getBoardTypeLabel(board.type) }}</span>
-            <span>•</span>
-            <span>{{ formatDate(board.createdAt) }}</span>
+          <div class="flex items-center justify-between text-sm text-gray-600 mt-4">
+            <span class="flex items-center gap-1">
+              <ClipboardIcon className="w-4 h-4" />
+              {{ board.tasks?.length || 0 }} tasks
+            </span>
+            <span class="text-blue-600 group-hover:text-blue-700 font-medium">
+              View →
+            </span>
           </div>
         </div>
       </div>
 
-      <!-- Empty State -->
       <EmptyState
         v-else
-        :icon="FolderIcon"
-        message="No boards yet. Create your first one!"
+        :icon="ClipboardIcon"
+        message="No boards yet. Create your first board!"
       />
     </div>
 
@@ -85,76 +98,79 @@
       :show="modal.isOpen.value"
       :title="modal.isEditing.value ? 'Edit Board' : 'Create Board'"
       :submitText="modal.isEditing.value ? 'Update' : 'Create'"
-      @close="modal.close"
+      @close="closeModal"
       @submit="submitBoardForm"
     >
-      <input
-        v-model="boardForm.name"
-        type="text"
-        placeholder="Board name"
-        class="input"
-      />
-      <textarea
-        v-model="boardForm.description"
-        placeholder="Board description (optional)"
-        class="input min-h-[100px]"
-      />
-      <select v-model="boardForm.type" class="input">
-        <option :value="0">Kanban</option>
-        <option :value="1">Scrum</option>
-        <option :value="2">Backlog</option>
-      </select>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Board Name *</label>
+          <input
+            v-model="boardForm.name"
+            type="text"
+            placeholder="e.g., Sprint 1, Backlog, Bug Tracker"
+            class="input"
+            required
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Board Type</label>
+          <select v-model="boardForm.type" class="input">
+            <option v-for="type in BOARD_TYPES" :key="type">{{ type }}</option>
+          </select>
+        </div>
+      </div>
     </Modal>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { getProject, createBoard as apiCreateBoard, updateBoard as apiUpdateBoard, deleteBoard as apiDeleteBoard } from '@/services/api';
-import { useModal } from '@/composables/useModal';
-import { useConfirm } from '@/composables/useConfirm';
-import type { Project, Board, BoardCreate } from '@/types/Project';
+import { defineComponent, ref, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { getProject, createBoard, updateBoard, deleteBoard } from "@/services/api";
+import { useModal } from "@/composables/useModal";
+import { useConfirm } from "@/composables/useConfirm";
+import type { Project, Board } from "@/types/Project";
+import { BOARD_TYPES } from "@/types/Project";
 
-import Modal from '@/components/common/Modal.vue';
-import EmptyState from '@/components/common/EmptyState.vue';
-import DropdownMenu from '@/components/common/DropdownMenu.vue';
-import { ArrowLeftIcon, LoadingIcon, PlusIcon, EditIcon, DeleteIcon, FolderIcon } from '@/components/icons';
+import Modal from "@/components/common/Modal.vue";
+import EmptyState from "@/components/common/EmptyState.vue";
+import { ArrowLeftIcon, LoadingIcon, ClipboardIcon, PlusIcon, EditIcon, DeleteIcon } from "@/components/icons";
 
 export default defineComponent({
-  name: 'ProjectDetailView',
+  name: "ProjectDetail",
   components: {
     Modal,
     EmptyState,
-    DropdownMenu,
     ArrowLeftIcon,
     LoadingIcon,
+    ClipboardIcon,
     PlusIcon,
     EditIcon,
-    DeleteIcon,
-    FolderIcon
+    DeleteIcon
   },
   setup() {
     const route = useRoute();
     const router = useRouter();
-    const { confirm } = useConfirm();
-    const modal = useModal<Board>();
-
     const projectId = ref(Number(route.params.id));
     const project = ref<Project>();
+    const boards = ref<Board[]>([]);
     const loading = ref(false);
+    const modal = useModal<Board>();
+    const { confirm } = useConfirm();
+    const activeBoardMenu = ref<number | null>(null);
 
-    const boardForm = ref<BoardCreate & { id?: number }>({
-      name: '',
-      description: '',
-      type: 0
+    const boardForm = ref<{ id?: number; name: string; type: string }>({
+      name: "",
+      type: "Kanban"
     });
 
     const fetchProject = async () => {
       loading.value = true;
       try {
-        const res = await getProject(projectId.value);
-        project.value = res.data;
+        const response = await getProject(projectId.value);
+        project.value = response.data;
+        boards.value = response.data.boards || [];
       } catch (error) {
         console.error('Failed to fetch project:', error);
       } finally {
@@ -163,7 +179,7 @@ export default defineComponent({
     };
 
     const openCreateBoardModal = () => {
-      boardForm.value = { name: '', description: '', type: 0 };
+      boardForm.value = { name: "", type: "Kanban" };
       modal.open();
     };
 
@@ -171,41 +187,54 @@ export default defineComponent({
       boardForm.value = {
         id: board.id,
         name: board.name,
-        description: board.description,
         type: board.type
       };
       modal.open(board);
+      activeBoardMenu.value = null;
+    };
+
+    const closeModal = () => {
+      modal.close();
+      activeBoardMenu.value = null;
     };
 
     const submitBoardForm = async () => {
+      if (!boardForm.value.name.trim()) {
+        alert('Board name is required');
+        return;
+      }
+
       try {
         if (modal.isEditing.value && boardForm.value.id) {
-          await apiUpdateBoard(projectId.value, boardForm.value.id, {
+          await updateBoard(projectId.value, boardForm.value.id, {
             name: boardForm.value.name,
-            description: boardForm.value.description,
-            type: boardForm.value.type
+            type: boardForm.value.type,
+            projectId: projectId.value
           });
         } else {
-          await apiCreateBoard(projectId.value, {
+          await createBoard(projectId.value,{
             name: boardForm.value.name,
-            description: boardForm.value.description,
-            type: boardForm.value.type
+            type: boardForm.value.type,
+            projectId: projectId.value
           });
         }
-        modal.close();
         await fetchProject();
+        closeModal();
       } catch (error) {
-        console.error('Failed to submit board:', error);
+        console.error('Failed to save board:', error);
+        alert('Failed to save board');
       }
     };
 
-    const deleteBoard = async (boardId: number) => {
-      if (confirm('Are you sure you want to delete this board? All tasks will be deleted.')) {
+    const handleDeleteBoard = async (id: number) => {
+      activeBoardMenu.value = null;
+      if (confirm("Are you sure you want to delete this board? All tasks in this board will be deleted.")) {
         try {
-          await apiDeleteBoard(projectId.value, boardId);
+          await deleteBoard(projectId.value, id);
           await fetchProject();
         } catch (error) {
           console.error('Failed to delete board:', error);
+          alert('Failed to delete board');
         }
       }
     };
@@ -214,32 +243,72 @@ export default defineComponent({
       router.push(`/projects/${projectId.value}/boards/${boardId}`);
     };
 
-    const getBoardTypeLabel = (type: number) => {
-      const types = ['Kanban', 'Scrum', 'Backlog'];
-      return types[type] || 'Kanban';
+    const toggleBoardMenu = (boardId: number) => {
+      activeBoardMenu.value = activeBoardMenu.value === boardId ? null : boardId;
     };
 
-    const formatDate = (dateString: string) => {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const getBoardTypeClass = (type: string) => {
+      const classes: Record<string, string> = {
+        'Kanban': 'bg-blue-100 text-blue-700',
+        'Scrum': 'bg-green-100 text-green-700',
+        'Backlog': 'bg-purple-100 text-purple-700'
+      };
+      return classes[type] || 'bg-gray-100 text-gray-700';
     };
 
-    onMounted(fetchProject);
+    // Close dropdown when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.relative')) {
+        activeBoardMenu.value = null;
+      }
+    };
+
+    onMounted(() => {
+      fetchProject();
+      document.addEventListener('click', handleClickOutside);
+    });
+
+    watch(
+      () => route.params.id,
+      (newId) => {
+        projectId.value = Number(newId);
+        fetchProject();
+      }
+    );
 
     return {
       project,
+      boards,
       loading,
       modal,
       boardForm,
-      FolderIcon,
+      activeBoardMenu,
+      BOARD_TYPES,
       openCreateBoardModal,
       editBoard,
+      closeModal,
       submitBoardForm,
-      deleteBoard,
+      handleDeleteBoard,
       navigateToBoard,
-      getBoardTypeLabel,
-      formatDate
+      toggleBoardMenu,
+      getBoardTypeClass,
+      ClipboardIcon
     };
   }
 });
 </script>
+
+<style scoped>
+.btn {
+  @apply border-none rounded px-4 py-2 cursor-pointer text-sm transition-colors duration-200;
+}
+
+.btn-light {
+  @apply bg-gray-200 hover:bg-gray-300;
+}
+
+.input {
+  @apply w-full px-3 py-2 mb-4 border border-gray-300 rounded;
+}
+</style>

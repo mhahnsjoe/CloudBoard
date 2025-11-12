@@ -124,7 +124,7 @@
 <script lang="ts">
 import { defineComponent, ref, watch, type PropType } from 'vue';
 import type { TaskItem } from '@/types/Project';
-import { PRIORITIES, STATUSES, TASK_TYPES , TaskType} from '@/types/Project';
+import { PRIORITIES, STATUSES, TASK_TYPES } from '@/types/Project';
 import { ClockIcon, CalendarIcon } from '@/components/icons';
 
 export default defineComponent({
@@ -154,7 +154,7 @@ export default defineComponent({
     const form = ref({
       id: props.task?.id || 0,
       title: props.task?.title || '',
-      type: props.task?.type ? TaskType[props.task.type] : 'Task',
+      type: props.task?.type || 'Task',
       description: props.task?.description || '',
       status: props.task?.status || props.defaultStatus || 'To Do',
       priority: props.task?.priority || 'Medium',
@@ -197,7 +197,7 @@ export default defineComponent({
         description: form.value.description || undefined,
         status: form.value.status,
         priority: form.value.priority,
-        type: TaskType[form.value.type as keyof typeof TaskType],
+        type: form.value.type!,
         dueDate: form.value.dueDate || undefined,
         estimatedHours: form.value.estimatedHours || undefined,
         actualHours: form.value.actualHours || undefined,
