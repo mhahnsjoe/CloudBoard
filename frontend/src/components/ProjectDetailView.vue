@@ -206,14 +206,13 @@ export default defineComponent({
 
       try {
         if (modal.isEditing.value && boardForm.value.id) {
-          await updateBoard(boardForm.value.id, {
-            id: boardForm.value.id,
+          await updateBoard(projectId.value, boardForm.value.id, {
             name: boardForm.value.name,
             type: boardForm.value.type,
             projectId: projectId.value
           });
         } else {
-          await createBoard({
+          await createBoard(projectId.value,{
             name: boardForm.value.name,
             type: boardForm.value.type,
             projectId: projectId.value
