@@ -154,7 +154,15 @@ export default defineComponent({
     };
 
     const navigateToProject = (projectId: number) => {
-      router.push(`/projects/${projectId}`);
+      const project = projects.value.find(p => p.id === projectId);
+      
+      if (project && project.boards && project.boards.length > 0) {
+        // Navigate to the first board of the project
+        const firstBoard = project.boards[0];
+        router.push(`/projects/${projectId}/boards/${firstBoard!.id}`);
+      } else {
+        alert('This project has no boards. Please create a board first.');
+      }
     };
 
     onMounted(fetchProjects);
