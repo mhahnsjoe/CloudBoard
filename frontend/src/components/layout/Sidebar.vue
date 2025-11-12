@@ -54,14 +54,10 @@
           {{ currentProjectName }}
         </div>
 
-        <router-link
-          :to="`/projects/${selectedProjectId}`"
-          class="nav-item"
-          :class="{ 'active': route.path === `/projects/${selectedProjectId}` }"
-        >
+        <div class="nav-item" :class="{ 'active': isOnProjectBoard }">
           <FolderIcon className="w-5 h-5" />
           <span>Boards</span>
-        </router-link>
+        </div>
       </div>
     </nav>
 
@@ -123,14 +119,18 @@ export default defineComponent({
       return project?.name || '';
     });
 
+    const isOnProjectBoard = computed(() => {
+      return route.path.includes('/projects/') && route.path.includes('/boards/');
+    });
+
     const fetchProjects = async () => {
       try {
         const response = await getProjects();
         projects.value = response.data;
         
         // Set selected project from route or default to first project
-        if (route.params.id || route.params.projectId) {
-          selectedProjectId.value = Number(route.params.id || route.params.projectId);
+        if (route.params.projectId) {
+          selectedProjectId.value = Number(route.params.projectId);
         } else if (projects.value.length > 0 && !selectedProjectId.value) {
           selectedProjectId.value = projects.value[0]!.id;
         }
@@ -139,9 +139,24 @@ export default defineComponent({
       }
     };
 
-    const handleProjectChange = () => {
-      if (selectedProjectId.value) {
-        router.push(`/projects/${selectedProjectId.value}`);
+    const handleProjectChange = async () => {
+      if (!selectedProjectId.value) return;
+
+      try {
+        // Fetch the project to get its boards
+        const project = projects.value.find(p => p.id === selectedProjectId.value);
+        
+        if (project && project.boards && project.boards.length > 0) {
+          // Navigate to the first board
+          const firstBoard = project.boards[0];
+          router.push(`/projects/${selectedProjectId.value}/boards/${firstBoard.id}`);
+        } else {
+          // If no boards exist, stay on current page or go to summary
+          console.warn('No boards found for this project');
+          alert('This project has no boards. Please create a board first.');
+        }
+      } catch (error) {
+        console.error('Failed to navigate to project:', error);
       }
     };
 
@@ -152,7 +167,7 @@ export default defineComponent({
       }
 
       try {
-        await createProject({
+        const response = await createProject({
           name: newProjectName.value,
           description: newProjectDescription.value
         });
@@ -162,6 +177,13 @@ export default defineComponent({
         showAddProjectModal.value = false;
         
         await fetchProjects();
+        
+        // Navigate to the newly created project's default board
+        if (response.data && response.data.boards && response.data.boards.length > 0) {
+          selectedProjectId.value = response.data.id;
+          const firstBoard = response.data.boards[0];
+          router.push(`/projects/${response.data.id}/boards/${firstBoard.id}`);
+        }
       } catch (error) {
         console.error('Failed to create project:', error);
         alert('Failed to create project');
@@ -169,9 +191,9 @@ export default defineComponent({
     };
 
     // Watch route changes to update selected project
-    watch(() => route.params, (params) => {
-      if (params.id || params.projectId) {
-        selectedProjectId.value = Number(params.id || params.projectId);
+    watch(() => route.params.projectId, (newProjectId) => {
+      if (newProjectId) {
+        selectedProjectId.value = Number(newProjectId);
       }
     });
 
@@ -182,6 +204,7 @@ export default defineComponent({
       projects,
       selectedProjectId,
       currentProjectName,
+      isOnProjectBoard,
       showAddProjectModal,
       newProjectName,
       newProjectDescription,
