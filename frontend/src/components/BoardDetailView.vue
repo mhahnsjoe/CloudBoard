@@ -92,10 +92,24 @@
           <span :class="getBoardTypeClass(board?.type || '')" class="text-xs px-3 py-1.5 rounded-full font-medium">
             {{ board?.type }}
           </span>
+
+          <!-- Sprint Selector -->
+          <SprintSelector
+            :sprints="sprintStore.sprints"
+            :selectedSprintId="selectedSprintId"
+            @select="handleSprintSelect"
+          />
         </div>
 
         <!-- Board Actions -->
         <div class="flex items-center gap-2">
+          <button
+            @click="openCreateSprintModal"
+            class="px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-all flex items-center gap-2"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Create Sprint
+          </button>
           <button
             @click="editCurrentBoard"
             class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
@@ -110,6 +124,67 @@
             <DeleteIcon className="w-4 h-4" />
             Delete Board
           </button>
+        </div>
+      </div>
+
+      <!-- Sprint Info Bar (if sprint is selected) -->
+      <div v-if="selectedSprint" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-start">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <h3 class="text-lg font-bold text-gray-800">{{ selectedSprint.name }}</h3>
+              <span 
+                class="text-xs px-2 py-1 rounded-full font-medium"
+                :class="{
+                  'bg-yellow-100 text-yellow-800': selectedSprint.status === 0,
+                  'bg-green-100 text-green-800': selectedSprint.status === 1,
+                  'bg-gray-100 text-gray-800': selectedSprint.status === 2
+                }"
+              >
+                {{ getSprintStatusLabel(selectedSprint.status) }}
+              </span>
+            </div>
+            <p v-if="selectedSprint.goal" class="text-gray-700 text-sm mb-2">{{ selectedSprint.goal }}</p>
+            <div class="flex items-center gap-4 text-sm text-gray-600">
+              <span>{{ formatDateRange(selectedSprint) }}</span>
+              <span>•</span>
+              <span>{{ selectedSprint.completedWorkItems }}/{{ selectedSprint.totalWorkItems }} items completed</span>
+              <span>•</span>
+              <span>{{ Math.round(selectedSprint.progressPercentage) }}% done</span>
+              <span v-if="selectedSprint.status === 1">•</span>
+              <span v-if="selectedSprint.status === 1" :class="selectedSprint.daysRemaining < 0 ? 'text-red-600 font-medium' : ''">
+                {{ selectedSprint.daysRemaining }} days remaining
+              </span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button
+              v-if="selectedSprint.status === 0"
+              @click="handleStartSprint(selectedSprint.id)"
+              class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+            >
+              Start Sprint
+            </button>
+            <button
+              v-if="selectedSprint.status === 1"
+              @click="handleCompleteSprint(selectedSprint.id)"
+              class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Complete Sprint
+            </button>
+            <button
+              @click="editSprint(selectedSprint)"
+              class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              @click="handleDeleteSprint(selectedSprint.id)"
+              class="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-sm rounded-md hover:bg-red-100 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
 
@@ -205,21 +280,33 @@
         </div>
       </div>
     </Modal>
+
+    <!-- Sprint Modal -->
+    <SprintModal
+      v-if="showSprintModal"
+      :sprint="selectedSprint"
+      @close="closeSprintModal"
+      @save="handleSaveSprint"
+    />
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { defineComponent, ref, onMounted, watch, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getBoard, getBoards, createBoard, updateBoard, deleteBoard, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
+import { useSprintStore } from '@/stores/sprint';
 import type { Board } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
+import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
 import { STATUSES, BOARD_TYPES } from '@/types/Project';
 
 import KanbanCard from './kanban/KanbanCard.vue';
 import WorkItemModal from './workItem/WorkItemModal.vue';
 import Modal from './common/Modal.vue';
+import SprintSelector from './sprint/SprintSelector.vue';
+import SprintModal from './sprint/SprintModal.vue';
 import { 
   LoadingIcon, 
   PlusIcon,
@@ -234,6 +321,8 @@ export default defineComponent({
   components: {
     WorkItemModal,
     Modal,
+    SprintSelector,
+    SprintModal,
     LoadingIcon,
     PlusIcon,
     EditIcon,
@@ -248,6 +337,7 @@ export default defineComponent({
     const projectId = ref(Number(route.params.projectId));
     const boardId = ref(Number(route.params.boardId));
     const { confirm } = useConfirm();
+    const sprintStore = useSprintStore();
 
     const board = ref<Board | null>(null);
     const projectBoards = ref<Board[]>([]);
@@ -267,6 +357,24 @@ export default defineComponent({
     const boardForm = ref<{ id?: number; name: string; type: string }>({
       name: "",
       type: "Kanban"
+    });
+
+    // Sprint Management
+    const showSprintModal = ref(false);
+    const selectedSprintId = ref<number | null>(null);
+    
+    const selectedSprint = computed(() => {
+      if (selectedSprintId.value === null) return undefined;
+      return sprintStore.sprints.find(s => s.id === selectedSprintId.value);
+    });
+
+    const filteredWorkItems = computed(() => {
+      if (selectedSprintId.value === null) {
+        // Show backlog items (items without sprint)
+        return workItems.value.filter(item => !item.sprintId);
+      }
+      // Show items in selected sprint
+      return workItems.value.filter(item => item.sprintId === selectedSprintId.value);
     });
 
     const fetchBoard = async () => {
@@ -294,6 +402,15 @@ export default defineComponent({
       }
     };
 
+    const fetchSprints = async () => {
+      if (!boardId.value) return;
+      try {
+        await sprintStore.fetchSprints(boardId.value);
+      } catch (error) {
+        console.error('Failed to fetch sprints:', error);
+      }
+    };
+
     const switchBoard = (newBoardId: number) => {
       showBoardDropdown.value = false;
       router.push(`/projects/${projectId.value}/boards/${newBoardId}`);
@@ -309,7 +426,7 @@ export default defineComponent({
     };
 
     const getWorkItemsByStatus = (status: string) => {
-      return workItems.value.filter(workItem => workItem.status === status);
+      return filteredWorkItems.value.filter(workItem => workItem.status === status);
     };
 
     const getStatusIconClass = (status: string) => {
@@ -319,6 +436,97 @@ export default defineComponent({
         'Done': 'text-green-500'
       };
       return classes[status] || 'text-gray-500';
+    };
+
+    // Sprint Management Functions
+    const handleSprintSelect = (sprintId: number | null) => {
+      selectedSprintId.value = sprintId;
+    };
+
+    const openCreateSprintModal = () => {
+      selectedSprintId.value = null;
+      showSprintModal.value = true;
+    };
+
+    const editSprint = (sprint: Sprint) => {
+      selectedSprintId.value = sprint.id;
+      showSprintModal.value = true;
+    };
+
+    const closeSprintModal = () => {
+      showSprintModal.value = false;
+      // Don't clear selectedSprintId here as it's used for viewing
+    };
+
+    const handleSaveSprint = async (sprintData: CreateSprintDto | UpdateSprintDto) => {
+    try {
+      if (selectedSprint.value) {
+        // Editing existing sprint
+        await sprintStore.updateSprint(selectedSprint.value.id, sprintData as UpdateSprintDto);
+      } else {
+        // Creating new sprint
+        const newSprint = await sprintStore.createSprint(boardId.value, sprintData as CreateSprintDto);
+        selectedSprintId.value = newSprint.id;  // <-- This line causes the issue
+      }
+      closeSprintModal();
+      await fetchSprints();
+    } catch (error) {
+      console.error('Failed to save sprint:', error);
+      alert('Failed to save sprint');
+    }
+  };
+
+    const handleStartSprint = async (sprintId: number) => {
+      try {
+        await sprintStore.startSprint(sprintId);
+        await fetchSprints();
+      } catch (error) {
+        console.error('Failed to start sprint:', error);
+        alert('Failed to start sprint. Make sure no other sprint is active.');
+      }
+    };
+
+    const handleCompleteSprint = async (sprintId: number) => {
+      if (confirm('Complete this sprint? Incomplete items will be moved to the backlog.')) {
+        try {
+          const result = await sprintStore.completeSprint(sprintId);
+          await fetchSprints();
+          await fetchBoard(); // Refresh work items
+          alert(`Sprint completed! ${result.movedToBacklog} items moved to backlog.`);
+        } catch (error) {
+          console.error('Failed to complete sprint:', error);
+          alert('Failed to complete sprint');
+        }
+      }
+    };
+
+    const handleDeleteSprint = async (sprintId: number) => {
+      if (confirm('Delete this sprint? All items will be moved to the backlog.')) {
+        try {
+          await sprintStore.deleteSprint(sprintId);
+          selectedSprintId.value = null;
+          await fetchSprints();
+          await fetchBoard(); // Refresh work items
+        } catch (error) {
+          console.error('Failed to delete sprint:', error);
+          alert('Failed to delete sprint');
+        }
+      }
+    };
+
+    const getSprintStatusLabel = (status: number) => {
+      const labels: Record<number, string> = {
+        0: 'Planning',
+        1: 'Active',
+        2: 'Completed'
+      };
+      return labels[status] || 'Unknown';
+    };
+
+    const formatDateRange = (sprint: Sprint) => {
+      const start = new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const end = new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `${start} - ${end}`;
     };
 
     // WorkItem Management
@@ -370,6 +578,7 @@ export default defineComponent({
         }
         closeWorkItemModal();
         await fetchBoard();
+        await fetchSprints(); // Refresh sprint stats
       } catch (error) {
         console.error('Failed to save WorkItem:', error);
       }
@@ -380,6 +589,7 @@ export default defineComponent({
         try {
           await deleteWorkItem(boardId.value, id);
           await fetchBoard();
+          await fetchSprints(); // Refresh sprint stats
         } catch (error) {
           console.error('Failed to delete WorkItem:', error);
         }
@@ -484,6 +694,7 @@ export default defineComponent({
     onMounted(() => {
       fetchProjectBoards();
       fetchBoard();
+      fetchSprints();
       document.addEventListener('click', handleClickOutside);
     });
 
@@ -498,6 +709,8 @@ export default defineComponent({
           boardId.value = Number(newBoardId);
           projectId.value = Number(route.params.projectId);
           fetchBoard();
+          fetchSprints();
+          selectedSprintId.value = null; // Reset sprint selection
         }
       }
     );
@@ -526,12 +739,26 @@ export default defineComponent({
       showBoardModal,
       isEditingBoard,
       boardForm,
+      sprintStore,
+      showSprintModal,
+      selectedSprintId,
+      selectedSprint,
       STATUSES,
       BOARD_TYPES,
       getBoardTypeClass,
       getWorkItemsByStatus,
       getStatusIconClass,
       switchBoard,
+      handleSprintSelect,
+      openCreateSprintModal,
+      editSprint,
+      closeSprintModal,
+      handleSaveSprint,
+      handleStartSprint,
+      handleCompleteSprint,
+      handleDeleteSprint,
+      getSprintStatusLabel,
+      formatDateRange,
       onDragStart,
       onDrop,
       openCreateModalWithStatus,

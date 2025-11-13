@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CloudBoard.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddUserAuthentication : Migration
+    public partial class FreshDbWithSprints : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -207,6 +207,31 @@ namespace CloudBoard.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Sprints",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Goal = table.Column<string>(type: "text", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    BoardId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Sprints", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Sprints_Boards_BoardId",
+                        column: x => x.BoardId,
+                        principalTable: "Boards",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "WorkItems",
                 columns: table => new
                 {
@@ -222,6 +247,7 @@ namespace CloudBoard.Api.Migrations
                     EstimatedHours = table.Column<decimal>(type: "numeric", nullable: true),
                     ActualHours = table.Column<decimal>(type: "numeric", nullable: true),
                     BoardId = table.Column<int>(type: "integer", nullable: false),
+                    SprintId = table.Column<int>(type: "integer", nullable: true),
                     ParentId = table.Column<int>(type: "integer", nullable: true),
                     AssignedToId = table.Column<int>(type: "integer", nullable: true),
                     CreatedById = table.Column<int>(type: "integer", nullable: false)
@@ -247,6 +273,12 @@ namespace CloudBoard.Api.Migrations
                         principalTable: "Boards",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_WorkItems_Sprints_SprintId",
+                        column: x => x.SprintId,
+                        principalTable: "Sprints",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_WorkItems_WorkItems_ParentId",
                         column: x => x.ParentId,
@@ -303,6 +335,16 @@ namespace CloudBoard.Api.Migrations
                 column: "OwnerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Sprints_BoardId",
+                table: "Sprints",
+                column: "BoardId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Sprints_Status",
+                table: "Sprints",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_WorkItems_AssignedToId",
                 table: "WorkItems",
                 column: "AssignedToId");
@@ -321,6 +363,11 @@ namespace CloudBoard.Api.Migrations
                 name: "IX_WorkItems_ParentId",
                 table: "WorkItems",
                 column: "ParentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_WorkItems_SprintId",
+                table: "WorkItems",
+                column: "SprintId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_WorkItems_Status",
@@ -351,6 +398,9 @@ namespace CloudBoard.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Sprints");
 
             migrationBuilder.DropTable(
                 name: "Boards");

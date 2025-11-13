@@ -16,6 +16,7 @@ namespace CloudBoard.Api.Services
         Task<IEnumerable<WorkItem>> GetByBoardAsync(int boardId, bool includeHierarchy = false);
         Task<IEnumerable<WorkItem>> GetHierarchyRootsAsync(int boardId);
         Task MoveToParentAsync(int itemId, int? newParentId);
+        Task AssignToSprintAsync(int sprintId, AssignSprintDto dto, int userId);
         Task<IEnumerable<WorkItem>> GetPathToRootAsync(int itemId);
     }
 }

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CloudBoard.Api.Migrations
 {
     [DbContext(typeof(CloudBoardContext))]
-    [Migration("20251113133712_AddUserAuthentication")]
-    partial class AddUserAuthentication
+    [Migration("20251113173619_FreshDbWithSprints")]
+    partial class FreshDbWithSprints
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -83,6 +83,45 @@ namespace CloudBoard.Api.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("Projects");
+                });
+
+            modelBuilder.Entity("CloudBoard.Api.Models.Sprint", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BoardId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Goal")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Sprints");
                 });
 
             modelBuilder.Entity("CloudBoard.Api.Models.User", b =>
@@ -198,6 +237,9 @@ namespace CloudBoard.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("SprintId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -216,6 +258,8 @@ namespace CloudBoard.Api.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("SprintId");
 
                     b.HasIndex("Status");
 
@@ -378,6 +422,17 @@ namespace CloudBoard.Api.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("CloudBoard.Api.Models.Sprint", b =>
+                {
+                    b.HasOne("CloudBoard.Api.Models.Board", "Board")
+                        .WithMany("Sprints")
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Board");
+                });
+
             modelBuilder.Entity("CloudBoard.Api.Models.WorkItem", b =>
                 {
                     b.HasOne("CloudBoard.Api.Models.User", "AssignedTo")
@@ -402,6 +457,11 @@ namespace CloudBoard.Api.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("CloudBoard.Api.Models.Sprint", "Sprint")
+                        .WithMany("WorkItems")
+                        .HasForeignKey("SprintId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("AssignedTo");
 
                     b.Navigation("Board");
@@ -409,6 +469,8 @@ namespace CloudBoard.Api.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Parent");
+
+                    b.Navigation("Sprint");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -464,12 +526,19 @@ namespace CloudBoard.Api.Migrations
 
             modelBuilder.Entity("CloudBoard.Api.Models.Board", b =>
                 {
+                    b.Navigation("Sprints");
+
                     b.Navigation("WorkItems");
                 });
 
             modelBuilder.Entity("CloudBoard.Api.Models.Project", b =>
                 {
                     b.Navigation("Boards");
+                });
+
+            modelBuilder.Entity("CloudBoard.Api.Models.Sprint", b =>
+                {
+                    b.Navigation("WorkItems");
                 });
 
             modelBuilder.Entity("CloudBoard.Api.Models.User", b =>
