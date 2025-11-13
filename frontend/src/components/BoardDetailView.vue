@@ -273,7 +273,7 @@ export default defineComponent({
       try {
         const res = await getBoard(projectId.value, boardId.value);
         board.value = res.data;
-        workItems.value = res.data.WorkItems || [];
+        workItems.value = res.data.workItems || [];
       } catch (error) {
         console.error('Failed to fetch board:', error);
         board.value = null;
