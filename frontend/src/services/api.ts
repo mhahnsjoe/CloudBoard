@@ -1,5 +1,6 @@
 import axios from "axios";
-import type { Project, ProjectCreate, Board, BoardCreate, WorkItem, WorkItemCreate, WorkItemEdit } from "../types/Project";
+import type { WorkItem, WorkItemCreate, WorkItemEdit } from "../types/WorkItem";
+import type { Project, ProjectCreate, Board, BoardCreate } from "../types/Project";
 
 // Projects
 export const getProjects = () => axios.get<Project[]>('/api/projects');

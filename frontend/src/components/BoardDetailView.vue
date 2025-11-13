@@ -213,7 +213,8 @@ import { defineComponent, ref, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getBoard, getBoards, createBoard, updateBoard, deleteBoard, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
-import type { WorkItem, Board, WorkItemCreate } from '@/types/Project';
+import type { Board } from '@/types/Project';
+import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import { STATUSES, BOARD_TYPES } from '@/types/Project';
 
 import KanbanCard from './kanban/KanbanCard.vue';

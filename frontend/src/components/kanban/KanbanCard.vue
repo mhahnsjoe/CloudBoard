@@ -60,7 +60,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
-import type { WorkItem, WorkItemType } from '@/types/Project';
+import type { WorkItem, WorkItemType } from '@/types/WorkItem';
 import WorkItemTypeBadge from '../workItem/WorkItemTypeBadge.vue';
 import { EditIcon, DeleteIcon, CalendarIcon, ClockIcon } from '@/components/icons';
 
