@@ -10,6 +10,7 @@ namespace CloudBoard.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ProjectsController : ControllerBase
     {
         private readonly CloudBoardContext _context;
@@ -19,7 +20,6 @@ namespace CloudBoard.Api.Controllers
             _context = context;
         }
 
-        [Authorize]
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

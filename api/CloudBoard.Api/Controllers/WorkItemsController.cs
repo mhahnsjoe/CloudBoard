@@ -14,6 +14,7 @@ namespace CloudBoard.Api.Controllers
     [ApiController]
     [Route("api/boards/{boardId}/workitems")]
     [Produces("application/json")]
+    [Authorize]
     public class WorkItemController : ControllerBase
     {
         private readonly IWorkItemService _workItemService;
@@ -22,7 +23,7 @@ namespace CloudBoard.Api.Controllers
         {
             _workItemService = workItemService;
         }
-        [Authorize]
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

@@ -4,12 +4,12 @@ using CloudBoard.Api.Models.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 
 namespace CloudBoard.Api.Controllers
 {
     [ApiController]
     [Route("api/projects/{projectId}/boards")]
+    [Authorize]
     public class BoardsController : ControllerBase
     {
         private readonly CloudBoardContext _context;
@@ -17,12 +17,6 @@ namespace CloudBoard.Api.Controllers
         public BoardsController(CloudBoardContext context)
         {
             _context = context;
-        }
-        [Authorize]
-        private int GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return int.Parse(userIdClaim!);
         }
 
         // GET: api/projects/1/boards
