@@ -10,6 +10,7 @@ export interface WorkItem {
   estimatedHours?: number;
   actualHours?: number;
   boardId: number;
+  sprintId?: number | null;
   
   // Hierarchy
   parentId?: number;

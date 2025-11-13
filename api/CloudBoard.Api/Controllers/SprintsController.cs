@@ -124,8 +124,8 @@ namespace CloudBoard.Api.Controllers
             var sprint = new Sprint
             {
                 Name = dto.Name,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
+                StartDate = dto.StartDate.ToUniversalTime(),
+                EndDate = dto.EndDate.ToUniversalTime(),
                 Goal = dto.Goal,
                 BoardId = boardId,
                 Status = SprintStatus.Planning
@@ -174,13 +174,14 @@ namespace CloudBoard.Api.Controllers
                 sprint.Name = dto.Name;
 
             if (dto.StartDate.HasValue)
-                sprint.StartDate = dto.StartDate.Value;
+            
+                sprint.StartDate = dto.StartDate.Value.ToUniversalTime();
 
             if (dto.EndDate.HasValue)
             {
                 if (dto.EndDate.Value <= sprint.StartDate)
                     return BadRequest("End date must be after start date");
-                sprint.EndDate = dto.EndDate.Value;
+                sprint.EndDate = dto.EndDate.Value.ToUniversalTime();
             }
 
             if (dto.Goal != null)
