@@ -2,6 +2,7 @@ import axios from "axios";
 import type { WorkItem, WorkItemCreate, WorkItemEdit } from "../types/WorkItem";
 import type { Project, ProjectCreate, Board, BoardCreate } from "../types/Project";
 import type { AuthResponse, User } from "../stores/auth";
+import type { Sprint, CreateSprintDto, UpdateSprintDto, SprintStats, BurndownPoint } from "../types/Sprint";
 
 // Auth types
 export interface LoginCredentials {
@@ -81,3 +82,15 @@ export const getWorkItem = (boardId: number, workItemId: number) => api.get<Work
 export const createWorkItem = (boardId: number, workItem: WorkItemCreate) => api.post<WorkItem>(`/api/boards/${boardId}/WorkItems`, workItem);
 export const updateWorkItem = (boardId: number, workItemId: number, workItem: WorkItemEdit) => api.put(`/api/boards/${boardId}/WorkItems/${workItemId}`, workItem);
 export const deleteWorkItem = (boardId: number, workItemId: number) => api.delete(`/api/boards/${boardId}/WorkItems/${workItemId}`);
+
+// Sprints
+export const getSprints = (boardId: number) => api.get<Sprint[]>(`/api/boards/${boardId}/sprints`);
+export const getSprint = (sprintId: number) => api.get<Sprint>(`/api/sprints/${sprintId}`);
+export const createSprint = (boardId: number, data: CreateSprintDto) => api.post<Sprint>(`/api/boards/${boardId}/sprints`, data);
+export const updateSprint = (sprintId: number, data: UpdateSprintDto) => api.put(`/api/sprints/${sprintId}`, data);
+export const startSprint = (sprintId: number) => api.patch(`/api/sprints/${sprintId}/start`);
+export const completeSprint = (sprintId: number) => api.patch<{ movedToBacklog: number }>(`/api/sprints/${sprintId}/complete`);
+export const deleteSprint = (sprintId: number) => api.delete(`/api/sprints/${sprintId}`);
+export const getSprintStats = (sprintId: number) => api.get<SprintStats>(`/api/sprints/${sprintId}/stats`);
+export const getSprintBurndown = (sprintId: number) => api.get<BurndownPoint[]>(`/api/sprints/${sprintId}/burndown`);
+export const assignWorkItemToSprint = (workItemId: number, sprintId: number | null) => api.patch(`/api/workitems/${workItemId}/assign-sprint`, { sprintId });
