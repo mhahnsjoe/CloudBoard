@@ -89,7 +89,6 @@ CloudBoard/
 │       ├── types/                # TypeScript interfaces
 │       └── router/               # Vue Router config
 ├── docker-compose.yml            # Local development setup
-├── MVP_ROADMAP.md                # Detailed feature roadmap
 └── README.md                     # This file
 ```
 ## 🔒 Security
