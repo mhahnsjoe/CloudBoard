@@ -1,3 +1,5 @@
+using CloudBoard.Api.Models.Extensions;
+
 namespace CloudBoard.Api.Models
 {
     /// <summary>
