@@ -100,9 +100,47 @@
       </div>
     </nav>
 
-    <!-- Footer -->
-    <div class="p-4 border-t border-gray-700 text-sm text-gray-400">
-      <p>v1.0.0</p>
+    <!-- User Footer -->
+    <div class="p-4 border-t border-gray-700">
+      <div class="relative" ref="userMenuRef">
+        <button
+          @click="showUserMenu = !showUserMenu"
+          class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+        >
+          <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+            {{ userInitials }}
+          </div>
+          <div class="flex-1 text-left min-w-0">
+            <div class="text-sm font-medium text-white truncate">{{ authStore.user?.name || 'User' }}</div>
+            <div class="text-xs text-gray-400 truncate">{{ authStore.user?.email }}</div>
+          </div>
+          <svg
+            class="w-4 h-4 text-gray-400 flex-shrink-0"
+            :class="{ 'rotate-180': showUserMenu }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- User Dropdown Menu -->
+        <div
+          v-if="showUserMenu"
+          class="absolute bottom-full left-0 right-0 mb-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-2 z-50"
+        >
+          <button
+            @click="handleLogout"
+            class="w-full text-left px-4 py-2 hover:bg-gray-700 transition-colors flex items-center gap-3 text-red-400"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Add Project Modal -->
@@ -135,6 +173,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { FolderIcon, PlusIcon } from '@/components/icons';
 import Modal from '@/components/common/Modal.vue';
 import { getProjects, createProject } from '@/services/api';
+import { useAuthStore } from '@/stores/auth';
 import type { Project } from '@/types/Project';
 
 export default defineComponent({
@@ -147,11 +186,14 @@ export default defineComponent({
   setup() {
     const route = useRoute();
     const router = useRouter();
+    const authStore = useAuthStore();
     const projects = ref<Project[]>([]);
     const selectedProjectId = ref<number | null>(null);
     const showAddProjectModal = ref(false);
     const showProjectDropdown = ref(false);
+    const showUserMenu = ref(false);
     const projectSelectorRef = ref<HTMLElement | null>(null);
+    const userMenuRef = ref<HTMLElement | null>(null);
     const newProjectName = ref('');
     const newProjectDescription = ref('');
 
@@ -163,6 +205,21 @@ export default defineComponent({
     const isOnProjectBoard = computed(() => {
       return route.path.includes('/projects/') && route.path.includes('/boards/');
     });
+
+    const userInitials = computed(() => {
+      const name = authStore.user?.name || '';
+      return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || 'U';
+    });
+
+    const handleLogout = () => {
+      authStore.logout();
+      router.push('/login');
+    };
 
     const fetchProjects = async () => {
       try {
@@ -241,10 +298,13 @@ export default defineComponent({
       }
     };
 
-    // Close dropdown when clicking outside
+    // Close dropdowns when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
       if (projectSelectorRef.value && !projectSelectorRef.value.contains(event.target as Node)) {
         showProjectDropdown.value = false;
+      }
+      if (userMenuRef.value && !userMenuRef.value.contains(event.target as Node)) {
+        showUserMenu.value = false;
       }
     };
 
@@ -264,18 +324,23 @@ export default defineComponent({
       document.removeEventListener('click', handleClickOutside);
     });
 
-    return { 
+    return {
       route,
+      authStore,
       projects,
       selectedProjectId,
       currentProjectName,
       isOnProjectBoard,
+      userInitials,
       showAddProjectModal,
       showProjectDropdown,
+      showUserMenu,
       projectSelectorRef,
+      userMenuRef,
       newProjectName,
       newProjectDescription,
       handleProjectChange,
+      handleLogout,
       openCreateProjectModal,
       handleCreateProject
     };
