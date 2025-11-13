@@ -30,8 +30,14 @@ namespace CloudBoard.Api.Models
         public int? ParentId { get; set; }
         public WorkItem? Parent { get; set; }
         public ICollection<WorkItem> Children { get; set; } = new List<WorkItem>();
-        #endregion
 
+        // User relationships
+        public int? AssignedToId { get; set; }
+        public User? AssignedTo { get; set; }
+        public int CreatedById { get; set; }
+        public User CreatedBy { get; set; } = null!;
+        #endregion
+        
         #region Computed Properties
         /// <summary>
         /// Calculates depth in hierarchy (0 for top-level items)

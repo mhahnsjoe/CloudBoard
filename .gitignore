@@ -1,3 +1,15 @@
+
+# Secrets
+appsettings.Development.json
+appsettings.Production.json
+*.user
+*.secrets.json
+
+# Environment files
+.env
+.env.local
+.env.production
+
 # Local environment variables
 *.env
 

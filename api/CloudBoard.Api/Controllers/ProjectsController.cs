@@ -3,11 +3,14 @@ using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace CloudBoard.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ProjectsController : ControllerBase
     {
         private readonly CloudBoardContext _context;
@@ -17,11 +20,18 @@ namespace CloudBoard.Api.Controllers
             _context = context;
         }
 
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.Parse(userIdClaim!);
+        }
+
         // GET: api/projects
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-            return await _context.Projects
+            var userId = GetCurrentUserId();
+            return await _context.Projects.Where(p => p.OwnerId == userId)
                 .Include(p => p.Boards)
                     .ThenInclude(b => b.WorkItems)
                 .ToListAsync();
@@ -46,13 +56,14 @@ namespace CloudBoard.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<Project>> CreateProject(ProjectCreateDto projectDto)
         {
+            var userId = GetCurrentUserId();
             var project = new Project
             {
                 Name = projectDto.Name,
                 Description = projectDto.Description,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                OwnerId = userId
             };
-
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 

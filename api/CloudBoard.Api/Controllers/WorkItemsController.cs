@@ -2,6 +2,8 @@ using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
 using CloudBoard.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace CloudBoard.Api.Controllers
 {
@@ -12,6 +14,7 @@ namespace CloudBoard.Api.Controllers
     [ApiController]
     [Route("api/boards/{boardId}/workitems")]
     [Produces("application/json")]
+    [Authorize]
     public class WorkItemController : ControllerBase
     {
         private readonly IWorkItemService _workItemService;
@@ -19,6 +22,12 @@ namespace CloudBoard.Api.Controllers
         public WorkItemController(IWorkItemService workItemService)
         {
             _workItemService = workItemService;
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.Parse(userIdClaim!);
         }
 
         /// <summary>
@@ -76,7 +85,8 @@ namespace CloudBoard.Api.Controllers
             try
             {
                 newWorkItem.BoardId = boardId; // Ensure consistency
-                var workItem = await _workItemService.CreateAsync(newWorkItem);
+                var userId = GetCurrentUserId();
+                var workItem = await _workItemService.CreateAsync(newWorkItem, userId);
                 return CreatedAtAction(nameof(GetWorkItem), new { boardId, id = workItem.Id }, workItem);
             }
             catch (InvalidOperationException ex)
