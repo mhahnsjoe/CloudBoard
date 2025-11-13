@@ -55,9 +55,12 @@ builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
 .AddDefaultTokenProviders();
 
 // JWT Authentication
-var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "YourSuperSecretKeyForJWTTokenGeneration123!";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "CloudBoardAPI";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "CloudBoardClient";
+var jwtSecret = builder.Configuration["Jwt:Secret"] 
+    ?? throw new InvalidOperationException("JWT Secret is not configured");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] 
+    ?? throw new InvalidOperationException("JWT Issuer is not configured");
+var jwtAudience = builder.Configuration["Jwt:Audience"] 
+    ?? throw new InvalidOperationException("JWT Audience is not configured");
 
 builder.Services.AddAuthentication(options =>
 {
