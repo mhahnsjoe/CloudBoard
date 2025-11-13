@@ -213,7 +213,7 @@ namespace CloudBoard.Api.Services
         {
             var workItem = await _context.WorkItems
                 .Include(w => w.Board)
-                    .ThenInclude(b => b.Project)
+                    .ThenInclude(b => b!.Project) //TODO: Check if ! is a possible bug situation
                 .FirstOrDefaultAsync(w => w.Id == sprintId);
                 
             if (workItem == null)
