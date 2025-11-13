@@ -182,34 +182,24 @@ namespace CloudBoard.Api.Controllers
         [HttpPatch("{id}/assign-sprint")]
         public async Task<IActionResult> AssignToSprint(int id, [FromBody] AssignSprintDto dto)
         {
-            var userId = GetCurrentUserId();
-
-            var workItem = await _context.WorkItems
-                .Include(w => w.Board)
-                    .ThenInclude(b => b.Project)
-                .FirstOrDefaultAsync(w => w.Id == id);
-
-            if (workItem == null)
-                return NotFound();
-
-            if (workItem.Board?.Project?.OwnerId != userId)
-                return Forbid();
-
-            // If sprintId is provided, verify it belongs to the same board
-            if (dto.SprintId.HasValue)
+            try
             {
-                var sprint = await _context.Sprints.FindAsync(dto.SprintId.Value);
-                if (sprint == null)
-                    return NotFound("Sprint not found");
-
-                if (sprint.BoardId != workItem.BoardId)
-                    return BadRequest("Sprint must belong to the same board");
+                var userId = GetCurrentUserId();
+                await _workItemService.AssignToSprintAsync(id, dto, userId);
+                return NoContent();
             }
-
-            workItem.SprintId = dto.SprintId;
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (NullReferenceException)
+            {
+                return NotFound();
+            }
+            catch(UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
     }
     

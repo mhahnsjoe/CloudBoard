@@ -207,5 +207,34 @@ namespace CloudBoard.Api.Services
 
             return item.GetAncestors().Reverse().Append(item);
         }
+
+
+        public async Task AssignToSprintAsync(int sprintId, AssignSprintDto dto, int userId)
+        {
+            var workItem = await _context.WorkItems
+                .Include(w => w.Board)
+                    .ThenInclude(b => b.Project)
+                .FirstOrDefaultAsync(w => w.Id == sprintId);
+                
+            if (workItem == null)
+                throw new NullReferenceException($"Item {sprintId} not found");
+
+            if (workItem.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException($"Item {sprintId} is not owned by the user");
+
+            // If sprintId is provided, verify it belongs to the same board
+            if (dto.SprintId.HasValue)
+            {
+                var sprint = await _context.Sprints.FindAsync(dto.SprintId.Value);
+                if (sprint == null)
+                    throw new InvalidOperationException($"Sprint {sprintId} not found");
+
+                if (sprint.BoardId != workItem.BoardId)
+                    throw new InvalidOperationException($"Sprint must belong to the same board");
+            }
+
+            workItem.SprintId = dto.SprintId;
+            await _context.SaveChangesAsync();
+        }
     }
 }
