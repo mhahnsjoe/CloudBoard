@@ -13,6 +13,7 @@ namespace CloudBoard.Api.Data
         public DbSet<Project> Projects => Set<Project>();
         public DbSet<Board> Boards => Set<Board>();
         public DbSet<WorkItem> WorkItems => Set<WorkItem>();
+        public DbSet<Sprint> Sprints => Set<Sprint>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,6 +22,7 @@ namespace CloudBoard.Api.Data
             ConfigureProjectRelationships(modelBuilder);
             ConfigureBoardRelationships(modelBuilder);
             ConfigureWorkItemHierarchy(modelBuilder);
+            ConfigureSprintRelationships(modelBuilder);
         }
 
         private void ConfigureProjectRelationships(ModelBuilder modelBuilder)
@@ -45,6 +47,24 @@ namespace CloudBoard.Api.Data
                 .WithOne(t => t.Board)
                 .HasForeignKey(t => t.BoardId)
                 .OnDelete(DeleteBehavior.Cascade);
+        }
+        private void ConfigureSprintRelationships(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Sprint>()
+                .HasOne(s => s.Board)
+                .WithMany(b => b.Sprints)
+                .HasForeignKey(s => s.BoardId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Sprint>()
+                .HasMany(s => s.WorkItems)
+                .WithOne(w => w.Sprint)
+                .HasForeignKey(w => w.SprintId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Indexes
+            modelBuilder.Entity<Sprint>().HasIndex(s => s.BoardId);
+            modelBuilder.Entity<Sprint>().HasIndex(s => s.Status);
         }
 
         private void ConfigureWorkItemHierarchy(ModelBuilder modelBuilder)
@@ -73,7 +93,7 @@ namespace CloudBoard.Api.Data
             modelBuilder.Entity<WorkItem>().HasIndex(t => t.ParentId);
             modelBuilder.Entity<WorkItem>().HasIndex(t => new { t.BoardId, t.Type });
             modelBuilder.Entity<WorkItem>().HasIndex(t => t.Status);
-            modelBuilder.Entity<WorkItem>().HasIndex(t => t.AssignedToId); // NEW
+            modelBuilder.Entity<WorkItem>().HasIndex(t => t.AssignedToId);
         }
     }
 }

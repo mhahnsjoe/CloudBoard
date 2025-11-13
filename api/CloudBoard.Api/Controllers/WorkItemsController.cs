@@ -30,6 +30,7 @@ namespace CloudBoard.Api.Controllers
             return int.Parse(userIdClaim!);
         }
 
+
         /// <summary>
         /// Gets all workitems for a board
         /// </summary>
@@ -176,7 +177,42 @@ namespace CloudBoard.Api.Controllers
 
             return Ok(path);
         }
+
+        // PATCH /api/workitems/{id}/assign-sprint
+        [HttpPatch("{id}/assign-sprint")]
+        public async Task<IActionResult> AssignToSprint(int id, [FromBody] AssignSprintDto dto)
+        {
+            var userId = GetCurrentUserId();
+
+            var workItem = await _context.WorkItems
+                .Include(w => w.Board)
+                    .ThenInclude(b => b.Project)
+                .FirstOrDefaultAsync(w => w.Id == id);
+
+            if (workItem == null)
+                return NotFound();
+
+            if (workItem.Board?.Project?.OwnerId != userId)
+                return Forbid();
+
+            // If sprintId is provided, verify it belongs to the same board
+            if (dto.SprintId.HasValue)
+            {
+                var sprint = await _context.Sprints.FindAsync(dto.SprintId.Value);
+                if (sprint == null)
+                    return NotFound("Sprint not found");
+
+                if (sprint.BoardId != workItem.BoardId)
+                    return BadRequest("Sprint must belong to the same board");
+            }
+
+            workItem.SprintId = dto.SprintId;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
     }
+    
 
     /// <summary>
     /// Request model for moving workitems

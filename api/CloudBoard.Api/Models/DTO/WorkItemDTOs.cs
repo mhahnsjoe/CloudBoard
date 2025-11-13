@@ -29,4 +29,8 @@ namespace CloudBoard.Api.Models.DTO
         public int? ParentId { get; set; }
         public int? AssignedToId { get; set; }
     }
+    public class AssignSprintDto
+    {
+        public int? SprintId { get; set; }
+    }
 }
