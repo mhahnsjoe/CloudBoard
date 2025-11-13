@@ -72,6 +72,7 @@ Start creating projects!
 
 
 ## 📁 Project Structure
+```
 CloudBoard/
 ├── api/                          # Backend (.NET)
 │   └── CloudBoard.Api/
@@ -88,12 +89,13 @@ CloudBoard/
 │       ├── types/                # TypeScript interfaces
 │       └── router/               # Vue Router config
 ├── docker-compose.yml            # Local development setup
+├── MVP_ROADMAP.md                # Detailed feature roadmap
 └── README.md                     # This file
-
+```
 ## 🔒 Security
-JWT tokens with 7-day expiration
-Passwords hashed with ASP.NET Core Identity (PBKDF2)
-Environment-based configuration (no secrets in code)
-CORS configured for specific origins
+- JWT tokens with 7-day expiration
+- Passwords hashed with ASP.NET Core Identity (PBKDF2)
+- Environment-based configuration (no secrets in code)
+- CORS configured for specific origins
 Protected API endpoints with [Authorize] attribute
 User-isolated data (users only see their own projects)
