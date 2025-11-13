@@ -25,6 +25,8 @@ namespace CloudBoard.Api.Models
         // Board relationship
         public int BoardId { get; set; }
         public Board? Board { get; set; }
+        public int? SprintId { get; set; }
+        public Sprint? Sprint { get; set; }
 
         // Hierarchy relationships
         public int? ParentId { get; set; }
