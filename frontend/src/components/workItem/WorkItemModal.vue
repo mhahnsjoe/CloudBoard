@@ -123,7 +123,8 @@
 
 <script lang="ts">
 import { defineComponent, ref, watch, type PropType } from 'vue';
-import type { WorkItem, WORKITEM_TYPES } from '@/types/WorkItem';
+import type { WorkItem, WorkItemType } from '@/types/WorkItem';
+import { WORKITEM_TYPES } from '@/types/WorkItem';
 import { PRIORITIES, STATUSES } from '@/types/Project';
 import { ClockIcon, CalendarIcon } from '@/components/icons';
 
@@ -197,7 +198,7 @@ export default defineComponent({
         description: form.value.description || undefined,
         status: form.value.status,
         priority: form.value.priority,
-        type: form.value.type!,
+        type: form.value.type! as WorkItemType,
         dueDate: form.value.dueDate || undefined,
         estimatedHours: form.value.estimatedHours || undefined,
         actualHours: form.value.actualHours || undefined,
