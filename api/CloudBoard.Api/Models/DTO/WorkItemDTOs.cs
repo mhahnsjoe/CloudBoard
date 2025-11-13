@@ -12,6 +12,7 @@ namespace CloudBoard.Api.Models.DTO
         public decimal? EstimatedHours { get; set; }
         public int BoardId { get; set; }
         public int? ParentId { get; set; }
+        public int? AssignedToId { get; set; }
     }
 
     public class WorkItemUpdateDto
@@ -26,5 +27,6 @@ namespace CloudBoard.Api.Models.DTO
         public decimal? ActualHours { get; set; }
         public int BoardId { get; set; }
         public int? ParentId { get; set; }
+        public int? AssignedToId { get; set; }
     }
 }

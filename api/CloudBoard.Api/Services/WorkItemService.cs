@@ -23,7 +23,7 @@ namespace CloudBoard.Api.Services
             _validation = validation;
         }
 
-        public async Task<WorkItem> CreateAsync(WorkItemCreateDto dto)
+        public async Task<WorkItem> CreateAsync(WorkItemCreateDto dto, int createdById)
         {
             // Validate board exists
             var board = await _context.Boards.FindAsync(dto.BoardId);
@@ -53,12 +53,14 @@ namespace CloudBoard.Api.Services
                 Priority = dto.Priority,
                 Type = dto.Type,
                 Description = dto.Description,
-                DueDate = dto.DueDate.HasValue 
+                DueDate = dto.DueDate.HasValue
                     ? DateTime.SpecifyKind(dto.DueDate.Value, DateTimeKind.Utc)
                     : null,
                 EstimatedHours = dto.EstimatedHours,
                 BoardId = dto.BoardId,
                 ParentId = dto.ParentId,
+                CreatedById = createdById,
+                AssignedToId = dto.AssignedToId,
                 CreatedAt = DateTime.UtcNow
             };
 

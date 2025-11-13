@@ -1,6 +1,7 @@
 using CloudBoard.Api.Data;
 using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ namespace CloudBoard.Api.Controllers
 {
     [ApiController]
     [Route("api/projects/{projectId}/boards")]
+    [Authorize]
     public class BoardsController : ControllerBase
     {
         private readonly CloudBoardContext _context;

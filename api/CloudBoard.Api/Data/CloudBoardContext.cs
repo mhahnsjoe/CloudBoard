@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using CloudBoard.Api.Models;
 
 namespace CloudBoard.Api.Data
 {
-    public class CloudBoardContext : DbContext
+    public class CloudBoardContext : IdentityDbContext<User, IdentityRole<int>, int>
     {
         public CloudBoardContext(DbContextOptions<CloudBoardContext> options)
             : base(options) { }
@@ -23,10 +25,18 @@ namespace CloudBoard.Api.Data
 
         private void ConfigureProjectRelationships(ModelBuilder modelBuilder)
         {
+            // Project-Board relationship
             modelBuilder.Entity<Project>()
                 .HasMany(p => p.Boards)
                 .WithOne(b => b.Project)
                 .HasForeignKey(b => b.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // User-Project relationship
+            modelBuilder.Entity<Project>()
+                .HasOne(p => p.Owner)
+                .WithMany(u => u.OwnedProjects)
+                .HasForeignKey(p => p.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
 
@@ -48,6 +58,19 @@ namespace CloudBoard.Api.Data
                 .HasForeignKey(t => t.ParentId)
                 .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete cycles
 
+            // User-WorkItem relationships
+            modelBuilder.Entity<WorkItem>()
+                .HasOne(w => w.AssignedTo)
+                .WithMany(u => u.AssignedWorkItems)
+                .HasForeignKey(w => w.AssignedToId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<WorkItem>()
+                .HasOne(w => w.CreatedBy)
+                .WithMany(u => u.CreatedWorkItems)
+                .HasForeignKey(w => w.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Indexes for performance
             modelBuilder.Entity<WorkItem>()
                 .HasIndex(t => t.ParentId);
@@ -57,6 +80,9 @@ namespace CloudBoard.Api.Data
 
             modelBuilder.Entity<WorkItem>()
                 .HasIndex(t => t.Status);
+
+            modelBuilder.Entity<WorkItem>()
+                .HasIndex(t => t.AssignedToId);
         }
     }
 }
