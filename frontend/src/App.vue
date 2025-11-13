@@ -1,32 +1,27 @@
 <template>
-  <div id="app" class="flex h-screen">
-    <Sidebar />
-    <div class="flex-1 ml-64 overflow-auto">
+  <div id="app">
+    <!-- Only show Sidebar when authenticated AND not on auth pages -->
+    <Sidebar v-if="showSidebar" />
+    
+    <!-- Main content with conditional padding -->
+    <div :class="showSidebar ? 'ml-64' : ''">
       <router-view />
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
-import Sidebar from "@/components/layout/Sidebar.vue";
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import Sidebar from '@/components/layout/Sidebar.vue'
 
-export default defineComponent({
-  name: "App",
-  components: {
-    Sidebar
-  }
-});
+const route = useRoute()
+const authStore = useAuthStore()
+
+const showSidebar = computed(() => {
+  const authPages = ['Login', 'Register']
+  const isAuthPage = authPages.includes(route.name as string)
+  return authStore.isAuthenticated && !isAuthPage
+})
 </script>
-
-<style>
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-
-#app {
-  height: 100%;
-}
-</style>
