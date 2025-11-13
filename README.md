@@ -40,35 +40,35 @@ A modern project management application inspired by Azure DevOps Boards, built w
 1. **Clone the repository**
    ```bash
    git clone https://github.com/mhahnsjoe/CloudBoard.git
-   cd CloudBoard
+   cd CloudBoard```
 2. **Set up environment variables**
-
-Create api/CloudBoard.Api/appsettings.Development.json:
-
-{
-  "ConnectionStrings": {
-    "Default": "Host=localhost;Port=5432;Database=cloudboard;Username=postgres;Password=postgres"
-  },
-  "Jwt": {
-    "Secret": "your-local-development-secret-min-32-characters",
-    "Issuer": "CloudBoardAPI",
-    "Audience": "CloudBoardClient"
-  }
-}
+   ```
+   Create api/CloudBoard.Api/appsettings.Development.json:
+   
+   {
+     "ConnectionStrings": {
+       "Default": "Host=localhost;Port=5432;Database=cloudboard;Username=postgres;Password=postgres"
+     },
+     "Jwt": {
+       "Secret": "your-local-development-secret-min-32-characters",
+       "Issuer": "CloudBoardAPI",
+       "Audience": "CloudBoardClient"
+     }
+   }
+   ```
 3. **Start the application**
-docker-compose up --build
-
-4.**Access the application**
-
-Frontend: http://localhost:5173
-Backend API: http://localhost:5000
-Swagger UI: http://localhost:5000/swagger
+   ```
+   docker-compose up --build
+   ```
+4. **Access the application**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:5000
+   - Swagger UI: http://localhost:5000/swagger
 
 5. **Create an account**
-
-Navigate to http://localhost:5173/register
-Register with email/password
-Start creating projects!
+   - Navigate to http://localhost:5173/register
+   - Register with email/password
+   - Start creating projects!
 
 
 ## 📁 Project Structure
