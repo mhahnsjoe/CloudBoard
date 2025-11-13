@@ -28,7 +28,7 @@
 import { defineComponent, type PropType } from 'vue';
 
 export default defineComponent({
-  name: 'TaskTypeBadge',
+  name: 'WorkItemTypeBadge',
   props: {
     type: {
       type: String as PropType<'Task' | 'Bug' | 'Feature' | 'Epic'>,

@@ -123,8 +123,8 @@
 
 <script lang="ts">
 import { defineComponent, ref, watch, type PropType } from 'vue';
-import type { WorkItem } from '@/types/Project';
-import { PRIORITIES, STATUSES, WORKITEM_TYPES } from '@/types/Project';
+import type { WorkItem, WORKITEM_TYPES } from '@/types/WorkItem';
+import { PRIORITIES, STATUSES } from '@/types/Project';
 import { ClockIcon, CalendarIcon } from '@/components/icons';
 
 export default defineComponent({
