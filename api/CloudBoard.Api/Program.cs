@@ -1,47 +1,63 @@
 using CloudBoard.Api.Data;
+using CloudBoard.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Controllers with JSON options
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.ReferenceHandler = 
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.WriteIndented = true;
-        // Add string enum converter so enums serialize as strings instead of integers
-        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
-// Add Swagger
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { 
+        Title = "CloudBoard API", 
+        Version = "v1",
+        Description = "Project management with hierarchical work items"
+    });
+    
+    // Include XML comments for better Swagger documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+        c.IncludeXmlComments(xmlPath);
+});
 
-//Add DbContext
+// Database
 builder.Services.AddDbContext<CloudBoardContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
-//Adding CORS
-var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+// Services
+builder.Services.AddScoped<IWorkItemValidationService, WorkItemValidationService>();
+builder.Services.AddScoped<IWorkItemService, WorkItemService>();
 
+// CORS
+var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: MyAllowSpecificOrigins,
-                      policy =>
-                      {
-                          policy.WithOrigins("http://localhost:5173", "https://localhost:7073") // Vue dev server
-                                .AllowAnyHeader()
-                                .AllowAnyMethod();
-                      });
+    options.AddPolicy(name: myAllowSpecificOrigins,
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173", "https://localhost:7073")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
 });
-
 
 var app = builder.Build();
 
-// Enable CORS
-app.UseCors(MyAllowSpecificOrigins);
+// Middleware pipeline
+app.UseCors(myAllowSpecificOrigins);
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -49,16 +65,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseDefaultFiles();
-app.UseStaticFiles(); 
-  
-//Commented out for dev TODO: Implement HTTPS for both
-//app.UseHttpsRedirection();
-
+app.UseStaticFiles();
 app.UseAuthorization();
-
-app.MapControllers(); 
-
+app.MapControllers();
 app.MapFallbackToFile("index.html");
-
 
 app.Run();

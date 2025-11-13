@@ -1,132 +1,178 @@
-using CloudBoard.Api.Data;
 using CloudBoard.Api.Models;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using CloudBoard.Api.Models.DTO;
+using CloudBoard.Api.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CloudBoard.Api.Controllers
 {
+    /// <summary>
+    /// API endpoints for work item management.
+    /// Delegates business logic to service layer for clean separation.
+    /// </summary>
     [ApiController]
-    [Route("api/boards/{boardId}/WorkItems")]
+    [Route("api/boards/{boardId}/workitems")]
+    [Produces("application/json")]
     public class WorkItemController : ControllerBase
     {
-        private readonly CloudBoardContext _context;
+        private readonly IWorkItemService _workItemService;
 
-        public WorkItemController(CloudBoardContext context)
+        public WorkItemController(IWorkItemService workItemService)
         {
-            _context = context;
+            _workItemService = workItemService;
         }
 
-        // GET: api/boards/1/WorkItems
+        /// <summary>
+        /// Gets all workitems for a board
+        /// </summary>
+        /// <param name="boardId">Board ID</param>
+        /// <param name="includeChildren">Include full hierarchy</param>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<WorkItem>>> GetWorkItems(int boardId)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WorkItem>>> GetWorkItems(
+            int boardId,
+            [FromQuery] bool includeChildren = false)
         {
-            var WorkItems = await _context.WorkItems
-                .Where(t => t.BoardId == boardId)
-                .Include(t => t.Board)
-                .ToListAsync();
-            
-            return Ok(WorkItems);
+            var workitems = await _workItemService.GetByBoardAsync(boardId, includeChildren);
+            return Ok(workitems);
         }
 
-        // GET: api/boards/1/WorkItems/5
+        /// <summary>
+        /// Gets workItem hierarchy roots (top-level items only)
+        /// </summary>
+        [HttpGet("hierarchy")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WorkItem>>> GetWorkItemsHierarchy(int boardId)
+        {
+            var roots = await _workItemService.GetHierarchyRootsAsync(boardId);
+            return Ok(roots);
+        }
+
+        /// <summary>
+        /// Gets a single workItem by ID
+        /// </summary>
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<WorkItem>> GetWorkItem(int boardId, int id)
         {
-            var WorkItem = await _context.WorkItems
-                .Include(t => t.Board)
-                .FirstOrDefaultAsync(t => t.Id == id && t.BoardId == boardId);
+            var workItem = await _workItemService.GetByIdAsync(id, includeHierarchy: true);
             
-            if (WorkItem == null) 
+            if (workItem == null || workItem.BoardId != boardId)
                 return NotFound();
-            
-            return WorkItem;
+
+            return Ok(workItem);
         }
 
-        // POST: api/boards/1/WorkItems
+        /// <summary>
+        /// Creates a new workItem
+        /// </summary>
         [HttpPost]
-        public async Task<ActionResult<WorkItem>> CreateWorkItem(int boardId, WorkItemCreateDto newWorkItem)
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<WorkItem>> CreateWorkItem(
+            int boardId,
+            WorkItemCreateDto newWorkItem)
         {
-            // Verify board exists
-            var board = await _context.Boards.FindAsync(boardId);
-            if (board == null)
-                return NotFound($"Board with id {boardId} not found");
-
-            var WorkItem = new WorkItem
-            {
-                Title = newWorkItem.Title,
-                Status = newWorkItem.Status,
-                Priority = newWorkItem.Priority,
-                Type = newWorkItem.Type,
-                Description = newWorkItem.Description,
-                DueDate = newWorkItem.DueDate.HasValue 
-                    ? DateTime.SpecifyKind(newWorkItem.DueDate.Value, DateTimeKind.Utc)
-                    : null,
-                EstimatedHours = newWorkItem.EstimatedHours,
-                BoardId = boardId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.WorkItems.Add(WorkItem);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetWorkItem), new { boardId, id = WorkItem.Id }, WorkItem);
-        }
-
-        // PUT: api/boards/1/WorkItems/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateWorkItem(int boardId, int id, WorkItemUpdateDto updatedWorkItem)
-        {
-            var WorkItem = await _context.WorkItems
-                .FirstOrDefaultAsync(t => t.Id == id && t.BoardId == boardId);
-            
-            if (WorkItem == null)
-                return NotFound();
-
-            WorkItem.Title = updatedWorkItem.Title;
-            WorkItem.Status = updatedWorkItem.Status;
-            WorkItem.Priority = updatedWorkItem.Priority;
-            WorkItem.Type = updatedWorkItem.Type;
-            WorkItem.Description = updatedWorkItem.Description;
-            WorkItem.DueDate = updatedWorkItem.DueDate.HasValue 
-                ? DateTime.SpecifyKind(updatedWorkItem.DueDate.Value, DateTimeKind.Utc)
-                : null;
-            WorkItem.EstimatedHours = updatedWorkItem.EstimatedHours;
-            WorkItem.ActualHours = updatedWorkItem.ActualHours;
-            
             try
             {
-                await _context.SaveChangesAsync();
+                newWorkItem.BoardId = boardId; // Ensure consistency
+                var workItem = await _workItemService.CreateAsync(newWorkItem);
+                return CreatedAtAction(nameof(GetWorkItem), new { boardId, id = workItem.Id }, workItem);
             }
-            catch (DbUpdateException ex)
+            catch (InvalidOperationException ex)
             {
-                return StatusCode(500, ex.Message);
+                return BadRequest(ex.Message);
             }
-
-            return NoContent();
         }
 
-        // DELETE: api/boards/1/WorkItems/5
+        /// <summary>
+        /// Updates an existing workItem
+        /// </summary>
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateWorkItem(
+            int boardId,
+            int id,
+            WorkItemUpdateDto updatedWorkItem)
+        {
+            try
+            {
+                updatedWorkItem.BoardId = boardId; // Ensure consistency
+                await _workItemService.UpdateAsync(id, updatedWorkItem);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Deletes a workItem
+        /// </summary>
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteWorkItem(int boardId, int id)
         {
-            var WorkItem = await _context.WorkItems
-                .FirstOrDefaultAsync(t => t.Id == id && t.BoardId == boardId);
-            
-            if (WorkItem == null) 
-                return NotFound();
-            
-            _context.WorkItems.Remove(WorkItem);
-            await _context.SaveChangesAsync();
-            
-            return NoContent();
+            try
+            {
+                await _workItemService.DeleteAsync(id);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        // Additional endpoint: GET all WorkItems (for Work Items view)
-        [HttpGet("/api/WorkItems")]
-        public async Task<ActionResult<IEnumerable<WorkItem>>> GetAllWorkItems()
+        /// <summary>
+        /// Moves a workItem to a different parent (or makes it top-level)
+        /// </summary>
+        [HttpPatch("{id}/move")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> MoveWorkItem(
+            int boardId,
+            int id,
+            [FromBody] MoveWorkItemRequest request)
         {
-            return await _context.WorkItems.Include(t => t.Board).ToListAsync();
+            try
+            {
+                await _workItemService.MoveToParentAsync(id, request.NewParentId);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
+
+        /// <summary>
+        /// Gets the breadcrumb path for a workItem (all ancestors)
+        /// </summary>
+        [HttpGet("{id}/path")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<WorkItem>>> GetWorkItemPath(int boardId, int id)
+        {
+            var path = await _workItemService.GetPathToRootAsync(id);
+            
+            if (!path.Any())
+                return NotFound();
+
+            return Ok(path);
+        }
+    }
+
+    /// <summary>
+    /// Request model for moving workitems
+    /// </summary>
+    public class MoveWorkItemRequest
+    {
+        public int? NewParentId { get; set; }
     }
 }
