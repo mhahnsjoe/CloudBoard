@@ -71,7 +71,7 @@ Register with email/password
 Start creating projects!
 
 
-📁 Project Structure
+## 📁 Project Structure
 CloudBoard/
 ├── api/                          # Backend (.NET)
 │   └── CloudBoard.Api/
@@ -90,7 +90,7 @@ CloudBoard/
 ├── docker-compose.yml            # Local development setup
 └── README.md                     # This file
 
-🔒 **Security**
+## 🔒 Security
 JWT tokens with 7-day expiration
 Passwords hashed with ASP.NET Core Identity (PBKDF2)
 Environment-based configuration (no secrets in code)
