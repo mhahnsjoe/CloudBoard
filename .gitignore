@@ -1,3 +1,4 @@
+
 # Secrets
 appsettings.Development.json
 appsettings.Production.json
@@ -8,6 +9,9 @@ appsettings.Production.json
 .env
 .env.local
 .env.production
+
+# Local environment variables
+*.env
 
 # .NET build folders
 bin/
