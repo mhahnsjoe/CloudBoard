@@ -120,15 +120,15 @@ const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
 const activeSprint = computed(() =>
-  props.sprints.find(s => s.status === 'Active' || s.status === 1)
+  props.sprints.find(s => s.status === 'Active')
 )
 
 const planningSprints = computed(() =>
-  props.sprints.filter(s => s.status === 'Planning' || s.status === 0)
+  props.sprints.filter(s => s.status === 'Planning')
 )
 
 const completedSprints = computed(() =>
-  props.sprints.filter(s => s.status === 'Completed' || s.status === 2).sort((a, b) => 
+  props.sprints.filter(s => s.status === 'Completed').sort((a, b) => 
     new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
   )
 )
