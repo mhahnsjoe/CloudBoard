@@ -1,7 +1,7 @@
 <template>
   <div class="relative" ref="dropdownRef">
     <button
-      @click.stop="toggleDropdown"
+      @click.stop="toggle"
       class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
     >
       <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,8 +103,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed } from 'vue'
 import type { Sprint } from '@/types/Sprint'
+import { useDropdown } from '@/composables/useDropdown'
+import { useClickOutside } from '@/composables/useClickOutside'
+import { formatDateRange } from '@/utils/dates'
 
 interface Props {
   sprints: Sprint[]
@@ -116,8 +119,10 @@ const emit = defineEmits<{
   select: [sprintId: number | null]
 }>()
 
-const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
+const { isOpen, toggle, close } = useDropdown()
+
+useClickOutside(dropdownRef, close)
 
 const activeSprint = computed(() =>
   props.sprints.find(s => s.status === 'Active')
@@ -128,7 +133,7 @@ const planningSprints = computed(() =>
 )
 
 const completedSprints = computed(() =>
-  props.sprints.filter(s => s.status === 'Completed').sort((a, b) => 
+  props.sprints.filter(s => s.status === 'Completed').sort((a, b) =>
     new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
   )
 )
@@ -141,35 +146,10 @@ const selectedLabel = computed(() => {
   return sprint?.name || 'Select Sprint'
 })
 
-function toggleDropdown() {
-  isOpen.value = !isOpen.value
-}
-
 function selectOption(sprintId: number | null) {
   emit('select', sprintId)
-  isOpen.value = false
+  close()
 }
-
-function formatDateRange(sprint: Sprint) {
-  const start = new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const end = new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  return `${start} - ${end}`
-}
-
-// Click outside handler
-function handleClickOutside(event: MouseEvent) {
-  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
-    isOpen.value = false
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <style scoped>
