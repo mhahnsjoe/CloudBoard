@@ -15,11 +15,7 @@ export interface Sprint {
   daysRemaining: number
 }
 
-export enum SprintStatus {
-  Planning = 0,
-  Active = 1,
-  Completed = 2
-}
+export type SprintStatus = 'Planning' | 'Active' | 'Completed'
 
 export interface CreateSprintDto {
   name: string

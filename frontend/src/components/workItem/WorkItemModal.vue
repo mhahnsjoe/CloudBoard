@@ -146,6 +146,10 @@ export default defineComponent({
     defaultStatus: {
       type: String,
       default: 'To Do'
+    },
+    sprintId: {
+      type: Number as PropType<number | null>,
+      default: null
     }
   },
   emits: ['close', 'save'],
@@ -162,7 +166,8 @@ export default defineComponent({
       dueDate: props.workItem?.dueDate ? props.workItem.dueDate.split('T')[0] : '',
       estimatedHours: props.workItem?.estimatedHours || null,
       actualHours: props.workItem?.actualHours || null,
-      boardId: props.boardId
+      boardId: props.boardId,
+      sprintId: props.workItem?.sprintId || props.sprintId || null
     });
 
     watch(() => props.workItem, (newWorkItem) => {
@@ -171,18 +176,20 @@ export default defineComponent({
         form.value = {
           id: newWorkItem.id,
           title: newWorkItem.title,
-          type: newWorkItem.priority,
+          type: newWorkItem.type,
           description: newWorkItem.description || '',
           status: newWorkItem.status,
           priority: newWorkItem.priority,
           dueDate: newWorkItem.dueDate ? newWorkItem.dueDate.split('T')[0] : '',
           estimatedHours: newWorkItem.estimatedHours || null,
           actualHours: newWorkItem.actualHours || null,
-          boardId: props.boardId
+          boardId: props.boardId,
+          sprintId: newWorkItem.sprintId || props.sprintId || null
         };
       } else {
         isEditing.value = false;
         form.value.status = props.defaultStatus || 'To Do';
+        form.value.sprintId = props.sprintId || null;
       }
     });
 
@@ -203,6 +210,7 @@ export default defineComponent({
         estimatedHours: form.value.estimatedHours || undefined,
         actualHours: form.value.actualHours || undefined,
         boardId: props.boardId,
+        sprintId: form.value.sprintId,
         createdAt: props.workItem?.createdAt || new Date().toISOString()
       };
 

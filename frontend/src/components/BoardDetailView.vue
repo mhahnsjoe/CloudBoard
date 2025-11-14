@@ -136,12 +136,12 @@
               <span 
                 class="text-xs px-2 py-1 rounded-full font-medium"
                 :class="{
-                  'bg-yellow-100 text-yellow-800': selectedSprint.status === 0,
-                  'bg-green-100 text-green-800': selectedSprint.status === 1,
-                  'bg-gray-100 text-gray-800': selectedSprint.status === 2
+                  'bg-yellow-100 text-yellow-800': selectedSprint.status === 'Planning',
+                  'bg-green-100 text-green-800': selectedSprint.status === 'Active',
+                  'bg-gray-100 text-gray-800': selectedSprint.status === 'Completed'
                 }"
               >
-                {{ getSprintStatusLabel(selectedSprint.status) }}
+                {{ selectedSprint.status }}
               </span>
             </div>
             <p v-if="selectedSprint.goal" class="text-gray-700 text-sm mb-2">{{ selectedSprint.goal }}</p>
@@ -151,22 +151,22 @@
               <span>{{ selectedSprint.completedWorkItems }}/{{ selectedSprint.totalWorkItems }} items completed</span>
               <span>•</span>
               <span>{{ Math.round(selectedSprint.progressPercentage) }}% done</span>
-              <span v-if="selectedSprint.status === 1">•</span>
-              <span v-if="selectedSprint.status === 1" :class="selectedSprint.daysRemaining < 0 ? 'text-red-600 font-medium' : ''">
+              <span v-if="selectedSprint.status === 'Active'">•</span>
+              <span v-if="selectedSprint.status === 'Active'" :class="selectedSprint.daysRemaining < 0 ? 'text-red-600 font-medium' : ''">
                 {{ selectedSprint.daysRemaining }} days remaining
               </span>
             </div>
           </div>
           <div class="flex gap-2">
-            <button
-              v-if="selectedSprint.status === 0"
-              @click="handleStartSprint(selectedSprint.id)"
-              class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+           <button
+            v-if="selectedSprint.status === 'Planning'"
+            @click="handleStartSprint(selectedSprint.id)"
+            class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
             >
               Start Sprint
             </button>
             <button
-              v-if="selectedSprint.status === 1"
+              v-if="selectedSprint.status === 'Active'"
               @click="handleCompleteSprint(selectedSprint.id)"
               class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
             >
@@ -242,12 +242,12 @@
       </div>
     </div>
 
-    <!-- WorkItem Modal -->
     <WorkItemModal
       v-if="showWorkItemModal"
       :workItem="selectedWorkItem"
       :boardId="boardId"
       :defaultStatus="defaultStatus"
+      :sprintId="selectedSprintId"
       @close="closeWorkItemModal"
       @save="handleSaveWorkItem"
     />
@@ -514,15 +514,6 @@ export default defineComponent({
       }
     };
 
-    const getSprintStatusLabel = (status: number) => {
-      const labels: Record<number, string> = {
-        0: 'Planning',
-        1: 'Active',
-        2: 'Completed'
-      };
-      return labels[status] || 'Unknown';
-    };
-
     const formatDateRange = (sprint: Sprint) => {
       const start = new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const end = new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -757,7 +748,6 @@ export default defineComponent({
       handleStartSprint,
       handleCompleteSprint,
       handleDeleteSprint,
-      getSprintStatusLabel,
       formatDateRange,
       onDragStart,
       onDrop,

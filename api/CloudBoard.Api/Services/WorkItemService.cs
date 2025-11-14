@@ -61,7 +61,8 @@ namespace CloudBoard.Api.Services
                 ParentId = dto.ParentId,
                 CreatedAt = DateTime.UtcNow,
                 CreatedById = createdById,
-                AssignedToId = dto.AssignedToId
+                AssignedToId = dto.AssignedToId,
+                SprintId = dto.SprintId
             };
 
             _context.WorkItems.Add(workItem);
@@ -119,6 +120,7 @@ namespace CloudBoard.Api.Services
             workItem.EstimatedHours = dto.EstimatedHours;
             workItem.ActualHours = dto.ActualHours;
             workItem.ParentId = dto.ParentId;
+            workItem.SprintId = dto.SprintId;
 
             await _context.SaveChangesAsync();
             return workItem;

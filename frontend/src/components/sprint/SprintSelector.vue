@@ -1,14 +1,20 @@
 <template>
-  <div class="relative">
+  <div class="relative" ref="dropdownRef">
     <button
-      @click="isOpen = !isOpen"
+      @click.stop="toggleDropdown"
       class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
     >
       <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
       <span class="font-medium">{{ selectedLabel }}</span>
-      <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg 
+        class="w-4 h-4 text-gray-500 transition-transform"
+        :class="{ 'rotate-180': isOpen }"
+        fill="none" 
+        stroke="currentColor" 
+        viewBox="0 0 24 24"
+      >
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
       </svg>
     </button>
@@ -16,7 +22,8 @@
     <!-- Dropdown -->
     <div
       v-if="isOpen"
-      class="absolute top-full mt-2 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50"
+      @click.stop
+      class="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50"
     >
       <!-- Backlog Option -->
       <button
@@ -34,7 +41,7 @@
 
       <!-- Active Sprint -->
       <div v-if="activeSprint" class="border-b border-gray-200">
-        <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Active</div>
+        <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase bg-gray-50">Active</div>
         <button
           @click="selectOption(activeSprint.id)"
           class="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
@@ -52,7 +59,7 @@
 
       <!-- Planning Sprints -->
       <div v-if="planningSprints.length > 0" class="border-b border-gray-200">
-        <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Planning</div>
+        <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase bg-gray-50">Planning</div>
         <button
           v-for="sprint in planningSprints"
           :key="sprint.id"
@@ -69,7 +76,7 @@
 
       <!-- Completed Sprints -->
       <div v-if="completedSprints.length > 0">
-        <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Completed</div>
+        <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase bg-gray-50">Completed</div>
         <button
           v-for="sprint in completedSprints.slice(0, 3)"
           :key="sprint.id"
@@ -86,12 +93,17 @@
           </div>
         </button>
       </div>
+
+      <!-- Empty state if no sprints -->
+      <div v-if="!activeSprint && planningSprints.length === 0 && completedSprints.length === 0" class="px-4 py-3 text-sm text-gray-500 text-center">
+        No sprints yet. Create one to get started!
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { Sprint } from '@/types/Sprint'
 
 interface Props {
@@ -105,17 +117,18 @@ const emit = defineEmits<{
 }>()
 
 const isOpen = ref(false)
+const dropdownRef = ref<HTMLElement | null>(null)
 
 const activeSprint = computed(() =>
-  props.sprints.find(s => s.status === 1)
+  props.sprints.find(s => s.status === 'Active')
 )
 
 const planningSprints = computed(() =>
-  props.sprints.filter(s => s.status === 0)
+  props.sprints.filter(s => s.status === 'Planning')
 )
 
 const completedSprints = computed(() =>
-  props.sprints.filter(s => s.status === 2).sort((a, b) => 
+  props.sprints.filter(s => s.status === 'Completed').sort((a, b) => 
     new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
   )
 )
@@ -128,6 +141,10 @@ const selectedLabel = computed(() => {
   return sprint?.name || 'Select Sprint'
 })
 
+function toggleDropdown() {
+  isOpen.value = !isOpen.value
+}
+
 function selectOption(sprintId: number | null) {
   emit('select', sprintId)
   isOpen.value = false
@@ -138,4 +155,25 @@ function formatDateRange(sprint: Sprint) {
   const end = new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   return `${start} - ${end}`
 }
+
+// Click outside handler
+function handleClickOutside(event: MouseEvent) {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+    isOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
+
+<style scoped>
+.rotate-180 {
+  transform: rotate(180deg);
+}
+</style>

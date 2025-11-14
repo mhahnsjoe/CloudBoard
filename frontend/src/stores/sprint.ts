@@ -10,15 +10,15 @@ export const useSprintStore = defineStore('sprint', () => {
   const error = ref<string | null>(null)
 
   const activeSprint = computed(() => 
-    sprints.value.find(s => s.status === 1) // SprintStatus.Active
+    sprints.value.find(s => s.status === 'Active') 
   )
 
   const planningSprints = computed(() =>
-    sprints.value.filter(s => s.status === 0) // SprintStatus.Planning
+    sprints.value.filter(s => s.status === 'Completed') 
   )
 
   const completedSprints = computed(() =>
-    sprints.value.filter(s => s.status === 2) // SprintStatus.Completed
+    sprints.value.filter(s => s.status === 'Completed')
   )
 
   async function fetchSprints(boardId: number) {
@@ -102,10 +102,10 @@ export const useSprintStore = defineStore('sprint', () => {
       await api.startSprint(sprintId)
       const sprint = sprints.value.find(s => s.id === sprintId)
       if (sprint) {
-        sprint.status = 1 // SprintStatus.Active
+        sprint.status = 'Active'
       }
       if (currentSprint.value?.id === sprintId) {
-        currentSprint.value.status = 1
+        currentSprint.value.status = 'Active'
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to start sprint'
@@ -124,10 +124,10 @@ export const useSprintStore = defineStore('sprint', () => {
       const result = response.data
       const sprint = sprints.value.find(s => s.id === sprintId)
       if (sprint) {
-        sprint.status = 2 // SprintStatus.Completed
+        sprint.status = 'Completed'
       }
       if (currentSprint.value?.id === sprintId) {
-        currentSprint.value.status = 2
+        currentSprint.value.status = 'Completed'
       }
       return result
     } catch (e) {

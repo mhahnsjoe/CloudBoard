@@ -1,4 +1,3 @@
-
 namespace CloudBoard.Api.Models.DTO
 {
     public class WorkItemCreateDto
@@ -13,6 +12,7 @@ namespace CloudBoard.Api.Models.DTO
         public int BoardId { get; set; }
         public int? ParentId { get; set; }
         public int? AssignedToId { get; set; }
+        public int? SprintId { get; set; }
     }
 
     public class WorkItemUpdateDto
@@ -28,7 +28,9 @@ namespace CloudBoard.Api.Models.DTO
         public int BoardId { get; set; }
         public int? ParentId { get; set; }
         public int? AssignedToId { get; set; }
+        public int? SprintId { get; set; }
     }
+    
     public class AssignSprintDto
     {
         public int? SprintId { get; set; }
