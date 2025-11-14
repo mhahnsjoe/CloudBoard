@@ -124,7 +124,7 @@ export const useSprintStore = defineStore('sprint', () => {
       const result = response.data
       const sprint = sprints.value.find(s => s.id === sprintId)
       if (sprint) {
-        sprint.status = 'Completed' // SprintStatus.Completed
+        sprint.status = 'Completed'
       }
       if (currentSprint.value?.id === sprintId) {
         currentSprint.value.status = 'Completed'
