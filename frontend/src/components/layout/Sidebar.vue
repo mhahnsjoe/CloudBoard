@@ -320,6 +320,8 @@ export default defineComponent({
       userMenuRef,
       newProjectName,
       newProjectDescription,
+      projectDropdown,
+      userMenuDropdown,
       handleProjectChange,
       handleLogout,
       openCreateProjectModal,
