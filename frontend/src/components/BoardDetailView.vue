@@ -114,7 +114,7 @@
 
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, watch, onBeforeUnmount, computed } from 'vue';
+import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getBoard, getBoards, createBoard, updateBoard, deleteBoard, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
@@ -123,7 +123,6 @@ import type { Board } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
 import { STATUSES, BOARD_TYPES } from '@/types/Project';
-
 import BoardHeader from './board/BoardHeader.vue';
 import SprintInfoBar from './sprint/SprintInfoBar.vue';
 import KanbanBoard from './kanban/KanbanBoard.vue';
@@ -168,10 +167,8 @@ export default defineComponent({
     const showWorkItemModal = ref(false);
     const selectedWorkItem = ref<WorkItem | null>(null);
     const defaultStatus = ref<string>('To Do');
-    const draggedWorkItem = ref<WorkItem | null>(null);
 
     // Board Management
-    const showBoardDropdown = ref(false);
     const showBoardModal = ref(false);
     const isEditingBoard = ref(false);
     const boardForm = ref<{ id?: number; name: string; type: string }>({
@@ -232,30 +229,7 @@ export default defineComponent({
     };
 
     const switchBoard = (newBoardId: number) => {
-      showBoardDropdown.value = false;
       router.push(`/projects/${projectId.value}/boards/${newBoardId}`);
-    };
-
-    const getBoardTypeClass = (type: string) => {
-      const classes: Record<string, string> = {
-        'Kanban': 'bg-blue-100 text-blue-700',
-        'Scrum': 'bg-green-100 text-green-700',
-        'Backlog': 'bg-purple-100 text-purple-700'
-      };
-      return classes[type] || 'bg-gray-100 text-gray-700';
-    };
-
-    const getWorkItemsByStatus = (status: string) => {
-      return filteredWorkItems.value.filter(workItem => workItem.status === status);
-    };
-
-    const getStatusIconClass = (status: string) => {
-      const classes: Record<string, string> = {
-        'To Do': 'text-gray-500',
-        'In Progress': 'text-blue-500',
-        'Done': 'text-green-500'
-      };
-      return classes[status] || 'text-gray-500';
     };
 
     // Sprint Management Functions
@@ -334,36 +308,6 @@ export default defineComponent({
       }
     };
 
-    const formatDateRange = (sprint: Sprint) => {
-      const start = new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const end = new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      return `${start} - ${end}`;
-    };
-
-    // WorkItem Management
-    const onDragStart = (event: DragEvent, workItem: WorkItem) => {
-      draggedWorkItem.value = workItem;
-      if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move';
-      }
-    };
-
-    const onDrop = async (event: DragEvent, newStatus: string) => {
-      event.preventDefault();
-      if (draggedWorkItem.value && draggedWorkItem.value.status !== newStatus) {
-        try {
-          await updateWorkItem(boardId.value, draggedWorkItem.value.id, {
-            ...draggedWorkItem.value,
-            status: newStatus
-          });
-          await fetchBoard();
-        } catch (error) {
-          console.error('Failed to update WorkItem status:', error);
-        }
-      }
-      draggedWorkItem.value = null;
-    };
-
     const openCreateModalWithStatus = (status: string) => {
       selectedWorkItem.value = null;
       defaultStatus.value = status;
@@ -412,7 +356,6 @@ export default defineComponent({
       boardForm.value = { name: "", type: "Kanban" };
       isEditingBoard.value = false;
       showBoardModal.value = true;
-      showBoardDropdown.value = false;
     };
 
     const editCurrentBoard = () => {
@@ -494,14 +437,6 @@ export default defineComponent({
       }
     };
 
-    // Close dropdown when clicking outside
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.relative')) {
-        showBoardDropdown.value = false;
-      }
-    };
-
      const handleUpdateWorkItemStatus = async (workItem: WorkItem, newStatus: string) => {
       try {
         await updateWorkItem(boardId.value, workItem.id, {
@@ -518,11 +453,6 @@ export default defineComponent({
       fetchProjectBoards();
       fetchBoard();
       fetchSprints();
-      document.addEventListener('click', handleClickOutside);
-    });
-
-    onBeforeUnmount(() => {
-      document.removeEventListener('click', handleClickOutside);
     });
 
     watch(
@@ -549,53 +479,46 @@ export default defineComponent({
     );
 
     return {
-      projectId,
-      boardId,
-      board,
-      projectBoards,
-      workItems,
-      loading,
-      showBoardDropdown,
-      showWorkItemModal,
-      selectedWorkItem,
-      defaultStatus,
-      showBoardModal,
-      isEditingBoard,
-      boardForm,
-      sprintStore,
-      showSprintModal,
-      selectedSprintId,
-      selectedSprint,
-      STATUSES,
-      BOARD_TYPES,
-      filteredWorkItems,
-      getBoardTypeClass,
-      getWorkItemsByStatus,
-      getStatusIconClass,
-      switchBoard,
-      handleSprintSelect,
-      openCreateSprintModal,
-      editSprint,
-      closeSprintModal,
-      handleSaveSprint,
-      handleStartSprint,
-      handleCompleteSprint,
-      handleDeleteSprint,
-      formatDateRange,
-      onDragStart,
-      onDrop,
-      openCreateModalWithStatus,
-      editWorkItem,
-      closeWorkItemModal,
-      handleSaveWorkItem,
-      handleDelete,
-      openCreateBoardModal,
-      editCurrentBoard,
-      closeBoardModal,
-      submitBoardForm,
-      handleDeleteCurrentBoard,
-      handleUpdateWorkItemStatus
-    };
+    projectId,
+    boardId,
+    board,
+    projectBoards,
+    workItems,
+    loading,
+    showWorkItemModal,
+    selectedWorkItem,
+    defaultStatus,
+    showBoardModal,
+    isEditingBoard,
+    boardForm,
+    sprintStore,
+    showSprintModal,
+    selectedSprintId,
+    selectedSprint,
+    STATUSES,
+    BOARD_TYPES,
+    filteredWorkItems,
+    switchBoard,
+    handleSprintSelect,
+    openCreateSprintModal,
+    editSprint,
+    closeSprintModal,
+    handleSaveSprint,
+    handleStartSprint,
+    handleCompleteSprint,
+    handleDeleteSprint,
+    openCreateModalWithStatus,
+    editWorkItem,
+    closeWorkItemModal,
+    handleSaveWorkItem,
+    handleDelete,
+    openCreateBoardModal,
+    editCurrentBoard,
+    closeBoardModal,
+    submitBoardForm,
+    handleDeleteCurrentBoard,
+    handleUpdateWorkItemStatus,
+  };
   }
 });
 </script>
