@@ -35,7 +35,23 @@
         @delete-board="handleDeleteCurrentBoard"
         @create-sprint="openCreateSprintModal"
       >
+        <template #sprint-selector>
+          <SprintSelector
+            :sprints="sprintStore.sprints"
+            :selectedSprintId="selectedSprintId"
+            @select="handleSprintSelect"
+          />
+        </template>
       </BoardHeader>
+
+      <!-- Sprint Info Bar -->
+      <SprintInfoBar
+        :sprint="selectedSprint"
+        @start-sprint="handleStartSprint"
+        @complete-sprint="handleCompleteSprint"
+        @edit-sprint="editSprint"
+        @delete-sprint="handleDeleteSprint"
+      />
 
       <!-- Kanban Board -->
       <KanbanBoard
@@ -85,6 +101,14 @@
         </div>
       </div>
     </Modal>
+
+    <!-- Sprint Modal -->
+    <SprintModal
+      v-if="showSprintModal"
+      :sprint="selectedSprint"
+      @close="closeSprintModal"
+      @save="handleSaveSprint"
+    />
   </div>
 </template>
 
@@ -99,18 +123,19 @@ import type { Board } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
 import { STATUSES, BOARD_TYPES } from '@/types/Project';
-import BoardHeader from './board/BoardHeader.vue';
-import SprintInfoBar from './sprint/SprintInfoBar.vue';
-import KanbanBoard from './kanban/KanbanBoard.vue';
-import WorkItemModal from './workItem/WorkItemModal.vue';
-import Modal from './common/Modal.vue';
-import SprintSelector from './sprint/SprintSelector.vue';
-import SprintModal from './sprint/SprintModal.vue';
+import BoardHeader from '../board/BoardHeader.vue';
+import KanbanBoard from '../kanban/KanbanBoard.vue';
+import WorkItemModal from '../workItem/WorkItemModal.vue';
+import Modal from '../common/Modal.vue';
+import SprintSelector from './SprintSelector.vue';
+import SprintModal from './SprintModal.vue';
+import SprintInfoBar from './SprintInfoBar.vue';
+
 import { 
   LoadingIcon, 
   PlusIcon,
   ClipboardIcon
-} from './icons';
+} from '../icons';
 
 export default defineComponent({
   name: 'BoardDetailView',
