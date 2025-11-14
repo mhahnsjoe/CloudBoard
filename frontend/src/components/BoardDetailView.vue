@@ -23,23 +23,44 @@
       </div>
     </div>
 
+    <!-- Dynamic Board View Based on Type -->
     <div v-else>
-      <!-- Board Header -->
-      <BoardHeader
+      <!-- Sprint Board (for Scrum boards) -->
+      <SprintBoardView
+        v-if="board?.type === 'Scrum'"
         :board="board"
         :boardId="boardId"
         :projectBoards="projectBoards"
+        :workItems="workItems"
+        :sprints="sprintStore.sprints"
+        :selectedSprintId="selectedSprintId"
         @switch-board="switchBoard"
         @create-board="openCreateBoardModal"
         @edit-board="editCurrentBoard"
         @delete-board="handleDeleteCurrentBoard"
         @create-sprint="openCreateSprintModal"
-      >
-      </BoardHeader>
+        @select-sprint="handleSprintSelect"
+        @start-sprint="handleStartSprint"
+        @complete-sprint="handleCompleteSprint"
+        @edit-sprint="editSprint"
+        @delete-sprint="handleDeleteSprint"
+        @create-workitem="openCreateModalWithStatus"
+        @edit-workitem="editWorkItem"
+        @delete-workitem="handleDelete"
+        @update-status="handleUpdateWorkItemStatus"
+      />
 
-      <!-- Kanban Board -->
-      <KanbanBoard
-        :workItems="filteredWorkItems"
+      <!-- Kanban Board (for Kanban and Backlog boards) -->
+      <KanbanBoardView
+        v-else
+        :board="board"
+        :boardId="boardId"
+        :projectBoards="projectBoards"
+        :workItems="workItems"
+        @switch-board="switchBoard"
+        @create-board="openCreateBoardModal"
+        @edit-board="editCurrentBoard"
+        @delete-board="handleDeleteCurrentBoard"
         @create-workitem="openCreateModalWithStatus"
         @edit-workitem="editWorkItem"
         @delete-workitem="handleDelete"
@@ -47,6 +68,7 @@
       />
     </div>
 
+    <!-- Modals stay in BoardDetailView -->
     <WorkItemModal
       v-if="showWorkItemModal"
       :workItem="selectedWorkItem"
@@ -57,7 +79,6 @@
       @save="handleSaveWorkItem"
     />
 
-    <!-- Board Modal -->
     <Modal
       :show="showBoardModal"
       :title="isEditingBoard ? 'Edit Board' : 'Create Board'"
@@ -85,6 +106,13 @@
         </div>
       </div>
     </Modal>
+
+    <SprintModal
+      v-if="showSprintModal"
+      :sprint="selectedSprint"
+      @close="closeSprintModal"
+      @save="handleSaveSprint"
+    />
   </div>
 </template>
 
@@ -99,13 +127,11 @@ import type { Board } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
 import { STATUSES, BOARD_TYPES } from '@/types/Project';
-import BoardHeader from './board/BoardHeader.vue';
-import SprintInfoBar from './sprint/SprintInfoBar.vue';
-import KanbanBoard from './kanban/KanbanBoard.vue';
 import WorkItemModal from './workItem/WorkItemModal.vue';
 import Modal from './common/Modal.vue';
-import SprintSelector from './sprint/SprintSelector.vue';
 import SprintModal from './sprint/SprintModal.vue';
+import SprintBoardView from './sprint/SprintBoardView.vue';
+import KanbanBoardView from './kanban/KanbanBoard.vue';
 import { 
   LoadingIcon, 
   PlusIcon,
@@ -117,14 +143,12 @@ export default defineComponent({
   components: {
     WorkItemModal,
     Modal,
-    SprintSelector,
     SprintModal,
     LoadingIcon,
     PlusIcon,
     ClipboardIcon,
-    BoardHeader,
-    SprintInfoBar,
-    KanbanBoard
+    SprintBoardView,
+    KanbanBoardView
   },
   setup() {
     const route = useRoute();
