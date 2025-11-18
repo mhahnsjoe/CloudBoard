@@ -23,225 +23,52 @@
       </div>
     </div>
 
+    <!-- Dynamic Board View Based on Type -->
     <div v-else>
-      <!-- Board Header with Selector -->
-      <div class="flex justify-between items-center mb-6">
-        <div class="flex items-center gap-4">
-          <!-- Board Dropdown Selector -->
-          <div class="relative">
-            <button
-              @click="showBoardDropdown = !showBoardDropdown"
-              class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-lg border border-gray-300 hover:border-gray-400 transition-all shadow-sm"
-            >
-              <FolderIcon className="w-5 h-5 text-gray-600" />
-              <span class="text-xl font-bold text-gray-800">{{ board?.name }}</span>
-              <svg class="w-5 h-5 text-gray-500 transition-transform duration-200" :class="{ 'rotate-180': showBoardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
+      <!-- Sprint Board (for Scrum boards) -->
+      <SprintBoardView
+        v-if="board?.type === 'Scrum'"
+        :board="board"
+        :boardId="boardId"
+        :projectBoards="projectBoards"
+        :workItems="workItems"
+        :sprints="sprintStore.sprints"
+        :selectedSprintId="selectedSprintId"
+        @switch-board="switchBoard"
+        @create-board="openCreateBoardModal"
+        @edit-board="editCurrentBoard"
+        @delete-board="handleDeleteCurrentBoard"
+        @create-sprint="openCreateSprintModal"
+        @select-sprint="handleSprintSelect"
+        @start-sprint="handleStartSprint"
+        @complete-sprint="handleCompleteSprint"
+        @edit-sprint="editSprint"
+        @delete-sprint="handleDeleteSprint"
+        @create-workitem="openCreateModalWithStatus"
+        @edit-workitem="editWorkItem"
+        @delete-workitem="handleDelete"
+        @update-status="handleUpdateWorkItemStatus"
+      />
 
-            <!-- Board Dropdown Menu -->
-            <div
-              v-if="showBoardDropdown"
-              class="absolute top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50"
-            >
-              <div class="px-3 py-2 text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-                Switch Board
-              </div>
-              
-              <!-- Board List -->
-              <div class="max-h-64 overflow-y-auto">
-                <button
-                  v-for="b in projectBoards"
-                  :key="b.id"
-                  @click="switchBoard(b.id)"
-                  class="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between group"
-                  :class="{ 'bg-blue-50': b.id === boardId }"
-                >
-                  <div class="flex items-center gap-3">
-                    <ClipboardIcon className="w-4 h-4 text-gray-500" />
-                    <div>
-                      <div class="font-medium text-gray-800" :class="{ 'text-blue-700': b.id === boardId }">
-                        {{ b.name }}
-                      </div>
-                      <div class="text-xs text-gray-500">
-                        {{ b.workItems?.length || 0 }} WorkItems
-                      </div>
-                    </div>
-                  </div>
-                  <span v-if="b.id === boardId" class="text-blue-600 text-xs font-medium">
-                    Current
-                  </span>
-                </button>
-              </div>
-
-              <!-- Add New Board -->
-              <div class="border-t border-gray-200 mt-2">
-                <button
-                  @click="openCreateBoardModal"
-                  class="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center gap-3 text-blue-600 font-medium"
-                >
-                  <PlusIcon className="w-4 h-4" />
-                  <span>Create New Board</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Board Type Badge -->
-          <span :class="getBoardTypeClass(board?.type || '')" class="text-xs px-3 py-1.5 rounded-full font-medium">
-            {{ board?.type }}
-          </span>
-
-          <!-- Sprint Selector -->
-          <SprintSelector
-            :sprints="sprintStore.sprints"
-            :selectedSprintId="selectedSprintId"
-            @select="handleSprintSelect"
-          />
-        </div>
-
-        <!-- Board Actions -->
-        <div class="flex items-center gap-2">
-          <button
-            @click="openCreateSprintModal"
-            class="px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-all flex items-center gap-2"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Create Sprint
-          </button>
-          <button
-            @click="editCurrentBoard"
-            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
-          >
-            <EditIcon className="w-4 h-4" />
-            Edit Board
-          </button>
-          <button
-            @click="handleDeleteCurrentBoard"
-            class="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all flex items-center gap-2"
-          >
-            <DeleteIcon className="w-4 h-4" />
-            Delete Board
-          </button>
-        </div>
-      </div>
-
-      <!-- Sprint Info Bar (if sprint is selected) -->
-      <div v-if="selectedSprint" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <div class="flex justify-between items-start">
-          <div class="flex-1">
-            <div class="flex items-center gap-3 mb-2">
-              <h3 class="text-lg font-bold text-gray-800">{{ selectedSprint.name }}</h3>
-              <span 
-                class="text-xs px-2 py-1 rounded-full font-medium"
-                :class="{
-                  'bg-yellow-100 text-yellow-800': selectedSprint.status === 'Planning',
-                  'bg-green-100 text-green-800': selectedSprint.status === 'Active',
-                  'bg-gray-100 text-gray-800': selectedSprint.status === 'Completed'
-                }"
-              >
-                {{ selectedSprint.status }}
-              </span>
-            </div>
-            <p v-if="selectedSprint.goal" class="text-gray-700 text-sm mb-2">{{ selectedSprint.goal }}</p>
-            <div class="flex items-center gap-4 text-sm text-gray-600">
-              <span>{{ formatDateRange(selectedSprint) }}</span>
-              <span>•</span>
-              <span>{{ selectedSprint.completedWorkItems }}/{{ selectedSprint.totalWorkItems }} items completed</span>
-              <span>•</span>
-              <span>{{ Math.round(selectedSprint.progressPercentage) }}% done</span>
-              <span v-if="selectedSprint.status === 'Active'">•</span>
-              <span v-if="selectedSprint.status === 'Active'" :class="selectedSprint.daysRemaining < 0 ? 'text-red-600 font-medium' : ''">
-                {{ selectedSprint.daysRemaining }} days remaining
-              </span>
-            </div>
-          </div>
-          <div class="flex gap-2">
-           <button
-            v-if="selectedSprint.status === 'Planning'"
-            @click="handleStartSprint(selectedSprint.id)"
-            class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
-            >
-              Start Sprint
-            </button>
-            <button
-              v-if="selectedSprint.status === 'Active'"
-              @click="handleCompleteSprint(selectedSprint.id)"
-              class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Complete Sprint
-            </button>
-            <button
-              @click="editSprint(selectedSprint)"
-              class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Edit
-            </button>
-            <button
-              @click="handleDeleteSprint(selectedSprint.id)"
-              class="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-sm rounded-md hover:bg-red-100 transition-colors"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Kanban Board -->
-      <div class="grid grid-cols-3 gap-6">
-        <div
-          v-for="status in STATUSES"
-          :key="status"
-          class="bg-gray-100 rounded-lg p-4"
-        >
-          <!-- Column Header -->
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <span :class="getStatusIconClass(status)">●</span>
-              {{ status }}
-            </h2>
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-500 bg-white px-2 py-1 rounded-full">
-                {{ getWorkItemsByStatus(status).length }}
-              </span>
-              <button
-                @click="openCreateModalWithStatus(status)"
-                class="p-1 hover:bg-white rounded transition-colors text-gray-600 hover:text-blue-600"
-                title="Add WorkItem"
-              >
-                <PlusIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Drop Zone -->
-          <div
-            @drop="onDrop($event, status)"
-            @dragover.prevent
-            @dragenter.prevent
-            class="min-h-[500px] space-y-3"
-          >
-            <KanbanCard
-              v-for="workItem in getWorkItemsByStatus(status)"
-              :key="workItem.id"
-              :workItem="workItem"
-              @dragstart="onDragStart($event, workItem)"
-              @edit="editWorkItem(workItem)"
-              @delete="handleDelete(workItem.id)"
-            />
-            <!-- Empty State -->
-            <div
-              v-if="getWorkItemsByStatus(status).length === 0"
-              class="flex items-center justify-center h-32 text-gray-400 text-sm"
-            >
-              Drop WorkItems here
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Kanban Board (for Kanban and Backlog boards) -->
+      <KanbanBoardView
+        v-else
+        :board="board"
+        :boardId="boardId"
+        :projectBoards="projectBoards"
+        :workItems="workItems"
+        @switch-board="switchBoard"
+        @create-board="openCreateBoardModal"
+        @edit-board="editCurrentBoard"
+        @delete-board="handleDeleteCurrentBoard"
+        @create-workitem="openCreateModalWithStatus"
+        @edit-workitem="editWorkItem"
+        @delete-workitem="handleDelete"
+        @update-status="handleUpdateWorkItemStatus"
+      />
     </div>
 
+    <!-- Modals stay in BoardDetailView -->
     <WorkItemModal
       v-if="showWorkItemModal"
       :workItem="selectedWorkItem"
@@ -252,7 +79,6 @@
       @save="handleSaveWorkItem"
     />
 
-    <!-- Board Modal -->
     <Modal
       :show="showBoardModal"
       :title="isEditingBoard ? 'Edit Board' : 'Create Board'"
@@ -281,7 +107,6 @@
       </div>
     </Modal>
 
-    <!-- Sprint Modal -->
     <SprintModal
       v-if="showSprintModal"
       :sprint="selectedSprint"
@@ -291,8 +116,9 @@
   </div>
 </template>
 
+
 <script lang="ts">
-import { defineComponent, ref, onMounted, watch, onBeforeUnmount, computed } from 'vue';
+import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getBoard, getBoards, createBoard, updateBoard, deleteBoard, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
@@ -301,18 +127,14 @@ import type { Board } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
 import { STATUSES, BOARD_TYPES } from '@/types/Project';
-
-import KanbanCard from './kanban/KanbanCard.vue';
 import WorkItemModal from './workItem/WorkItemModal.vue';
 import Modal from './common/Modal.vue';
-import SprintSelector from './sprint/SprintSelector.vue';
 import SprintModal from './sprint/SprintModal.vue';
+import SprintBoardView from './sprint/SprintBoardView.vue';
+import KanbanBoardView from './kanban/KanbanBoard.vue';
 import { 
   LoadingIcon, 
   PlusIcon,
-  EditIcon,
-  DeleteIcon,
-  FolderIcon,
   ClipboardIcon
 } from './icons';
 
@@ -321,15 +143,12 @@ export default defineComponent({
   components: {
     WorkItemModal,
     Modal,
-    SprintSelector,
     SprintModal,
     LoadingIcon,
     PlusIcon,
-    EditIcon,
-    DeleteIcon,
-    FolderIcon,
     ClipboardIcon,
-    KanbanCard
+    SprintBoardView,
+    KanbanBoardView
   },
   setup() {
     const route = useRoute();
@@ -348,10 +167,8 @@ export default defineComponent({
     const showWorkItemModal = ref(false);
     const selectedWorkItem = ref<WorkItem | null>(null);
     const defaultStatus = ref<string>('To Do');
-    const draggedWorkItem = ref<WorkItem | null>(null);
 
     // Board Management
-    const showBoardDropdown = ref(false);
     const showBoardModal = ref(false);
     const isEditingBoard = ref(false);
     const boardForm = ref<{ id?: number; name: string; type: string }>({
@@ -412,30 +229,7 @@ export default defineComponent({
     };
 
     const switchBoard = (newBoardId: number) => {
-      showBoardDropdown.value = false;
       router.push(`/projects/${projectId.value}/boards/${newBoardId}`);
-    };
-
-    const getBoardTypeClass = (type: string) => {
-      const classes: Record<string, string> = {
-        'Kanban': 'bg-blue-100 text-blue-700',
-        'Scrum': 'bg-green-100 text-green-700',
-        'Backlog': 'bg-purple-100 text-purple-700'
-      };
-      return classes[type] || 'bg-gray-100 text-gray-700';
-    };
-
-    const getWorkItemsByStatus = (status: string) => {
-      return filteredWorkItems.value.filter(workItem => workItem.status === status);
-    };
-
-    const getStatusIconClass = (status: string) => {
-      const classes: Record<string, string> = {
-        'To Do': 'text-gray-500',
-        'In Progress': 'text-blue-500',
-        'Done': 'text-green-500'
-      };
-      return classes[status] || 'text-gray-500';
     };
 
     // Sprint Management Functions
@@ -514,36 +308,6 @@ export default defineComponent({
       }
     };
 
-    const formatDateRange = (sprint: Sprint) => {
-      const start = new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const end = new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      return `${start} - ${end}`;
-    };
-
-    // WorkItem Management
-    const onDragStart = (event: DragEvent, workItem: WorkItem) => {
-      draggedWorkItem.value = workItem;
-      if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move';
-      }
-    };
-
-    const onDrop = async (event: DragEvent, newStatus: string) => {
-      event.preventDefault();
-      if (draggedWorkItem.value && draggedWorkItem.value.status !== newStatus) {
-        try {
-          await updateWorkItem(boardId.value, draggedWorkItem.value.id, {
-            ...draggedWorkItem.value,
-            status: newStatus
-          });
-          await fetchBoard();
-        } catch (error) {
-          console.error('Failed to update WorkItem status:', error);
-        }
-      }
-      draggedWorkItem.value = null;
-    };
-
     const openCreateModalWithStatus = (status: string) => {
       selectedWorkItem.value = null;
       defaultStatus.value = status;
@@ -592,7 +356,6 @@ export default defineComponent({
       boardForm.value = { name: "", type: "Kanban" };
       isEditingBoard.value = false;
       showBoardModal.value = true;
-      showBoardDropdown.value = false;
     };
 
     const editCurrentBoard = () => {
@@ -674,11 +437,15 @@ export default defineComponent({
       }
     };
 
-    // Close dropdown when clicking outside
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.relative')) {
-        showBoardDropdown.value = false;
+     const handleUpdateWorkItemStatus = async (workItem: WorkItem, newStatus: string) => {
+      try {
+        await updateWorkItem(boardId.value, workItem.id, {
+          ...workItem,
+          status: newStatus
+        });
+        await fetchBoard();
+      } catch (error) {
+        console.error('Failed to update WorkItem status:', error);
       }
     };
 
@@ -686,11 +453,6 @@ export default defineComponent({
       fetchProjectBoards();
       fetchBoard();
       fetchSprints();
-      document.addEventListener('click', handleClickOutside);
-    });
-
-    onBeforeUnmount(() => {
-      document.removeEventListener('click', handleClickOutside);
     });
 
     watch(
@@ -717,51 +479,46 @@ export default defineComponent({
     );
 
     return {
-      projectId,
-      boardId,
-      board,
-      projectBoards,
-      workItems,
-      loading,
-      showBoardDropdown,
-      showWorkItemModal,
-      selectedWorkItem,
-      defaultStatus,
-      showBoardModal,
-      isEditingBoard,
-      boardForm,
-      sprintStore,
-      showSprintModal,
-      selectedSprintId,
-      selectedSprint,
-      STATUSES,
-      BOARD_TYPES,
-      getBoardTypeClass,
-      getWorkItemsByStatus,
-      getStatusIconClass,
-      switchBoard,
-      handleSprintSelect,
-      openCreateSprintModal,
-      editSprint,
-      closeSprintModal,
-      handleSaveSprint,
-      handleStartSprint,
-      handleCompleteSprint,
-      handleDeleteSprint,
-      formatDateRange,
-      onDragStart,
-      onDrop,
-      openCreateModalWithStatus,
-      editWorkItem,
-      closeWorkItemModal,
-      handleSaveWorkItem,
-      handleDelete,
-      openCreateBoardModal,
-      editCurrentBoard,
-      closeBoardModal,
-      submitBoardForm,
-      handleDeleteCurrentBoard
-    };
+    projectId,
+    boardId,
+    board,
+    projectBoards,
+    workItems,
+    loading,
+    showWorkItemModal,
+    selectedWorkItem,
+    defaultStatus,
+    showBoardModal,
+    isEditingBoard,
+    boardForm,
+    sprintStore,
+    showSprintModal,
+    selectedSprintId,
+    selectedSprint,
+    STATUSES,
+    BOARD_TYPES,
+    filteredWorkItems,
+    switchBoard,
+    handleSprintSelect,
+    openCreateSprintModal,
+    editSprint,
+    closeSprintModal,
+    handleSaveSprint,
+    handleStartSprint,
+    handleCompleteSprint,
+    handleDeleteSprint,
+    openCreateModalWithStatus,
+    editWorkItem,
+    closeWorkItemModal,
+    handleSaveWorkItem,
+    handleDelete,
+    openCreateBoardModal,
+    editCurrentBoard,
+    closeBoardModal,
+    submitBoardForm,
+    handleDeleteCurrentBoard,
+    handleUpdateWorkItemStatus,
+  };
   }
 });
 </script>

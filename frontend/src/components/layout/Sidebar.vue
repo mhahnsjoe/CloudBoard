@@ -11,7 +11,7 @@
       <label class="text-xs text-gray-400 uppercase tracking-wide mb-2 block">Project</label>
       <div class="relative" ref="projectSelectorRef">
         <button
-          @click="showProjectDropdown = !showProjectDropdown"
+          @click="projectDropdown.toggle"
           class="w-full bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-700 hover:border-gray-600 focus:border-blue-500 outline-none cursor-pointer transition-all flex items-center justify-between"
         >
           <span class="truncate">{{ currentProjectName || 'Select Project' }}</span>
@@ -104,7 +104,7 @@
     <div class="p-4 border-t border-gray-700">
       <div class="relative" ref="userMenuRef">
         <button
-          @click="showUserMenu = !showUserMenu"
+          @click="userMenuDropdown.toggle"
           class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors"
         >
           <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
@@ -167,13 +167,15 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
+import { defineComponent, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { FolderIcon, PlusIcon } from '@/components/icons';
 import Modal from '@/components/common/Modal.vue';
 import { getProjects, createProject } from '@/services/api';
 import type { Project } from '@/types/Project';
 import { useAuthStore } from '@/stores/auth';
+import { useDropdown } from '@/composables/useDropdown';
+import { useClickOutside } from '@/composables/useClickOutside';
 
 export default defineComponent({
   name: 'SidebarComponent',
@@ -189,12 +191,17 @@ export default defineComponent({
     const authStore = useAuthStore();
     const selectedProjectId = ref<number | null>(null);
     const showAddProjectModal = ref(false);
-    const showProjectDropdown = ref(false);
-    const projectSelectorRef = ref<HTMLElement | null>(null);
-    const showUserMenu = ref(false);
-    const userMenuRef = ref<HTMLElement | null>(null);
     const newProjectName = ref('');
     const newProjectDescription = ref('');
+
+    // Dropdown management
+    const projectSelectorRef = ref<HTMLElement | null>(null);
+    const userMenuRef = ref<HTMLElement | null>(null);
+    const projectDropdown = useDropdown();
+    const userMenuDropdown = useDropdown();
+
+    useClickOutside(projectSelectorRef, projectDropdown.close);
+    useClickOutside(userMenuRef, userMenuDropdown.close);
 
     const currentProjectName = computed(() => {
       const project = projects.value.find(p => p.id === selectedProjectId.value);
@@ -214,6 +221,7 @@ export default defineComponent({
         .toUpperCase()
         .slice(0, 2) || 'U';
     });
+
     const handleLogout = () => {
       authStore.logout();
       router.push('/login');
@@ -224,7 +232,6 @@ export default defineComponent({
         const response = await getProjects();
         projects.value = response.data;
         
-        // Set selected project from route or default to first project
         if (route.params.projectId) {
           selectedProjectId.value = Number(route.params.projectId);
         } else if (projects.value.length > 0 && !selectedProjectId.value) {
@@ -236,24 +243,21 @@ export default defineComponent({
     };
 
     const handleProjectChange = async (projectId: number) => {
-      showProjectDropdown.value = false;
+      projectDropdown.close();
       
       if (projectId === selectedProjectId.value) {
-        return; // Already on this project
+        return;
       }
 
       selectedProjectId.value = projectId;
 
       try {
-        // Fetch the project to get its boards
         const project = projects.value.find(p => p.id === projectId);
         
         if (project && project.boards && project.boards.length > 0) {
-          // Navigate to the first board
           const firstBoard = project.boards[0];
           router.push(`/projects/${projectId}/boards/${firstBoard!.id}`);
         } else {
-          // If no boards exist, navigate to the project with boardId 0 (will show empty state)
           router.push(`/projects/${projectId}/boards/0`);
         }
       } catch (error) {
@@ -262,7 +266,7 @@ export default defineComponent({
     };
 
     const openCreateProjectModal = () => {
-      showProjectDropdown.value = false;
+      projectDropdown.close();
       showAddProjectModal.value = true;
     };
 
@@ -284,7 +288,6 @@ export default defineComponent({
         
         await fetchProjects();
         
-        // Navigate to the newly created project's default board
         if (response.data && response.data.boards && response.data.boards.length > 0) {
           selectedProjectId.value = response.data.id;
           const firstBoard = response.data.boards[0];
@@ -296,30 +299,10 @@ export default defineComponent({
       }
     };
 
-    // Close dropdowns when clicking outside
-    const handleClickOutside = (event: MouseEvent) => {
-      if (projectSelectorRef.value && !projectSelectorRef.value.contains(event.target as Node)) {
-        showProjectDropdown.value = false;
-      }
-      if (userMenuRef.value && !userMenuRef.value.contains(event.target as Node)) {
-        showUserMenu.value = false;
-      }
-    };
-
-    // Watch route changes to update selected project
     watch(() => route.params.projectId, (newProjectId) => {
       if (newProjectId) {
         selectedProjectId.value = Number(newProjectId);
       }
-    });
-
-    onMounted(() => {
-      fetchProjects();
-      document.addEventListener('click', handleClickOutside);
-    });
-
-    onBeforeUnmount(() => {
-      document.removeEventListener('click', handleClickOutside);
     });
 
     return {
@@ -331,16 +314,19 @@ export default defineComponent({
       isOnProjectBoard,
       userInitials,
       showAddProjectModal,
-      showProjectDropdown,
-      showUserMenu,
+      showProjectDropdown: projectDropdown.isOpen,
+      showUserMenu: userMenuDropdown.isOpen,
       projectSelectorRef,
       userMenuRef,
       newProjectName,
       newProjectDescription,
+      projectDropdown,
+      userMenuDropdown,
       handleProjectChange,
       handleLogout,
       openCreateProjectModal,
-      handleCreateProject
+      handleCreateProject,
+      fetchProjects
     };
   }
 });

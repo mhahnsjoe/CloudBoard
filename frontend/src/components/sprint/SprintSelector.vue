@@ -105,6 +105,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { Sprint } from '@/types/Sprint'
+import { formatDateRange } from '@/utils/dates';
 
 interface Props {
   sprints: Sprint[]
@@ -148,12 +149,6 @@ function toggleDropdown() {
 function selectOption(sprintId: number | null) {
   emit('select', sprintId)
   isOpen.value = false
-}
-
-function formatDateRange(sprint: Sprint) {
-  const start = new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const end = new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  return `${start} - ${end}`
 }
 
 // Click outside handler
