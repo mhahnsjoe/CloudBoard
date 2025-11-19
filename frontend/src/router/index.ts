@@ -1,33 +1,36 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import SummaryView from '@/components/SummaryView.vue';
-import BoardDetailView from '@/components/BoardDetailView.vue';
-import LoginView from '@/components/LoginView.vue';
-import RegisterView from '@/components/RegisterView.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const routes = [
   {
     path: "/login",
     name: "Login",
-    component: LoginView,
+    component: () => import('@/components/LoginView.vue'),
     meta: { requiresAuth: false }
   },
   {
     path: "/register",
     name: "Register",
-    component: RegisterView,
+    component: () => import('@/components/RegisterView.vue'),
     meta: { requiresAuth: false }
   },
   {
     path: "/",
     name: "Summary",
-    component: SummaryView,
+    component: () => import('@/components/SummaryView.vue'),
     meta: { requiresAuth: true }
   },
   {
     path: "/projects/:projectId/boards/:boardId",
     name: "BoardDetail",
-    component: BoardDetailView,
+    component: () => import('@/components/BoardDetailView.vue'),
+    props: true,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: "/projects/:projectId/backlog",
+    name: "Backlog",
+    component: () => import('@/components/BacklogView.vue'),
     props: true,
     meta: { requiresAuth: true }
   }
