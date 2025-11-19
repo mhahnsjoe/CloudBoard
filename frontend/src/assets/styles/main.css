@@ -43,4 +43,32 @@
   .loading {
     @apply text-gray-600;
   }
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition-all mb-2 cursor-pointer;
+  }
+
+  .nav-item.active {
+    @apply bg-gray-700 text-white;
+    border-left: 3px solid #25AAE1;
+    padding-left: calc(1rem - 3px);
+  }
+
+  .nav-item-nested {
+    @apply flex items-center justify-between px-4 py-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-all cursor-pointer;
+  }
+
+  .nav-item-nested.active {
+    @apply bg-gray-700 text-white;
+    border-left: 3px solid #64BC46;
+    padding-left: calc(1rem - 3px);
+  }
+
+  .rotate-180 {
+    transform: rotate(180deg);
+  }
+
+  .rotate-90 {
+    transform: rotate(90deg);
+  }
+  
 }

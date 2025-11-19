@@ -25,7 +25,7 @@
       @click.stop
       class="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50"
     >
-      <!-- Backlog Option -->
+      <!-- Backlog Option 
       <button
         @click="selectOption(null)"
         class="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors border-b border-gray-200"
@@ -37,7 +37,7 @@
           </svg>
           <span>Backlog</span>
         </div>
-      </button>
+      </button>-->
 
       <!-- Active Sprint -->
       <div v-if="activeSprint" class="border-b border-gray-200">
@@ -135,9 +135,9 @@ const completedSprints = computed(() =>
 )
 
 const selectedLabel = computed(() => {
-  if (props.selectedSprintId === null) {
-    return 'Backlog'
-  }
+  // if (props.selectedSprintId === null) {
+  //   return 'Backlog'
+  // }
   const sprint = props.sprints.find(s => s.id === props.selectedSprintId)
   return sprint?.name || 'Select Sprint'
 })
