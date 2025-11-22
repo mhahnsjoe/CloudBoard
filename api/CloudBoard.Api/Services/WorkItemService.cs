@@ -28,7 +28,7 @@ namespace CloudBoard.Api.Services
             // Validate board exists
             var board = await _context.Boards.FindAsync(dto.BoardId);
             if (board == null)
-                throw new InvalidOperationException($"Board {dto.BoardId} not found");
+                throw new KeyNotFoundException($"Board {dto.BoardId} not found");
 
             // Validate parent relationship if specified
             WorkItem? parent = null;
@@ -36,7 +36,7 @@ namespace CloudBoard.Api.Services
             {
                 parent = await _context.WorkItems.FindAsync(dto.ParentId.Value);
                 if (parent == null)
-                    throw new InvalidOperationException("Parent workItem not found");
+                    throw new KeyNotFoundException("Parent workItem not found");
 
                 if (parent.BoardId != dto.BoardId)
                     throw new InvalidOperationException("Parent must be on the same board");
@@ -79,7 +79,7 @@ namespace CloudBoard.Api.Services
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (workItem == null)
-                throw new InvalidOperationException($"WorkItem {id} not found");
+                throw new KeyNotFoundException($"WorkItem {id} not found");
 
             // Validate parent change
             if (dto.ParentId != workItem.ParentId)
@@ -92,7 +92,7 @@ namespace CloudBoard.Api.Services
                 {
                     var newParent = await _context.WorkItems.FindAsync(dto.ParentId.Value);
                     if (newParent == null)
-                        throw new InvalidOperationException("New parent not found");
+                        throw new KeyNotFoundException("New parent not found");
 
                     var parentValidation = _validation.ValidateParentChild(newParent.Type, workItem.Type);
                     if (!parentValidation.IsValid)
@@ -133,7 +133,7 @@ namespace CloudBoard.Api.Services
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (workItem == null)
-                throw new InvalidOperationException($"workItem {id} not found");
+                throw new KeyNotFoundException($"workItem {id} not found");
 
             var validation = _validation.ValidateDelete(workItem);
             if (!validation.IsValid)
@@ -188,7 +188,7 @@ namespace CloudBoard.Api.Services
         {
             var item = await _context.WorkItems.FindAsync(itemId);
             if (item == null)
-                throw new InvalidOperationException($"Item {itemId} not found");
+                throw new KeyNotFoundException($"Item {itemId} not found");
 
             var validation = await _validation.ValidateNoCycle(itemId, newParentId);
             if (!validation.IsValid)
@@ -219,7 +219,7 @@ namespace CloudBoard.Api.Services
                 .FirstOrDefaultAsync(w => w.Id == sprintId);
                 
             if (workItem == null)
-                throw new NullReferenceException($"Item {sprintId} not found");
+                throw new KeyNotFoundException($"Item {sprintId} not found");
 
             if (workItem.Board?.Project?.OwnerId != userId)
                 throw new UnauthorizedAccessException($"Item {sprintId} is not owned by the user");
@@ -229,7 +229,7 @@ namespace CloudBoard.Api.Services
             {
                 var sprint = await _context.Sprints.FindAsync(dto.SprintId.Value);
                 if (sprint == null)
-                    throw new InvalidOperationException($"Sprint {sprintId} not found");
+                    throw new KeyNotFoundException($"Sprint {sprintId} not found");
 
                 if (sprint.BoardId != workItem.BoardId)
                     throw new InvalidOperationException($"Sprint must belong to the same board");
