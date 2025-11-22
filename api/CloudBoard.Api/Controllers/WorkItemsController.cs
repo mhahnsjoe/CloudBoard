@@ -94,6 +94,10 @@ namespace CloudBoard.Api.Controllers
             {
                 return BadRequest(ex.Message);
             }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         /// <summary>
@@ -118,6 +122,10 @@ namespace CloudBoard.Api.Controllers
             {
                 return BadRequest(ex.Message);
             }
+            catch(KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         /// <summary>
@@ -137,6 +145,10 @@ namespace CloudBoard.Api.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(ex.Message);
+            }
+            catch(KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
             }
         }
 
@@ -159,6 +171,10 @@ namespace CloudBoard.Api.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(ex.Message);
+            }
+            catch(KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
             }
         }
 
@@ -192,9 +208,9 @@ namespace CloudBoard.Api.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (NullReferenceException)
+            catch (KeyNotFoundException ex)
             {
-                return NotFound();
+                return NotFound(ex.Message);
             }
             catch(UnauthorizedAccessException)
             {

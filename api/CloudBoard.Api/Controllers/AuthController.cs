@@ -58,7 +58,7 @@ namespace CloudBoard.Api.Controllers
                 var userDto = await _authService.GetCurrentUser(userId);
                 return Ok(userDto);
             }
-            catch (NullReferenceException)
+            catch (KeyNotFoundException)
             {
                 return NotFound();
             }

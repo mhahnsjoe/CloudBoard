@@ -44,7 +44,7 @@ namespace CloudBoard.Api.Controllers
                 var project = await _projetService.GetProjectByIdAsync(id);
                 return project;
             }
-            catch(NullReferenceException)
+            catch(KeyNotFoundException)
             {
                 return NotFound();
             }
@@ -76,7 +76,7 @@ namespace CloudBoard.Api.Controllers
                 await _projetService.UpdateProjectAsync(id, projectDto);
                 return NoContent();
             }
-            catch(NullReferenceException)
+            catch(KeyNotFoundException)
             {
                 return NotFound();
             }
@@ -91,7 +91,7 @@ namespace CloudBoard.Api.Controllers
                 await _projetService.DeleteProjectAsync(id);
                 return NoContent();
             }
-            catch (NullReferenceException)
+            catch (KeyNotFoundException)
             {
                 return NotFound();
             }

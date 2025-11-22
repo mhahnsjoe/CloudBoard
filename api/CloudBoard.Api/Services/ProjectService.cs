@@ -9,7 +9,6 @@ namespace CloudBoard.Api.Services
     public class ProjectService : IProjectService
     {
         private readonly CloudBoardContext _context;
-        
         //TODO: Feature/Add-Logging-To-Backend
         //private readonly ILogger<ProjectService> _logger;
 
@@ -36,7 +35,7 @@ namespace CloudBoard.Api.Services
                 .FirstOrDefaultAsync(p => p.Id == id);
             
             if (project == null) 
-                throw new NullReferenceException();
+                throw new KeyNotFoundException();
             
             return project;
         }
@@ -78,7 +77,7 @@ namespace CloudBoard.Api.Services
         {
             var project = await _context.Projects.FindAsync(id);
             if (project == null)
-                throw new NullReferenceException();
+                throw new KeyNotFoundException();
             
             project.Name = projectDto.Name;
             project.Description = projectDto.Description;
@@ -91,7 +90,7 @@ namespace CloudBoard.Api.Services
         {
             var project = await _context.Projects.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
             if (project == null)
-                throw new NullReferenceException();
+                throw new KeyNotFoundException();
 
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
