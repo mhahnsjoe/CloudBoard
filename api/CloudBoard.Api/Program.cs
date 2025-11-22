@@ -85,6 +85,8 @@ builder.Services.AddAuthentication(options =>
 // Services
 builder.Services.AddScoped<IWorkItemValidationService, WorkItemValidationService>();
 builder.Services.AddScoped<IWorkItemService, WorkItemService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
 
 // CORS
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
