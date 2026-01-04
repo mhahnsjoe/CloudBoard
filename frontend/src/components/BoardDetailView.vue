@@ -127,7 +127,7 @@ import type { Board } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
 import { STATUSES, BOARD_TYPES } from '@/types/Project';
-import WorkItemModal from './workItem/WorkItemModal.vue';
+import WorkItemModal from './workItem/WorkItemModalOld.vue';
 import Modal from './common/Modal.vue';
 import SprintModal from './sprint/SprintModal.vue';
 import SprintBoardView from './sprint/SprintBoardView.vue';
