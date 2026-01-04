@@ -6,7 +6,7 @@
     </div>
 
     <!-- Empty State: No Boards -->
-    <div v-else-if="!board && projectBoards.length === 0" class="flex items-center justify-center min-h-[60vh]">
+    <div v-else-if="!board && boardStore.boards.length === 0" class="flex items-center justify-center min-h-[60vh]">
       <div class="text-center max-w-md">
         <ClipboardIcon className="w-20 h-20 mx-auto mb-4 text-gray-300" />
         <h2 class="text-2xl font-bold text-gray-800 mb-2">No Boards Yet</h2>
@@ -30,7 +30,7 @@
         v-if="board?.type === 'Scrum'"
         :board="board"
         :boardId="boardId"
-        :projectBoards="projectBoards"
+        :projectBoards="boardStore.boards"
         :workItems="workItems"
         :sprints="sprintStore.sprints"
         :selectedSprintId="selectedSprintId"
@@ -55,7 +55,7 @@
         v-else
         :board="board"
         :boardId="boardId"
-        :projectBoards="projectBoards"
+        :projectBoards="boardStore.boards"
         :workItems="workItems"
         @switch-board="switchBoard"
         @create-board="openCreateBoardModal"
@@ -93,14 +93,14 @@
             v-model="boardForm.name"
             type="text"
             placeholder="e.g., Sprint 1, Backlog, Bug Tracker"
-            class="input"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             required
           />
         </div>
         
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Board Type</label>
-          <select v-model="boardForm.type" class="input">
+          <select v-model="boardForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
             <option v-for="type in BOARD_TYPES" :key="type">{{ type }}</option>
           </select>
         </div>
@@ -120,9 +120,10 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getBoard, getBoards, createBoard, updateBoard, deleteBoard, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api';
+import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useSprintStore } from '@/stores/sprint';
+import { useBoardStore } from '@/stores/boards';
 import type { Board } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
@@ -157,9 +158,9 @@ export default defineComponent({
     const boardId = ref(Number(route.params.boardId));
     const { confirm } = useConfirm();
     const sprintStore = useSprintStore();
+    const boardStore = useBoardStore();
 
     const board = ref<Board | null>(null);
-    const projectBoards = ref<Board[]>([]);
     const workItems = ref<WorkItem[]>([]);
     const loading = ref(false);
     
@@ -209,16 +210,6 @@ export default defineComponent({
       }
     };
 
-    const fetchProjectBoards = async () => {
-      try {
-        const res = await getBoards(projectId.value);
-        projectBoards.value = res.data;
-      } catch (error) {
-        console.error('Failed to fetch project boards:', error);
-        projectBoards.value = [];
-      }
-    };
-
     const fetchSprints = async () => {
       if (!boardId.value) return;
       try {
@@ -249,26 +240,23 @@ export default defineComponent({
 
     const closeSprintModal = () => {
       showSprintModal.value = false;
-      // Don't clear selectedSprintId here as it's used for viewing
     };
 
     const handleSaveSprint = async (sprintData: CreateSprintDto | UpdateSprintDto) => {
-    try {
-      if (selectedSprint.value) {
-        // Editing existing sprint
-        await sprintStore.updateSprint(selectedSprint.value.id, sprintData as UpdateSprintDto);
-      } else {
-        // Creating new sprint
-        const newSprint = await sprintStore.createSprint(boardId.value, sprintData as CreateSprintDto);
-        selectedSprintId.value = newSprint.id;  // <-- This line causes the issue
+      try {
+        if (selectedSprint.value) {
+          await sprintStore.updateSprint(selectedSprint.value.id, sprintData as UpdateSprintDto);
+        } else {
+          const newSprint = await sprintStore.createSprint(boardId.value, sprintData as CreateSprintDto);
+          selectedSprintId.value = newSprint.id;
+        }
+        closeSprintModal();
+        await fetchSprints();
+      } catch (error) {
+        console.error('Failed to save sprint:', error);
+        alert('Failed to save sprint');
       }
-      closeSprintModal();
-      await fetchSprints();
-    } catch (error) {
-      console.error('Failed to save sprint:', error);
-      alert('Failed to save sprint');
-    }
-  };
+    };
 
     const handleStartSprint = async (sprintId: number) => {
       try {
@@ -285,7 +273,7 @@ export default defineComponent({
         try {
           const result = await sprintStore.completeSprint(sprintId);
           await fetchSprints();
-          await fetchBoard(); // Refresh work items
+          await fetchBoard();
           alert(`Sprint completed! ${result.movedToBacklog} items moved to backlog.`);
         } catch (error) {
           console.error('Failed to complete sprint:', error);
@@ -300,7 +288,7 @@ export default defineComponent({
           await sprintStore.deleteSprint(sprintId);
           selectedSprintId.value = null;
           await fetchSprints();
-          await fetchBoard(); // Refresh work items
+          await fetchBoard();
         } catch (error) {
           console.error('Failed to delete sprint:', error);
           alert('Failed to delete sprint');
@@ -333,7 +321,7 @@ export default defineComponent({
         }
         closeWorkItemModal();
         await fetchBoard();
-        await fetchSprints(); // Refresh sprint stats
+        await fetchSprints();
       } catch (error) {
         console.error('Failed to save WorkItem:', error);
       }
@@ -344,14 +332,14 @@ export default defineComponent({
         try {
           await deleteWorkItem(boardId.value, id);
           await fetchBoard();
-          await fetchSprints(); // Refresh sprint stats
+          await fetchSprints();
         } catch (error) {
           console.error('Failed to delete WorkItem:', error);
         }
       }
     };
 
-    // Board Management
+    // Board Management - Using Store
     const openCreateBoardModal = () => {
       boardForm.value = { name: "", type: "Kanban" };
       isEditingBoard.value = false;
@@ -382,21 +370,22 @@ export default defineComponent({
 
       try {
         if (isEditingBoard.value && boardForm.value.id) {
-          await updateBoard(projectId.value, boardForm.value.id, {
+          // Update existing board via store
+          await boardStore.updateBoard(projectId.value, boardForm.value.id, {
             name: boardForm.value.name,
             type: boardForm.value.type,
             projectId: projectId.value
           });
           await fetchBoard();
-          await fetchProjectBoards();
         } else {
-          const response = await createBoard(projectId.value, {
+          // Create new board via store (this updates sidebar automatically)
+          const newBoard = await boardStore.createBoard(projectId.value, {
             name: boardForm.value.name,
             type: boardForm.value.type,
             projectId: projectId.value
           });
           // Navigate to the newly created board
-          router.push(`/projects/${projectId.value}/boards/${response.data.id}`);
+          router.push(`/projects/${projectId.value}/boards/${newBoard.id}`);
         }
         closeBoardModal();
       } catch (error) {
@@ -410,21 +399,13 @@ export default defineComponent({
       
       if (confirm("Are you sure you want to delete this board? All WorkItems in this board will be deleted.")) {
         try {
-          await deleteBoard(projectId.value, board.value.id);
+          // Delete via store (this updates sidebar automatically)
+          await boardStore.deleteBoard(projectId.value, board.value.id);
           
-          // Refresh the boards list
-          await fetchProjectBoards();
-          
-          // Navigate to another board or stay if no boards
-          if (projectBoards.value.length > 0) {
-            const nextBoard = projectBoards.value.find(b => b.id !== board.value!.id);
-            if (nextBoard) {
-              router.push(`/projects/${projectId.value}/boards/${nextBoard.id}`);
-            } else {
-              // This was the last board, stay on the page to show empty state
-              board.value = null;
-              workItems.value = [];
-            }
+          // Navigate to another board or show empty state
+          if (boardStore.boards.length > 0) {
+            const nextBoard = boardStore.boards[0];
+            router.push(`/projects/${projectId.value}/boards/${nextBoard!.id}`);
           } else {
             // No boards left, clear the board
             board.value = null;
@@ -437,7 +418,7 @@ export default defineComponent({
       }
     };
 
-     const handleUpdateWorkItemStatus = async (workItem: WorkItem, newStatus: string) => {
+    const handleUpdateWorkItemStatus = async (workItem: WorkItem, newStatus: string) => {
       try {
         await updateWorkItem(boardId.value, workItem.id, {
           ...workItem,
@@ -449,10 +430,11 @@ export default defineComponent({
       }
     };
 
-    onMounted(() => {
-      fetchProjectBoards();
-      fetchBoard();
-      fetchSprints();
+    onMounted(async () => {
+      // Fetch boards for sidebar sync
+      await boardStore.fetchBoards(projectId.value);
+      await fetchBoard();
+      await fetchSprints();
     });
 
     watch(
@@ -463,71 +445,67 @@ export default defineComponent({
           projectId.value = Number(route.params.projectId);
           fetchBoard();
           fetchSprints();
-          selectedSprintId.value = null; // Reset sprint selection
+          selectedSprintId.value = null;
         }
       }
     );
 
     watch(
       () => route.params.projectId,
-      (newProjectId) => {
+      async (newProjectId) => {
         if (newProjectId) {
           projectId.value = Number(newProjectId);
-          fetchProjectBoards();
+          await boardStore.fetchBoards(projectId.value);
         }
       }
     );
 
     return {
-    projectId,
-    boardId,
-    board,
-    projectBoards,
-    workItems,
-    loading,
-    showWorkItemModal,
-    selectedWorkItem,
-    defaultStatus,
-    showBoardModal,
-    isEditingBoard,
-    boardForm,
-    sprintStore,
-    showSprintModal,
-    selectedSprintId,
-    selectedSprint,
-    STATUSES,
-    BOARD_TYPES,
-    filteredWorkItems,
-    switchBoard,
-    handleSprintSelect,
-    openCreateSprintModal,
-    editSprint,
-    closeSprintModal,
-    handleSaveSprint,
-    handleStartSprint,
-    handleCompleteSprint,
-    handleDeleteSprint,
-    openCreateModalWithStatus,
-    editWorkItem,
-    closeWorkItemModal,
-    handleSaveWorkItem,
-    handleDelete,
-    openCreateBoardModal,
-    editCurrentBoard,
-    closeBoardModal,
-    submitBoardForm,
-    handleDeleteCurrentBoard,
-    handleUpdateWorkItemStatus,
-  };
+      projectId,
+      boardId,
+      board,
+      workItems,
+      loading,
+      showWorkItemModal,
+      selectedWorkItem,
+      defaultStatus,
+      showBoardModal,
+      isEditingBoard,
+      boardForm,
+      sprintStore,
+      boardStore,
+      showSprintModal,
+      selectedSprintId,
+      selectedSprint,
+      STATUSES,
+      BOARD_TYPES,
+      filteredWorkItems,
+      switchBoard,
+      handleSprintSelect,
+      openCreateSprintModal,
+      editSprint,
+      closeSprintModal,
+      handleSaveSprint,
+      handleStartSprint,
+      handleCompleteSprint,
+      handleDeleteSprint,
+      openCreateModalWithStatus,
+      editWorkItem,
+      closeWorkItemModal,
+      handleSaveWorkItem,
+      handleDelete,
+      openCreateBoardModal,
+      editCurrentBoard,
+      closeBoardModal,
+      submitBoardForm,
+      handleDeleteCurrentBoard,
+      handleUpdateWorkItemStatus
+    };
   }
 });
 </script>
 
 <style scoped>
-.input {
-  @apply w-full px-3 py-2 mb-4 border border-gray-300 rounded;
-}
-
 .rotate-180 {
   transform: rotate(180deg);
 }

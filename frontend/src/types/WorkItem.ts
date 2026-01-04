@@ -33,6 +33,8 @@ export interface WorkItemCreate {
   dueDate?: string;
   estimatedHours?: number;
   boardId: number;
+  parentId?: number;  // Added for hierarchy support
+  sprintId?: number | null;
 }
 
 export interface WorkItemEdit {
@@ -46,11 +48,13 @@ export interface WorkItemEdit {
   estimatedHours?: number;
   actualHours?: number;
   boardId: number;
+  parentId?: number;  // Added for hierarchy support
+  sprintId?: number | null;
 }
 
 export type WorkItemType = 'Task' | 'Bug' | 'PBI' | 'Feature' | 'Epic';
 
-export const WORKITEM_TYPES: readonly WorkItemType[] = ['Task', 'Bug', 'PBI', 'Feature', 'Epic'] as const;
+export const WORKITEM_TYPES: readonly WorkItemType[] = ['Epic', 'Feature', 'PBI', 'Task', 'Bug'] as const;
 
 // Hierarchy rules (mirrors backend)
 export const TYPE_HIERARCHY: Record<WorkItemType, {
@@ -58,36 +62,42 @@ export const TYPE_HIERARCHY: Record<WorkItemType, {
   canHaveChildren: WorkItemType[];
   displayName: string;
   iconClass: string;
+  color: string;
 }> = {
   'Epic': {
     level: 0,
     canHaveChildren: ['Feature', 'Bug'],
     displayName: 'Epic',
-    iconClass: 'epic-icon'
+    iconClass: 'epic-icon',
+    color: 'orange'
   },
   'Feature': {
     level: 1,
     canHaveChildren: ['PBI', 'Bug'],
     displayName: 'Feature',
-    iconClass: 'feature-icon'
+    iconClass: 'feature-icon',
+    color: 'purple'
   },
   'PBI': {
     level: 2,
     canHaveChildren: ['Task', 'Bug'],
     displayName: 'Product Backlog Item',
-    iconClass: 'pbi-icon'
+    iconClass: 'pbi-icon',
+    color: 'blue'
   },
   'Task': {
     level: 3,
     canHaveChildren: [],
     displayName: 'Task',
-    iconClass: 'task-icon'
+    iconClass: 'task-icon',
+    color: 'yellow'
   },
   'Bug': {
     level: -1, // Flexible
     canHaveChildren: [],
     displayName: 'Bug',
-    iconClass: 'bug-icon'
+    iconClass: 'bug-icon',
+    color: 'red'
   }
 };
 
@@ -106,4 +116,8 @@ export function getDisplayName(type: WorkItemType): string {
 
 export function getIconClass(type: WorkItemType): string {
   return TYPE_HIERARCHY[type].iconClass;
+}
+
+export function getTypeColor(type: WorkItemType): string {
+  return TYPE_HIERARCHY[type].color;
 }

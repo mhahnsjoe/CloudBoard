@@ -30,7 +30,7 @@ const routes = [
   {
     path: "/projects/:projectId/backlog",
     name: "Backlog",
-    component: () => import('@/components/BacklogView.vue'),
+    component: () => import('@/components/backlog/BacklogView.vue'),
     props: true,
     meta: { requiresAuth: true }
   }
