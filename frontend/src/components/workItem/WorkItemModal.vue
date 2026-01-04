@@ -41,27 +41,10 @@
               Parent Item
               <span class="text-gray-400 font-normal">(optional)</span>
             </label>
-            <div class="relative">
-              <select
-                v-model="form.parentId"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
-                :disabled="validParentOptions.length === 0"
-              >
-                <option :value="null">No parent (top-level item)</option>
-                <option 
-                  v-for="parent in validParentOptions" 
-                  :key="parent.id" 
-                  :value="parent.id"
-                >
-                  {{ getParentLabel(parent) }}
-                </option>
-              </select>
-              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-              </div>
-            </div>
+            <ParentSelector
+              v-model="form.parentId"
+              :parents="validParentOptions"
+            />
             <p v-if="validParentOptions.length === 0 && form.type !== 'Epic'" class="text-xs text-gray-500 mt-1">
               No valid parents available for this type. Create a higher-level item first.
             </p>
@@ -200,12 +183,14 @@ import { WORKITEM_TYPES } from '@/types/WorkItem'
 import { PRIORITIES, STATUSES } from '@/types/Project'
 import { HIERARCHY_RULES } from '@/composables/useWorkItemTree'
 import WorkItemTypeBadge from './WorkItemTypeBadge.vue'
+import ParentSelector from './ParentSelector.vue'
 import { ClockIcon, CalendarIcon } from '@/components/icons'
 
 export default defineComponent({
   name: 'WorkItemModal',
   components: {
     WorkItemTypeBadge,
+    ParentSelector,
     ClockIcon,
     CalendarIcon
   },

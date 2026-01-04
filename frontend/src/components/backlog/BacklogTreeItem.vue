@@ -9,7 +9,12 @@
       }"
     >
       <!-- Indentation & Expand Toggle -->
-      <div class="flex items-center" :style="{ paddingLeft: `${node.depth * 24}px` }">
+      <div class="flex items-center flex-shrink-0" :style="{ paddingLeft: `${node.depth * 24}px` }">
+        <!-- Tree connector line for nested items -->
+        <div v-if="node.depth > 0" class="flex items-center mr-1">
+          <span class="text-gray-300 text-sm">└</span>
+        </div>
+        
         <!-- Expand/Collapse Button -->
         <button
           v-if="node.children.length > 0"
@@ -106,15 +111,6 @@
         </button>
       </div>
     </div>
-
-    <!-- Connector Lines (visual hierarchy indicator) -->
-    <div 
-      v-if="node.depth > 0" 
-      class="absolute left-0 top-0 bottom-0 pointer-events-none"
-      :style="{ left: `${(node.depth - 1) * 24 + 12}px` }"
-    >
-      <div class="w-px h-full bg-gray-200"></div>
-    </div>
   </div>
 </template>
 
@@ -182,7 +178,7 @@ export default defineComponent({
 
 <style scoped>
 .tree-row {
-  @apply flex items-center py-2.5 px-4 border-b border-gray-100 relative;
+  @apply flex items-center py-2.5 px-4 border-b border-gray-100;
   min-height: 48px;
 }
 
