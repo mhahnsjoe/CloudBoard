@@ -23,13 +23,12 @@ namespace CloudBoard.Api.Controllers
             try
             {
                 var authResponse = await _authService.Register(dto);
+                return Ok(authResponse);
             }
             catch(InvalidOperationException ex)
             {
                 return BadRequest(ex.Message);
             }
-           
-            return Ok(dto);
         }
 
         [HttpPost("login")]
@@ -38,7 +37,7 @@ namespace CloudBoard.Api.Controllers
             try
             {
                 var authResponse = await _authService.Login(dto);
-                return Ok(dto);
+                return Ok(authResponse);
             }
             catch(UnauthorizedAccessException ex)
             {
