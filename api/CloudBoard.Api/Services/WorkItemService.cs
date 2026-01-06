@@ -25,11 +25,15 @@ namespace CloudBoard.Api.Services
 
         public async Task<WorkItem> CreateAsync(WorkItemCreateDto dto, int createdById)
         {
-            // Validate board exists
-            var board = await _context.Boards.FindAsync(dto.BoardId);
-            if (board == null)
-                throw new KeyNotFoundException($"Board {dto.BoardId} not found");
-
+            //TODO: Implement better way to distinguish when a backlog item is created than using null
+            if(dto.BoardId != null) //If boardId is set to null we are most likely creating a backlog item
+            {
+                // Validate board exists
+                var board = await _context.Boards.FindAsync(dto.BoardId);
+                if (board == null)
+                    throw new KeyNotFoundException($"Board {dto.BoardId} not found");
+                dto.ProjectId = board.ProjectId; //Ugly fix for now TODO: find a better way to send projectId? Maybe this works but it feels wrong
+            }
             // Validate parent relationship if specified
             WorkItem? parent = null;
             if (dto.ParentId.HasValue)
@@ -48,6 +52,7 @@ namespace CloudBoard.Api.Services
 
             var workItem = new WorkItem
             {
+                ProjectId = dto.ProjectId,
                 Title = dto.Title,
                 Status = dto.Status,
                 Priority = dto.Priority,
