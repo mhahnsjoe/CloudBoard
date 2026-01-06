@@ -22,8 +22,10 @@ namespace CloudBoard.Api.Models
         #endregion
 
         #region Relationships
+        public int ProjectId { get; set; }
+        public Project? Project { get; set; }
         // Board relationship
-        public int BoardId { get; set; }
+        public int? BoardId { get; set; }
         public Board? Board { get; set; }
         public int? SprintId { get; set; }
         public Sprint? Sprint { get; set; }

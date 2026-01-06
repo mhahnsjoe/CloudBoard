@@ -21,6 +21,7 @@ namespace CloudBoard.Api.Data
 
             ConfigureProjectRelationships(modelBuilder);
             ConfigureBoardRelationships(modelBuilder);
+            ConfigureWorkItemelationships(modelBuilder);
             ConfigureWorkItemHierarchy(modelBuilder);
             ConfigureSprintRelationships(modelBuilder);
         }
@@ -39,6 +40,7 @@ namespace CloudBoard.Api.Data
                 .WithMany(u => u.OwnedProjects)
                 .HasForeignKey(p => p.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
         }
         private void ConfigureBoardRelationships(ModelBuilder modelBuilder)
         {
@@ -46,7 +48,7 @@ namespace CloudBoard.Api.Data
                 .HasMany(b => b.WorkItems)
                 .WithOne(t => t.Board)
                 .HasForeignKey(t => t.BoardId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
         }
         private void ConfigureSprintRelationships(ModelBuilder modelBuilder)
         {
@@ -65,6 +67,14 @@ namespace CloudBoard.Api.Data
             // Indexes
             modelBuilder.Entity<Sprint>().HasIndex(s => s.BoardId);
             modelBuilder.Entity<Sprint>().HasIndex(s => s.Status);
+        }
+        private void ConfigureWorkItemelationships(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<WorkItem>()
+                .HasOne(w => w.Project)
+                .WithMany()
+                .HasForeignKey(w => w.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
         private void ConfigureWorkItemHierarchy(ModelBuilder modelBuilder)

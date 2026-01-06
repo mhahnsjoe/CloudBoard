@@ -9,10 +9,12 @@ namespace CloudBoard.Api.Models.DTO
         public string? Description { get; set; }
         public DateTime? DueDate { get; set; }
         public decimal? EstimatedHours { get; set; }
-        public int BoardId { get; set; }
+        public int? BoardId { get; set; }
         public int? ParentId { get; set; }
         public int? AssignedToId { get; set; }
         public int? SprintId { get; set; }
+        public int ProjectId { get; set; }  // needed when BoardId is null
+
     }
 
     public class WorkItemUpdateDto
@@ -34,5 +36,9 @@ namespace CloudBoard.Api.Models.DTO
     public class AssignSprintDto
     {
         public int? SprintId { get; set; }
+    }
+    public class MoveToBoardDto
+    {
+        public int? BoardId { get; set; }  // null = move to backlog
     }
 }

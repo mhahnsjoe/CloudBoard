@@ -238,5 +238,70 @@ namespace CloudBoard.Api.Services
             workItem.SprintId = dto.SprintId;
             await _context.SaveChangesAsync();
         }
+        public async Task<IEnumerable<WorkItem>> GetBacklogItemsAsync(int projectId)
+        {
+            // Get all work items for this project that have no board assigned
+            var backlog = await _context.WorkItems
+                .Where(w => w.ProjectId == projectId && w.BoardId == null)
+                .ToListAsync();          
+            return backlog;
+        }
+
+        public async Task MoveToBoardAsync(int workItemId, int? boardId, int userId)
+        {
+            var workItem = await _context.WorkItems
+                .Include(w => w.Board)
+                    .ThenInclude(b => b.Project)
+                .FirstOrDefaultAsync(w => w.Id == workItemId);
+
+            if (workItem == null)
+                throw new KeyNotFoundException("Work item not found");
+
+            // Verify user owns this project
+            // TODO: add project ownership verification logic
+
+            if (boardId.HasValue)
+            {
+                var board = await _context.Boards.FindAsync(boardId.Value);
+                if (board == null)
+                    throw new KeyNotFoundException("Board not found");
+            }
+
+            workItem.BoardId = boardId;
+            
+            // If moving to backlog, also clear sprint assignment
+            if (!boardId.HasValue)
+            {
+                workItem.SprintId = null;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Returns a work item to the backlog (sets BoardId to null)
+        /// </summary>
+        public async Task ReturnToBacklogAsync(int workItemId, int userId)
+        {
+            var workItem = await _context.WorkItems
+                .Include(w => w.Board)
+                    .ThenInclude(b => b!.Project)
+                .FirstOrDefaultAsync(w => w.Id == workItemId);
+
+            if (workItem == null)
+                throw new KeyNotFoundException($"Work item {workItemId} not found");
+
+            // Verify ownership through project
+            if (workItem.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException("You don't have permission to modify this work item");
+
+            // Clear board assignment (return to backlog)
+            workItem.BoardId = null;
+            
+            // Also clear sprint assignment since it belongs to the board
+            workItem.SprintId = null;
+
+            await _context.SaveChangesAsync();
+        }
     }
 }
