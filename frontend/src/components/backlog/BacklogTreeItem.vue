@@ -73,13 +73,19 @@
         </span>
       </div>
 
-      <!-- Board Name -->
-      <div class="w-32 text-sm text-gray-500 truncate">
-        {{ boardName }}
-      </div>
-
       <!-- Actions (visible on hover) -->
-      <div class="w-24 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div class="w-28 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <!-- Move to Board -->
+        <button
+          @click.stop="$emit('move-to-board', node)"
+          class="p-1.5 hover:bg-indigo-100 rounded transition-colors"
+          title="Move to Board"
+        >
+          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+          </svg>
+        </button>
+
         <!-- Add Child (only if can have children) -->
         <button
           v-if="canHaveChildren"
@@ -133,16 +139,12 @@ export default defineComponent({
       type: Object as PropType<TreeNode>,
       required: true
     },
-    boardName: {
-      type: String,
-      default: ''
-    },
     isSelected: {
       type: Boolean,
       default: false
     }
   },
-  emits: ['toggle', 'select', 'edit', 'delete', 'add-child'],
+  emits: ['toggle', 'select', 'edit', 'delete', 'add-child', 'move-to-board'],
   setup(props) {
     const canHaveChildren = computed(() => {
       return HIERARCHY_RULES[props.node.type]?.length > 0

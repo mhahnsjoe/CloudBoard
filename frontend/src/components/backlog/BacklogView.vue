@@ -72,8 +72,7 @@
           <div class="flex-1">Title</div>
           <div class="w-28">Status</div>
           <div class="w-24">Priority</div>
-          <div class="w-32">Board</div>
-          <div class="w-24">Actions</div>
+          <div class="w-28">Actions</div>
         </div>
 
         <!-- Tree Items -->
@@ -82,13 +81,13 @@
             v-for="node in treeHelpers.flattenedTree.value"
             :key="node.id"
             :node="node"
-            :boardName="getBoardName(node.boardId)"
             :isSelected="selectedItemId === node.id"
             @toggle="treeHelpers.toggleExpanded"
             @select="handleSelectItem"
             @edit="openEditModal"
             @delete="handleDelete"
             @add-child="openCreateChildModal"
+            @move-to-board="openMoveToBoardModal"
           />
         </div>
 
@@ -157,18 +156,35 @@
       @close="closeWorkItemModal"
       @save="handleSaveWorkItem"
     />
+
+    <!-- Move To Board Modal -->
+    <MoveToBoardModal
+      v-if="showMoveToBoardModal"
+      :workItem="workItemToMove"
+      :boards="boards"
+      @close="closeMoveToBoardModal"
+      @move="handleMoveToBoard"
+    />
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getBoards, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api'
+import { 
+  getBoards, 
+  getProjectBacklog, 
+  createBacklogItem, 
+  updateWorkItem, 
+  deleteWorkItem,
+  moveToBoard 
+} from '@/services/api'
 import { useConfirm } from '@/composables/useConfirm'
 import { useWorkItemTree, HIERARCHY_RULES } from '@/composables/useWorkItemTree'
 import type { Board } from '@/types/Project'
 import type { WorkItem, WorkItemType, WorkItemCreate } from '@/types/WorkItem'
 import WorkItemModal from '@/components/workItem/WorkItemModal.vue'
+import MoveToBoardModal from '@/components/workItem/MoveToBoardModal.vue'
 import BacklogTreeItem from './BacklogTreeItem.vue'
 import BacklogFilters from './BacklogFilters.vue'
 import WorkItemTypeBadge from '@/components/workItem/WorkItemTypeBadge.vue'
@@ -178,6 +194,7 @@ export default defineComponent({
   name: 'BacklogView',
   components: {
     WorkItemModal,
+    MoveToBoardModal,
     BacklogTreeItem,
     BacklogFilters,
     WorkItemTypeBadge,
@@ -201,12 +218,16 @@ export default defineComponent({
     const addDropdownRef = ref<HTMLElement | null>(null)
     const selectedItemId = ref<number | null>(null)
     
-    // Modal State
+    // Work Item Modal State
     const showWorkItemModal = ref(false)
     const selectedWorkItem = ref<WorkItem | null>(null)
     const selectedBoardId = ref<number>(0)
     const selectedParentId = ref<number | null>(null)
     const defaultType = ref<WorkItemType>('Task')
+
+    // Move To Board Modal State
+    const showMoveToBoardModal = ref(false)
+    const workItemToMove = ref<WorkItem | null>(null)
 
     // Filter State
     const searchQuery = ref('')
@@ -230,22 +251,22 @@ export default defineComponent({
       return treeHelpers.getValidParents(defaultType.value, selectedWorkItem.value?.id)
     })
 
-    // Fetch all boards and aggregate work items
-    const fetchBacklogData = async () => {
+    // =============================================
+    // DATA FETCHING
+    // =============================================
+    
+    const fetchBacklogItems = async () => {
       loading.value = true
       try {
-        const res = await getBoards(projectId.value)
-        boards.value = res.data
+        // Fetch backlog items (items with no board assigned)
+        const backlogRes = await getProjectBacklog(projectId.value)
+        allWorkItems.value = backlogRes.data
         
-        // Aggregate work items from all boards
-        allWorkItems.value = boards.value.flatMap(board => 
-          (board.workItems || []).map(item => ({
-            ...item,
-            boardId: board.id
-          }))
-        )
-
-        // Set default board for new items
+        // Also fetch boards for the "Move to Board" modal
+        const boardsRes = await getBoards(projectId.value)
+        boards.value = boardsRes.data
+        
+        // Set default board for potential use
         if (boards.value.length > 0) {
           selectedBoardId.value = boards.value[0]!.id
         }
@@ -256,11 +277,10 @@ export default defineComponent({
       }
     }
 
-    const getBoardName = (boardId: number): string => {
-      return boards.value.find(b => b.id === boardId)?.name || 'Unknown'
-    }
+    // =============================================
+    // WORK ITEM MODAL HANDLERS
+    // =============================================
 
-    // Modal handlers
     const openCreateModal = (type: WorkItemType) => {
       addDropdownOpen.value = false
       selectedWorkItem.value = null
@@ -272,7 +292,6 @@ export default defineComponent({
     const openCreateChildModal = (parent: WorkItem) => {
       selectedWorkItem.value = null
       selectedParentId.value = parent.id
-      selectedBoardId.value = parent.boardId
       
       // Set default type to first allowed child type
       const allowedChildren = HIERARCHY_RULES[parent.type]
@@ -283,7 +302,7 @@ export default defineComponent({
 
     const openEditModal = (workItem: WorkItem) => {
       selectedWorkItem.value = workItem
-      selectedBoardId.value = workItem.boardId
+      selectedBoardId.value = workItem.boardId || 0
       selectedParentId.value = workItem.parentId || null
       defaultType.value = workItem.type
       showWorkItemModal.value = true
@@ -302,21 +321,19 @@ export default defineComponent({
 
     const handleSaveWorkItem = async (workItemData: WorkItem | WorkItemCreate) => {
       try {
-        const boardId = 'id' in workItemData && workItemData.id 
-          ? workItemData.boardId 
-          : selectedBoardId.value
-
         if ('id' in workItemData && workItemData.id) {
+          // Update existing - use the boardId if it has one, or 0 for backlog items
+          const boardId = workItemData.boardId || 0
           await updateWorkItem(boardId, workItemData.id, workItemData as WorkItem)
         } else {
-          await createWorkItem(boardId, { 
-            ...workItemData as WorkItemCreate, 
-            boardId,
+          // Create new backlog item (no board assigned)
+          await createBacklogItem(projectId.value, { 
+            ...workItemData as WorkItemCreate,
             parentId: selectedParentId.value || undefined
           })
         }
         closeWorkItemModal()
-        await fetchBacklogData()
+        await fetchBacklogItems()
       } catch (error) {
         console.error('Failed to save work item:', error)
         alert('Failed to save work item')
@@ -325,7 +342,6 @@ export default defineComponent({
 
     const handleDelete = async (id: number, boardId: number) => {
       // Check if item has children
-      const item = allWorkItems.value.find(i => i.id === id)
       const hasChildren = allWorkItems.value.some(i => i.parentId === id)
       
       if (hasChildren) {
@@ -335,14 +351,45 @@ export default defineComponent({
 
       if (confirm('Are you sure you want to delete this work item?')) {
         try {
-          await deleteWorkItem(boardId, id)
-          await fetchBacklogData()
+          await deleteWorkItem(boardId || 0, id)
+          await fetchBacklogItems()
         } catch (error) {
           console.error('Failed to delete work item:', error)
           alert('Failed to delete work item')
         }
       }
     }
+
+    // =============================================
+    // MOVE TO BOARD MODAL HANDLERS
+    // =============================================
+
+    const openMoveToBoardModal = (workItem: WorkItem) => {
+      workItemToMove.value = workItem
+      showMoveToBoardModal.value = true
+    }
+
+    const closeMoveToBoardModal = () => {
+      showMoveToBoardModal.value = false
+      workItemToMove.value = null
+    }
+
+    const handleMoveToBoard = async (workItemId: number, boardId: number) => {
+      if (!workItemToMove.value) return
+      
+      try {
+        await moveToBoard(workItemId, boardId)
+        closeMoveToBoardModal()
+        await fetchBacklogItems() // Refresh - item will disappear from backlog
+      } catch (error) {
+        console.error('Failed to move work item to board:', error)
+        alert('Failed to move work item to board')
+      }
+    }
+
+    // =============================================
+    // FILTER HANDLERS
+    // =============================================
 
     const clearAllFilters = () => {
       searchQuery.value = ''
@@ -358,8 +405,12 @@ export default defineComponent({
       }
     }
 
+    // =============================================
+    // LIFECYCLE
+    // =============================================
+
     onMounted(() => {
-      fetchBacklogData()
+      fetchBacklogItems()
       document.addEventListener('click', handleClickOutside)
     })
 
@@ -367,7 +418,7 @@ export default defineComponent({
     watch(() => route.params.projectId, (newId) => {
       if (newId) {
         projectId.value = Number(newId)
-        fetchBacklogData()
+        fetchBacklogItems()
       }
     })
 
@@ -380,17 +431,22 @@ export default defineComponent({
       addDropdownOpen,
       addDropdownRef,
       selectedItemId,
+      // Work Item Modal
       showWorkItemModal,
       selectedWorkItem,
       selectedBoardId,
       selectedParentId,
       defaultType,
+      availableParents,
+      // Move To Board Modal
+      showMoveToBoardModal,
+      workItemToMove,
+      // Filter state
       searchQuery,
       selectedTypes,
       selectedStatuses,
       creatableTypes,
-      availableParents,
-      getBoardName,
+      // Methods
       openCreateModal,
       openCreateChildModal,
       openEditModal,
@@ -398,6 +454,9 @@ export default defineComponent({
       handleSelectItem,
       handleSaveWorkItem,
       handleDelete,
+      openMoveToBoardModal,
+      closeMoveToBoardModal,
+      handleMoveToBoard,
       clearAllFilters
     }
   }

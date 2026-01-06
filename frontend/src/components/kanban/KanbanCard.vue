@@ -1,4 +1,4 @@
-<template>
+<template> <!--TODO: RENAME TO WORKITEM CARD? BoardCanvas use this for both sprint & kanban-->
   <div
     class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-3 cursor-move hover:shadow-md transition-all group"
     draggable="true"
@@ -8,7 +8,17 @@
     <!-- WorkItem Type Badge -->
     <div class="flex items-center justify-between mb-2">
       <WorkItemTypeBadge :type="workItem.type as WorkItemType" />
-      <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <!-- Return to Backlog -->
+        <button
+          @click.stop="$emit('return-to-backlog', workItem)"
+          class="p-1 hover:bg-purple-50 rounded transition"
+          title="Return to Backlog"
+        >
+          <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
+          </svg>
+        </button>
         <button
           @click.stop="$emit('edit', workItem)"
           class="p-1 hover:bg-gray-100 rounded transition"
@@ -79,7 +89,7 @@ export default defineComponent({
       required: true
     }
   },
-  emits: ['dragstart', 'click', 'edit', 'delete'],
+  emits: ['dragstart', 'click', 'edit', 'delete', 'return-to-backlog'],
   methods: {
     getPriorityClass(priority: string) {
       const classes: Record<string, string> = {
