@@ -226,7 +226,7 @@ namespace CloudBoard.Api.Controllers
         }
 
         //Move item to a board (or back to backlog)
-        [HttpPatch("{id}/move-to-board")]
+        [HttpPatch("~/api/workitems/{id}/move-to-board")]
         public async Task<IActionResult> MoveToBoard(int id, [FromBody] MoveToBoardDto dto)
         {
             try
