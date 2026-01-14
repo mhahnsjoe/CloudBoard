@@ -19,6 +19,7 @@ namespace CloudBoard.Api.Models
         public DateTime? DueDate { get; set; }
         public decimal? EstimatedHours { get; set; }
         public decimal? ActualHours { get; set; }
+        public int? BacklogOrder { get; set; }
         #endregion
 
         #region Relationships

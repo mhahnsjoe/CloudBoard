@@ -50,6 +50,20 @@ namespace CloudBoard.Api.Services
                     throw new InvalidOperationException(validation.ErrorMessage);
             }
 
+            // If creating a backlog item, assign next BacklogOrder
+            int? backlogOrder = null;
+            if (dto.BoardId == null)
+            {
+                // Get the highest BacklogOrder for this project and parent level
+                var maxOrder = await _context.WorkItems
+                    .Where(w => w.ProjectId == dto.ProjectId
+                        && w.BoardId == null
+                        && w.ParentId == dto.ParentId)
+                    .MaxAsync(w => (int?)w.BacklogOrder);
+
+                backlogOrder = (maxOrder ?? -100) + 100; // Start at 0, increment by 100
+            }
+
             var workItem = new WorkItem
             {
                 ProjectId = dto.ProjectId,
@@ -58,7 +72,7 @@ namespace CloudBoard.Api.Services
                 Priority = dto.Priority,
                 Type = dto.Type,
                 Description = dto.Description,
-                DueDate = dto.DueDate.HasValue 
+                DueDate = dto.DueDate.HasValue
                     ? DateTime.SpecifyKind(dto.DueDate.Value, DateTimeKind.Utc)
                     : null,
                 EstimatedHours = dto.EstimatedHours,
@@ -67,7 +81,8 @@ namespace CloudBoard.Api.Services
                 CreatedAt = DateTime.UtcNow,
                 CreatedById = createdById,
                 AssignedToId = dto.AssignedToId,
-                SprintId = dto.SprintId
+                SprintId = dto.SprintId,
+                BacklogOrder = backlogOrder
             };
 
             _context.WorkItems.Add(workItem);
@@ -246,9 +261,12 @@ namespace CloudBoard.Api.Services
         public async Task<IEnumerable<WorkItem>> GetBacklogItemsAsync(int projectId)
         {
             // Get all work items for this project that have no board assigned
+            // Order by BacklogOrder (nulls last), then by Id as fallback
             var backlog = await _context.WorkItems
                 .Where(w => w.ProjectId == projectId && w.BoardId == null)
-                .ToListAsync();          
+                .OrderBy(w => w.BacklogOrder ?? int.MaxValue)
+                .ThenBy(w => w.Id)
+                .ToListAsync();
             return backlog;
         }
 
@@ -305,6 +323,39 @@ namespace CloudBoard.Api.Services
             
             // Also clear sprint assignment since it belongs to the board
             workItem.SprintId = null;
+
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Reorder backlog items by setting their BacklogOrder values
+        /// </summary>
+        public async Task ReorderBacklogItemsAsync(int projectId, List<Controllers.ItemOrder> itemOrders, int userId)
+        {
+            // Verify project exists and user has access
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project == null)
+                throw new KeyNotFoundException($"Project {projectId} not found");
+
+            if (project.OwnerId != userId)
+                throw new UnauthorizedAccessException("You don't have permission to modify this project");
+
+            // Get all items to be reordered
+            var itemIds = itemOrders.Select(io => io.ItemId).ToList();
+            var items = await _context.WorkItems
+                .Where(w => itemIds.Contains(w.Id) && w.ProjectId == projectId && w.BoardId == null)
+                .ToListAsync();
+
+            // Verify all items exist and belong to the backlog
+            if (items.Count != itemIds.Count)
+                throw new InvalidOperationException("Some items were not found or don't belong to the backlog");
+
+            // Update BacklogOrder for each item
+            foreach (var itemOrder in itemOrders)
+            {
+                var item = items.First(i => i.Id == itemOrder.ItemId);
+                item.BacklogOrder = itemOrder.Order;
+            }
 
             await _context.SaveChangesAsync();
         }

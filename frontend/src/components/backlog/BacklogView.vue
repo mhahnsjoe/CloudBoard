@@ -66,9 +66,10 @@
       <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <!-- Table Header -->
         <div class="flex items-center py-3 px-4 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <div class="w-6 mr-1"></div> <!-- Drag handle spacer -->
           <div class="w-6 mr-1"></div> <!-- Expand spacer -->
+          <div class="w-12">Order</div>
           <div class="w-24">Type</div>
-          <div class="w-16">ID</div>
           <div class="flex-1">Title</div>
           <div class="w-28">Status</div>
           <div class="w-24">Priority</div>
@@ -76,20 +77,47 @@
         </div>
 
         <!-- Tree Items -->
-        <div v-if="treeHelpers.flattenedTree.value.length > 0">
-          <BacklogTreeItem
-            v-for="node in treeHelpers.flattenedTree.value"
-            :key="node.id"
-            :node="node"
-            :isSelected="selectedItemId === node.id"
-            @toggle="treeHelpers.toggleExpanded"
-            @select="handleSelectItem"
-            @edit="openEditModal"
-            @delete="handleDelete"
-            @add-child="openCreateChildModal"
-            @move-to-board="openMoveToBoardModal"
-          />
-        </div>
+        <VueDraggable
+          v-if="treeHelpers.flattenedTree.value.length > 0"
+          v-model="draggableItems"
+          :animation="150"
+          handle=".drag-handle"
+          ghost-class="opacity-50"
+          @end="handleDragEnd"
+        >
+          <div v-for="rootNode in rootItems" :key="rootNode.id" class="root-item-group">
+            <!-- Root Item -->
+            <BacklogTreeItem
+              :node="rootNode"
+              :displayOrder="getDisplayOrder(rootNode)"
+              :isSelected="selectedItemId === rootNode.id"
+              :isDraggable="true"
+              @toggle="treeHelpers.toggleExpanded"
+              @select="handleSelectItem"
+              @edit="openEditModal"
+              @delete="handleDelete"
+              @add-child="openCreateChildModal"
+              @move-to-board="openMoveToBoardModal"
+            />
+            <!-- Children (if expanded) -->
+            <template v-if="rootNode.expanded">
+              <BacklogTreeItem
+                v-for="childNode in getVisibleChildren(rootNode)"
+                :key="childNode.id"
+                :node="childNode"
+                :displayOrder="null"
+                :isSelected="selectedItemId === childNode.id"
+                :isDraggable="false"
+                @toggle="treeHelpers.toggleExpanded"
+                @select="handleSelectItem"
+                @edit="openEditModal"
+                @delete="handleDelete"
+                @add-child="openCreateChildModal"
+                @move-to-board="openMoveToBoardModal"
+              />
+            </template>
+          </div>
+        </VueDraggable>
 
         <!-- Empty State -->
         <div v-else class="text-center py-16">
@@ -171,16 +199,18 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { 
-  getBoards, 
-  getProjectBacklog, 
-  createBacklogItem, 
-  updateWorkItem, 
+import { VueDraggable } from 'vue-draggable-plus'
+import {
+  getBoards,
+  getProjectBacklog,
+  createBacklogItem,
+  updateWorkItem,
   deleteWorkItem,
-  moveToBoard 
+  moveToBoard,
+  reorderBacklogItems
 } from '@/services/api'
 import { useConfirm } from '@/composables/useConfirm'
-import { useWorkItemTree, HIERARCHY_RULES } from '@/composables/useWorkItemTree'
+import { useWorkItemTree, HIERARCHY_RULES, type TreeNode } from '@/composables/useWorkItemTree'
 import type { Board } from '@/types/Project'
 import type { WorkItem, WorkItemType, WorkItemCreate } from '@/types/WorkItem'
 import WorkItemModal from '@/components/workItem/WorkItemModal.vue'
@@ -193,6 +223,7 @@ import { LoadingIcon, PlusIcon, ClipboardIcon } from '@/components/icons'
 export default defineComponent({
   name: 'BacklogView',
   components: {
+    VueDraggable,
     WorkItemModal,
     MoveToBoardModal,
     BacklogTreeItem,
@@ -249,6 +280,28 @@ export default defineComponent({
     const availableParents = computed(() => {
       if (!defaultType.value) return []
       return treeHelpers.getValidParents(defaultType.value, selectedWorkItem.value?.id)
+    })
+
+    // Get only root items for dragging
+    const rootItems = computed(() => {
+      return treeHelpers.flattenedTree.value.filter(item => !item.parentId)
+    })
+
+    // Store the dragged order temporarily
+    const draggedOrder = ref<TreeNode[]>([])
+
+    // Sync draggableItems with rootItems whenever rootItems changes
+    watch(rootItems, (newRootItems) => {
+      draggedOrder.value = [...newRootItems]
+    }, { immediate: true })
+
+    // Draggable items (writable ref for vue-draggable-plus)
+    const draggableItems = computed({
+      get: () => draggedOrder.value,
+      set: (newValue) => {
+        // VueDraggable sets the new visual order here
+        draggedOrder.value = newValue
+      }
     })
 
     // =============================================
@@ -385,6 +438,33 @@ export default defineComponent({
     }
 
     // =============================================
+    // DRAG AND DROP HANDLERS
+    // =============================================
+
+    const handleDragEnd = async (event: { oldIndex?: number; newIndex?: number }) => {
+      if (event.oldIndex === undefined || event.newIndex === undefined) return
+      if (event.oldIndex === event.newIndex) return
+
+      // Use the draggedOrder which has been updated by VueDraggable
+      const items = draggedOrder.value
+
+      // Create new order mapping: assign order values based on current position in array
+      const itemOrders = items.map((item, index) => ({
+        itemId: item.id,
+        order: index * 100 // Use gaps of 100 for easier insertion later
+      }))
+
+      try {
+        await reorderBacklogItems(projectId.value, itemOrders)
+        await fetchBacklogItems() // Refresh to get updated order from server
+      } catch (error) {
+        console.error('Failed to reorder backlog items:', error)
+        alert('Failed to reorder backlog items')
+        await fetchBacklogItems() // Refresh to restore original order
+      }
+    }
+
+    // =============================================
     // FILTER HANDLERS
     // =============================================
 
@@ -400,6 +480,35 @@ export default defineComponent({
       if (addDropdownRef.value && !addDropdownRef.value.contains(event.target as Node)) {
         addDropdownOpen.value = false
       }
+    }
+
+    // =============================================
+    // DISPLAY ORDER AND CHILDREN
+    // =============================================
+
+    const getDisplayOrder = (node: typeof treeHelpers.flattenedTree.value[0]): number | null => {
+      // Only show order for root-level items (no parent)
+      if (node.parentId) return null
+
+      const rootIndex = rootItems.value.findIndex(item => item.id === node.id)
+      return rootIndex + 1 // 1-based numbering
+    }
+
+    // Get all visible children recursively (respecting expanded state)
+    const getVisibleChildren = (node: TreeNode): TreeNode[] => {
+      const result: TreeNode[] = []
+
+      const addChildren = (parent: TreeNode) => {
+        parent.children.forEach(child => {
+          result.push(child)
+          if (child.expanded && child.children.length > 0) {
+            addChildren(child)
+          }
+        })
+      }
+
+      addChildren(node)
+      return result
     }
 
     // =============================================
@@ -443,6 +552,12 @@ export default defineComponent({
       selectedTypes,
       selectedStatuses,
       creatableTypes,
+      // Drag and Drop
+      rootItems,
+      draggableItems,
+      handleDragEnd,
+      getDisplayOrder,
+      getVisibleChildren,
       // Methods
       openCreateModal,
       openCreateChildModal,

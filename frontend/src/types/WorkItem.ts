@@ -11,7 +11,8 @@ export interface WorkItem {
   actualHours?: number;
   boardId: number;
   sprintId?: number | null;
-  
+  backlogOrder?: number | null;
+
   // Hierarchy
   parentId?: number;
   parent?: WorkItem;

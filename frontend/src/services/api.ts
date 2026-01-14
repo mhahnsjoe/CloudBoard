@@ -100,3 +100,5 @@ export const getProjectBacklog = (projectId: number) =>  api.get<WorkItem[]>(`/a
 export const createBacklogItem = (projectId: number, workItem: WorkItemCreate) => api.post<WorkItem>(`/api/projects/${projectId}/backlog`, workItem);
 export const moveToBoard = (workItemId: number, boardId: number | null) => api.patch(`/api/workitems/${workItemId}/move-to-board`, { boardId });
 export const returnWorkItemToBacklog = (workItemId: number) => api.patch(`/api/workitems/${workItemId}/return-to-backlog`);
+export const reorderBacklogItems = (projectId: number, itemOrders: Array<{ itemId: number; order: number }>) =>
+  api.patch(`/api/projects/${projectId}/backlog/reorder`, { itemOrders });

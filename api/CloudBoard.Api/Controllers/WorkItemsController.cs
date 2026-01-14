@@ -271,8 +271,34 @@ namespace CloudBoard.Api.Controllers
             await _workItemService.ReturnToBacklogAsync(id, userId);
             return NoContent();
         }
+
+        /// <summary>
+        /// Reorder backlog items within the same level
+        /// </summary>
+        [HttpPatch("/api/projects/{projectId}/backlog/reorder")]
+        public async Task<IActionResult> ReorderBacklogItems(int projectId, [FromBody] ReorderBacklogRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                await _workItemService.ReorderBacklogItemsAsync(projectId, request.ItemOrders, userId);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
-    
+
 
     /// <summary>
     /// Request model for moving workitems
@@ -280,5 +306,19 @@ namespace CloudBoard.Api.Controllers
     public class MoveWorkItemRequest
     {
         public int? NewParentId { get; set; }
+    }
+
+    /// <summary>
+    /// Request model for reordering backlog items
+    /// </summary>
+    public class ReorderBacklogRequest
+    {
+        public List<ItemOrder> ItemOrders { get; set; } = new();
+    }
+
+    public class ItemOrder
+    {
+        public int ItemId { get; set; }
+        public int Order { get; set; }
     }
 }

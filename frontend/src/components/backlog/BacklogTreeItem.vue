@@ -1,31 +1,42 @@
 <template>
   <div class="tree-item">
     <!-- Main Row -->
-    <div 
+    <div
       class="tree-row group"
-      :class="{ 
-        'bg-blue-50': isSelected,
-        'hover:bg-gray-50': !isSelected 
+      :class="{
+        'bg-blue-50 border-l-4 border-blue-500': isSelected,
+        'hover:bg-blue-50/50 hover:border-l-4 hover:border-blue-200': !isSelected
       }"
     >
+      <!-- Drag Handle (only for root items) -->
+      <div
+        v-if="node.depth === 0 && isDraggable"
+        class="drag-handle w-6 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+        </svg>
+      </div>
+      <div v-else class="w-6"></div>
+
       <!-- Indentation & Expand Toggle -->
       <div class="flex items-center flex-shrink-0" :style="{ paddingLeft: `${node.depth * 24}px` }">
         <!-- Tree connector line for nested items -->
         <div v-if="node.depth > 0" class="flex items-center mr-1">
           <span class="text-gray-300 text-sm">└</span>
         </div>
-        
+
         <!-- Expand/Collapse Button -->
         <button
           v-if="node.children.length > 0"
           @click.stop="$emit('toggle', node.id)"
           class="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors mr-1"
         >
-          <svg 
+          <svg
             class="w-4 h-4 text-gray-500 transition-transform duration-200"
             :class="{ 'rotate-90': node.expanded }"
-            fill="none" 
-            stroke="currentColor" 
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -33,14 +44,16 @@
         </button>
         <!-- Spacer for leaf nodes -->
         <div v-else class="w-6 h-6 mr-1"></div>
-
-        <!-- Work Item Type Icon -->
-        <WorkItemTypeBadge :type="node.type" class="mr-3" />
       </div>
 
-      <!-- ID -->
-      <div class="w-16 text-sm font-mono text-gray-500">
-        #{{ node.id }}
+      <!-- Order Number -->
+      <div class="w-12 text-sm font-semibold text-gray-700">
+        <span v-if="displayOrder !== null">{{ displayOrder }}</span>
+      </div>
+
+      <!-- Work Item Type Badge -->
+      <div class="w-24">
+        <WorkItemTypeBadge :type="node.type" />
       </div>
 
       <!-- Title (clickable) -->
@@ -142,6 +155,14 @@ export default defineComponent({
     isSelected: {
       type: Boolean,
       default: false
+    },
+    isDraggable: {
+      type: Boolean,
+      default: false
+    },
+    displayOrder: {
+      type: Number as PropType<number | null>,
+      default: null
     }
   },
   emits: ['toggle', 'select', 'edit', 'delete', 'add-child', 'move-to-board'],
