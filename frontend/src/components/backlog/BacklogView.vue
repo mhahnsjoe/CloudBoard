@@ -327,10 +327,7 @@ export default defineComponent({
           await updateWorkItem(boardId, workItemData.id, workItemData as WorkItem)
         } else {
           // Create new backlog item (no board assigned)
-          await createBacklogItem(projectId.value, { 
-            ...workItemData as WorkItemCreate,
-            parentId: selectedParentId.value || undefined
-          })
+          await createBacklogItem(projectId.value, workItemData as WorkItemCreate)
         }
         closeWorkItemModal()
         await fetchBacklogItems()
