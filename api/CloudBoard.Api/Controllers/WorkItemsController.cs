@@ -217,8 +217,88 @@ namespace CloudBoard.Api.Controllers
                 return Forbid();
             }
         }
+        //Get all backlog items for a project (items without a board)
+        [HttpGet("/api/projects/{projectId}/backlog")]
+        public async Task<ActionResult<IEnumerable<WorkItem>>> GetProjectBacklog(int projectId)
+        {
+            var workItems = await _workItemService.GetBacklogItemsAsync(projectId);
+            return Ok(workItems);
+        }
+
+        //Move item to a board (or back to backlog)
+        [HttpPatch("~/api/workitems/{id}/move-to-board")]
+        public async Task<IActionResult> MoveToBoard(int id, [FromBody] MoveToBoardDto dto)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                await _workItemService.MoveToBoardAsync(id, dto.BoardId, userId);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+        }
+
+        //Create work item in project backlog (no board)
+        [HttpPost("/api/projects/{projectId}/backlog")]
+        public async Task<ActionResult<WorkItem>> CreateBacklogItem(
+            int projectId,
+            WorkItemCreateDto dto)
+        {
+            try
+            {
+                dto.BoardId = null;
+                dto.ProjectId = projectId;
+                var userId = GetCurrentUserId();
+                var workItem = await _workItemService.CreateAsync(dto, userId);
+                return CreatedAtAction(nameof(GetWorkItem), new { boardId = 0, id = workItem.Id }, workItem);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        [HttpPatch("/api/workitems/{id}/return-to-backlog")]
+        public async Task<IActionResult> ReturnToBacklog(int id)
+        {
+            var userId = GetCurrentUserId();
+            await _workItemService.ReturnToBacklogAsync(id, userId);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Reorder backlog items within the same level
+        /// </summary>
+        [HttpPatch("/api/projects/{projectId}/backlog/reorder")]
+        public async Task<IActionResult> ReorderBacklogItems(int projectId, [FromBody] ReorderBacklogRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                await _workItemService.ReorderBacklogItemsAsync(projectId, request.ItemOrders, userId);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
-    
+
 
     /// <summary>
     /// Request model for moving workitems
@@ -226,5 +306,19 @@ namespace CloudBoard.Api.Controllers
     public class MoveWorkItemRequest
     {
         public int? NewParentId { get; set; }
+    }
+
+    /// <summary>
+    /// Request model for reordering backlog items
+    /// </summary>
+    public class ReorderBacklogRequest
+    {
+        public List<ItemOrder> ItemOrders { get; set; } = new();
+    }
+
+    public class ItemOrder
+    {
+        public int ItemId { get; set; }
+        public int Order { get; set; }
     }
 }

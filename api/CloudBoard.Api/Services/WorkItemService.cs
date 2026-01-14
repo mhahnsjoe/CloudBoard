@@ -25,11 +25,15 @@ namespace CloudBoard.Api.Services
 
         public async Task<WorkItem> CreateAsync(WorkItemCreateDto dto, int createdById)
         {
-            // Validate board exists
-            var board = await _context.Boards.FindAsync(dto.BoardId);
-            if (board == null)
-                throw new KeyNotFoundException($"Board {dto.BoardId} not found");
-
+            //TODO: Implement better way to distinguish when a backlog item is created than using null
+            if(dto.BoardId != null) //If boardId is set to null we are most likely creating a backlog item
+            {
+                // Validate board exists
+                var board = await _context.Boards.FindAsync(dto.BoardId);
+                if (board == null)
+                    throw new KeyNotFoundException($"Board {dto.BoardId} not found");
+                dto.ProjectId = board.ProjectId; //Ugly fix for now TODO: find a better way to send projectId? Maybe this works but it feels wrong
+            }
             // Validate parent relationship if specified
             WorkItem? parent = null;
             if (dto.ParentId.HasValue)
@@ -46,14 +50,29 @@ namespace CloudBoard.Api.Services
                     throw new InvalidOperationException(validation.ErrorMessage);
             }
 
+            // If creating a backlog item, assign next BacklogOrder
+            int? backlogOrder = null;
+            if (dto.BoardId == null)
+            {
+                // Get the highest BacklogOrder for this project and parent level
+                var maxOrder = await _context.WorkItems
+                    .Where(w => w.ProjectId == dto.ProjectId
+                        && w.BoardId == null
+                        && w.ParentId == dto.ParentId)
+                    .MaxAsync(w => (int?)w.BacklogOrder);
+
+                backlogOrder = (maxOrder ?? -100) + 100; // Start at 0, increment by 100
+            }
+
             var workItem = new WorkItem
             {
+                ProjectId = dto.ProjectId,
                 Title = dto.Title,
                 Status = dto.Status,
                 Priority = dto.Priority,
                 Type = dto.Type,
                 Description = dto.Description,
-                DueDate = dto.DueDate.HasValue 
+                DueDate = dto.DueDate.HasValue
                     ? DateTime.SpecifyKind(dto.DueDate.Value, DateTimeKind.Utc)
                     : null,
                 EstimatedHours = dto.EstimatedHours,
@@ -62,7 +81,8 @@ namespace CloudBoard.Api.Services
                 CreatedAt = DateTime.UtcNow,
                 CreatedById = createdById,
                 AssignedToId = dto.AssignedToId,
-                SprintId = dto.SprintId
+                SprintId = dto.SprintId,
+                BacklogOrder = backlogOrder
             };
 
             _context.WorkItems.Add(workItem);
@@ -236,6 +256,107 @@ namespace CloudBoard.Api.Services
             }
 
             workItem.SprintId = dto.SprintId;
+            await _context.SaveChangesAsync();
+        }
+        public async Task<IEnumerable<WorkItem>> GetBacklogItemsAsync(int projectId)
+        {
+            // Get all work items for this project that have no board assigned
+            // Order by BacklogOrder (nulls last), then by Id as fallback
+            var backlog = await _context.WorkItems
+                .Where(w => w.ProjectId == projectId && w.BoardId == null)
+                .OrderBy(w => w.BacklogOrder ?? int.MaxValue)
+                .ThenBy(w => w.Id)
+                .ToListAsync();
+            return backlog;
+        }
+
+        public async Task MoveToBoardAsync(int workItemId, int? boardId, int userId)
+        {
+            var workItem = await _context.WorkItems
+                .Include(w => w.Board)
+                    .ThenInclude(b => b.Project)
+                .FirstOrDefaultAsync(w => w.Id == workItemId);
+
+            if (workItem == null)
+                throw new KeyNotFoundException("Work item not found");
+
+            // Verify user owns this project
+            // TODO: add project ownership verification logic
+
+            if (boardId.HasValue)
+            {
+                var board = await _context.Boards.FindAsync(boardId.Value);
+                if (board == null)
+                    throw new KeyNotFoundException("Board not found");
+            }
+
+            workItem.BoardId = boardId;
+            
+            // If moving to backlog, also clear sprint assignment
+            if (!boardId.HasValue)
+            {
+                workItem.SprintId = null;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Returns a work item to the backlog (sets BoardId to null)
+        /// </summary>
+        public async Task ReturnToBacklogAsync(int workItemId, int userId)
+        {
+            var workItem = await _context.WorkItems
+                .Include(w => w.Board)
+                    .ThenInclude(b => b!.Project)
+                .FirstOrDefaultAsync(w => w.Id == workItemId);
+
+            if (workItem == null)
+                throw new KeyNotFoundException($"Work item {workItemId} not found");
+
+            // Verify ownership through project
+            if (workItem.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException("You don't have permission to modify this work item");
+
+            // Clear board assignment (return to backlog)
+            workItem.BoardId = null;
+            
+            // Also clear sprint assignment since it belongs to the board
+            workItem.SprintId = null;
+
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Reorder backlog items by setting their BacklogOrder values
+        /// </summary>
+        public async Task ReorderBacklogItemsAsync(int projectId, List<Controllers.ItemOrder> itemOrders, int userId)
+        {
+            // Verify project exists and user has access
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project == null)
+                throw new KeyNotFoundException($"Project {projectId} not found");
+
+            if (project.OwnerId != userId)
+                throw new UnauthorizedAccessException("You don't have permission to modify this project");
+
+            // Get all items to be reordered
+            var itemIds = itemOrders.Select(io => io.ItemId).ToList();
+            var items = await _context.WorkItems
+                .Where(w => itemIds.Contains(w.Id) && w.ProjectId == projectId && w.BoardId == null)
+                .ToListAsync();
+
+            // Verify all items exist and belong to the backlog
+            if (items.Count != itemIds.Count)
+                throw new InvalidOperationException("Some items were not found or don't belong to the backlog");
+
+            // Update BacklogOrder for each item
+            foreach (var itemOrder in itemOrders)
+            {
+                var item = items.First(i => i.Id == itemOrder.ItemId);
+                item.BacklogOrder = itemOrder.Order;
+            }
+
             await _context.SaveChangesAsync();
         }
     }

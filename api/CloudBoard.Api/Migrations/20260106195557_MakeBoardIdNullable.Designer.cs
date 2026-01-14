@@ -3,6 +3,7 @@ using System;
 using CloudBoard.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CloudBoard.Api.Migrations
 {
     [DbContext(typeof(CloudBoardContext))]
-    partial class CloudBoardContextModelSnapshot : ModelSnapshot
+    [Migration("20260106195557_MakeBoardIdNullable")]
+    partial class MakeBoardIdNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -207,9 +210,6 @@ namespace CloudBoard.Api.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<int?>("AssignedToId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("BacklogOrder")
                         .HasColumnType("integer");
 
                     b.Property<int?>("BoardId")

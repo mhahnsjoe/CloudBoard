@@ -39,6 +39,7 @@
           @dragstart="onDragStart($event, workItem)"
           @edit="$emit('edit-workitem', workItem)"
           @delete="$emit('delete-workitem', workItem.id)"
+          @return-to-backlog="$emit('return-to-backlog', workItem)"
         />
         <!-- Empty State -->
         <div
@@ -71,6 +72,7 @@ const emit = defineEmits<{
   'edit-workitem': [workItem: WorkItem]
   'delete-workitem': [id: number]
   'update-status': [workItem: WorkItem, newStatus: string]
+  'return-to-backlog': [workItem: WorkItem]
 }>()
 
 const draggedWorkItem = ref<WorkItem | null>(null)

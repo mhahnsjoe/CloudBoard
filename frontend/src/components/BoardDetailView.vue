@@ -48,6 +48,7 @@
         @edit-workitem="editWorkItem"
         @delete-workitem="handleDelete"
         @update-status="handleUpdateWorkItemStatus"
+        @return-to-backlog="handleReturnToBacklog"
       />
 
       <!-- Kanban Board (for Kanban and Backlog boards) -->
@@ -65,6 +66,7 @@
         @edit-workitem="editWorkItem"
         @delete-workitem="handleDelete"
         @update-status="handleUpdateWorkItemStatus"
+        @return-to-backlog="handleReturnToBacklog"
       />
     </div>
 
@@ -120,7 +122,7 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem } from '@/services/api';
+import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem, returnWorkItemToBacklog } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useSprintStore } from '@/stores/sprint';
 import { useBoardStore } from '@/stores/boards';
@@ -430,6 +432,18 @@ export default defineComponent({
       }
     };
 
+    const handleReturnToBacklog = async (workItem: WorkItem) => {
+      if (confirm('Return this item to the backlog? It will be removed from this board.')) {
+        try {
+          await returnWorkItemToBacklog(workItem.id)
+          await fetchBoard() // Refresh board - item will disappear
+        } catch (error) {
+          console.error('Failed to return to backlog:', error)
+          alert('Failed to return item to backlog')
+        }
+      }
+    }
+
     onMounted(async () => {
       // Fetch boards for sidebar sync
       await boardStore.fetchBoards(projectId.value);
@@ -499,7 +513,8 @@ export default defineComponent({
       closeBoardModal,
       submitBoardForm,
       handleDeleteCurrentBoard,
-      handleUpdateWorkItemStatus
+      handleUpdateWorkItemStatus,
+      handleReturnToBacklog
     };
   }
 });

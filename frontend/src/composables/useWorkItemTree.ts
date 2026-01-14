@@ -66,12 +66,21 @@ export function useWorkItemTree(workItems: Ref<WorkItem[]>) {
       }
     })
 
-    // Sort children by type level, then by id
+    // Sort children
     const sortChildren = (nodes: TreeNode[]) => {
       nodes.sort((a, b) => {
+        // For backlog items (no boardId), prioritize backlogOrder first
+        if (a.boardId === null && b.boardId === null) {
+          const orderA = a.backlogOrder ?? Number.MAX_SAFE_INTEGER
+          const orderB = b.backlogOrder ?? Number.MAX_SAFE_INTEGER
+          if (orderA !== orderB) return orderA - orderB
+        }
+
+        // For board items or when backlogOrder is the same, sort by type level
         const levelA = TYPE_LEVELS[a.type] === -1 ? 99 : TYPE_LEVELS[a.type]
         const levelB = TYPE_LEVELS[b.type] === -1 ? 99 : TYPE_LEVELS[b.type]
         if (levelA !== levelB) return levelA - levelB
+
         return a.id - b.id
       })
       nodes.forEach(node => sortChildren(node.children))

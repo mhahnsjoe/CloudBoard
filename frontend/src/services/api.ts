@@ -94,3 +94,11 @@ export const deleteSprint = (sprintId: number) => api.delete(`/api/sprints/${spr
 export const getSprintStats = (sprintId: number) => api.get<SprintStats>(`/api/sprints/${sprintId}/stats`);
 export const getSprintBurndown = (sprintId: number) => api.get<BurndownPoint[]>(`/api/sprints/${sprintId}/burndown`);
 export const assignWorkItemToSprint = (workItemId: number, sprintId: number | null) => api.patch(`/api/workitems/${workItemId}/assign-sprint`, { sprintId });
+
+// Backlog endpoints
+export const getProjectBacklog = (projectId: number) =>  api.get<WorkItem[]>(`/api/projects/${projectId}/backlog`);
+export const createBacklogItem = (projectId: number, workItem: WorkItemCreate) => api.post<WorkItem>(`/api/projects/${projectId}/backlog`, workItem);
+export const moveToBoard = (workItemId: number, boardId: number | null) => api.patch(`/api/workitems/${workItemId}/move-to-board`, { boardId });
+export const returnWorkItemToBacklog = (workItemId: number) => api.patch(`/api/workitems/${workItemId}/return-to-backlog`);
+export const reorderBacklogItems = (projectId: number, itemOrders: Array<{ itemId: number; order: number }>) =>
+  api.patch(`/api/projects/${projectId}/backlog/reorder`, { itemOrders });

@@ -31,11 +31,12 @@
 
     <!-- Shared Board Canvas -->
     <BoardCanvas
-        :workItems="filteredWorkItems"
-        @create-workitem="$emit('create-workitem', $event)"
-        @edit-workitem="$emit('edit-workitem', $event)"
-        @delete-workitem="$emit('delete-workitem', $event)"
-        @update-status="(workItem, newStatus) => $emit('update-status', workItem, newStatus)"
+      :workItems="filteredWorkItems"
+      @create-workitem="$emit('create-workitem', $event)"
+      @edit-workitem="$emit('edit-workitem', $event)"
+      @delete-workitem="$emit('delete-workitem', $event)"
+      @update-status="(workItem, newStatus) => $emit('update-status', workItem, newStatus)"
+      @return-to-backlog="$emit('return-to-backlog', $event)"
     />
   </div>
 </template>
@@ -76,6 +77,7 @@ defineEmits<{
   'edit-workitem': [workItem: WorkItem]
   'delete-workitem': [id: number]
   'update-status': [workItem: WorkItem, newStatus: string]
+  'return-to-backlog': [workItem: WorkItem]
 }>()
 
 const selectedSprint = computed(() => {
