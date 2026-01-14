@@ -53,8 +53,9 @@
             </p>
           </div>
 
+          <!--TODO DECIDE IF THIS SHOULD BE REMOVED OR USED ANYWHERE-->
           <!-- Board Selector (when multiple boards available) -->
-          <div v-if="showBoardSelector">
+          <!-- <div v-if="showBoardSelector">
             <label class="block text-sm font-medium text-gray-700 mb-1">Board</label>
             <select
               v-model="form.boardId"
@@ -64,7 +65,7 @@
                 {{ board.name }} ({{ board.type }})
               </option>
             </select>
-          </div>
+          </div> -->
 
           <!-- Description -->
           <div>
