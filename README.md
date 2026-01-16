@@ -5,9 +5,9 @@ A modern project management application inspired by Azure DevOps Boards, built w
 ## 🛠️ Tech Stack
 
 ### Backend
-- **Framework**: ASP.NET Core 8.0
+- **Framework**: ASP.NET Core 10.0
 - **Database**: PostgreSQL 16
-- **ORM**: Entity Framework Core 8.0
+- **ORM**: Entity Framework Core 9.0
 - **Authentication**: ASP.NET Core Identity + JWT Bearer
 - **API Documentation**: Swagger/OpenAPI
 
