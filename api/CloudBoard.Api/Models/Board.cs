@@ -15,6 +15,7 @@ namespace CloudBoard.Api.Models
         // Navigation
         public ICollection<WorkItem> WorkItems { get; set; } = new List<WorkItem>();
         public ICollection<Sprint> Sprints { get; set; } = new List<Sprint>();
+        public ICollection<BoardColumn> Columns { get; set; } = new List<BoardColumn>();
     }
 
     public enum BoardType

@@ -14,6 +14,7 @@ namespace CloudBoard.Api.Data
         public DbSet<Board> Boards => Set<Board>();
         public DbSet<WorkItem> WorkItems => Set<WorkItem>();
         public DbSet<Sprint> Sprints => Set<Sprint>();
+        public DbSet<BoardColumn> BoardColumns => Set<BoardColumn>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,6 +22,7 @@ namespace CloudBoard.Api.Data
 
             ConfigureProjectRelationships(modelBuilder);
             ConfigureBoardRelationships(modelBuilder);
+            ConfigureBoardColumns(modelBuilder);
             ConfigureWorkItemelationships(modelBuilder);
             ConfigureWorkItemHierarchy(modelBuilder);
             ConfigureSprintRelationships(modelBuilder);
@@ -49,6 +51,36 @@ namespace CloudBoard.Api.Data
                 .WithOne(t => t.Board)
                 .HasForeignKey(t => t.BoardId)
                 .OnDelete(DeleteBehavior.SetNull);
+        }
+
+        private void ConfigureBoardColumns(ModelBuilder modelBuilder)
+        {
+            // One-to-many relationship: Board -> BoardColumn
+            modelBuilder.Entity<Board>()
+                .HasMany(b => b.Columns)
+                .WithOne(c => c.Board)
+                .HasForeignKey(c => c.BoardId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure column properties
+            modelBuilder.Entity<BoardColumn>()
+                .Property(c => c.Name)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<BoardColumn>()
+                .Property(c => c.Category)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            // Index on BoardId + Order for efficient ordering queries
+            modelBuilder.Entity<BoardColumn>()
+                .HasIndex(c => new { c.BoardId, c.Order });
+
+            // Unique constraint on BoardId + Name to prevent duplicate column names within a board
+            modelBuilder.Entity<BoardColumn>()
+                .HasIndex(c => new { c.BoardId, c.Name })
+                .IsUnique();
         }
         private void ConfigureSprintRelationships(ModelBuilder modelBuilder)
         {
