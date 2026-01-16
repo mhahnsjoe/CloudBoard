@@ -17,7 +17,38 @@ namespace CloudBoard.Api.Services
         {
             _context = context;
         }
+        public async Task<SprintDto> GetSprintAsync(int sprintId, int userId, CancellationToken cancellationToken = default)
+        {
+            var sprint = await _context.Sprints
+                .Include(s => s.WorkItems)
+                .Include(s => s.Board)
+                    .ThenInclude(b => b.Project)
+                .FirstOrDefaultAsync(s => s.Id == sprintId);
+            
+            if (sprint == null)
+                throw new KeyNotFoundException("Sprint not found");
 
+            if (sprint.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException("Unauthorized access to sprint");
+
+            return new SprintDto
+            {
+                Id = sprint.Id,
+                Name = sprint.Name,
+                StartDate = sprint.StartDate,
+                EndDate = sprint.EndDate,
+                Goal = sprint.Goal,
+                Status = sprint.Status,
+                CreatedAt = sprint.CreatedAt,
+                BoardId = sprint.BoardId,
+                TotalWorkItems = sprint.TotalWorkItems,
+                CompletedWorkItems = sprint.CompletedWorkItems,
+                ProgressPercentage = sprint.ProgressPercentage,
+                TotalEstimatedHours = sprint.TotalEstimatedHours,
+                CompletedEstimatedHours = sprint.CompletedEstimatedHours,
+                DaysRemaining = sprint.DaysRemaining
+            };
+        }
         public async Task<List<SprintDto>> GetSprintsAsync(int boardId, int userId, CancellationToken cancellationToken = default)
         {
             // Verify board access
