@@ -274,7 +274,7 @@ namespace CloudBoard.Api.Services
         {
             var workItem = await _context.WorkItems
                 .Include(w => w.Board)
-                    .ThenInclude(b => b.Project)
+                    .ThenInclude(b => b!.Project)
                 .FirstOrDefaultAsync(w => w.Id == workItemId);
 
             if (workItem == null)

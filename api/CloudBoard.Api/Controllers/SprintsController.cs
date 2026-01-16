@@ -14,12 +14,11 @@ namespace CloudBoard.Api.Controllers
     [Authorize]
     public class SprintsController : ControllerBase
     {
-        private readonly CloudBoardContext _context;
         private readonly ISprintService _sprintService;
 
-        public SprintsController(CloudBoardContext context)
+        public SprintsController(ISprintService sprintService)
         {
-            _context = context;
+            _sprintService = sprintService;
         }
 
         private int GetUserId()
@@ -49,36 +48,19 @@ namespace CloudBoard.Api.Controllers
         public async Task<ActionResult<SprintDto>> GetSprint(int id)
         {
             var userId = GetUserId();
-
-            var sprint = await _context.Sprints
-                .Include(s => s.WorkItems)
-                .Include(s => s.Board)
-                    .ThenInclude(b => b.Project)
-                .FirstOrDefaultAsync(s => s.Id == id);
-
-            if (sprint == null)
-                return NotFound();
-
-            if (sprint.Board?.Project?.OwnerId != userId)
-                return Forbid();
-
-            return Ok(new SprintDto
+            try
             {
-                Id = sprint.Id,
-                Name = sprint.Name,
-                StartDate = sprint.StartDate,
-                EndDate = sprint.EndDate,
-                Goal = sprint.Goal,
-                Status = sprint.Status,
-                CreatedAt = sprint.CreatedAt,
-                BoardId = sprint.BoardId,
-                TotalWorkItems = sprint.TotalWorkItems,
-                CompletedWorkItems = sprint.CompletedWorkItems,
-                ProgressPercentage = sprint.ProgressPercentage,
-                TotalEstimatedHours = sprint.TotalEstimatedHours,
-                CompletedEstimatedHours = sprint.CompletedEstimatedHours,
-                DaysRemaining = sprint.DaysRemaining
-            });
+                var sprint = await _sprintService.GetSprintAsync(id, userId);
+                return Ok(sprint);
+            }
+            catch(KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // POST /api/boards/{boardId}/sprints

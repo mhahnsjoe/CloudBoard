@@ -70,7 +70,7 @@ namespace CloudBoard.Api.Services
                 .Include(p => p.Boards)
                 .FirstOrDefaultAsync(p => p.Id == project.Id);
             
-            return createdProject;
+            return createdProject!;
         }
 
         public async Task UpdateProjectAsync(int id, ProjectUpdateDto projectDto, CancellationToken cancellationToken = default)
