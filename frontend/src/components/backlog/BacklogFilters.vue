@@ -75,7 +75,7 @@
         >
           <div class="p-2 space-y-1">
             <label
-              v-for="status in statuses"
+              v-for="status in availableStatuses"
               :key="status"
               class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
             >
@@ -134,7 +134,7 @@
 import { defineComponent, ref, computed, type PropType, onMounted, onBeforeUnmount } from 'vue'
 import type { WorkItemType } from '@/types/WorkItem'
 import { WORKITEM_TYPES } from '@/types/WorkItem'
-import { STATUSES } from '@/types/Project'
+import { DEFAULT_STATUSES } from '@/types/Project'
 import WorkItemTypeBadge from '@/components/workItem/WorkItemTypeBadge.vue'
 import { SearchIcon } from '@/components/icons'
 
@@ -156,6 +156,10 @@ export default defineComponent({
     selectedStatuses: {
       type: Array as PropType<string[]>,
       default: () => []
+    },
+    availableStatuses: {
+      type: Array as PropType<string[]>,
+      default: () => [...DEFAULT_STATUSES]
     },
     filteredCount: {
       type: Number,
@@ -181,7 +185,6 @@ export default defineComponent({
     const statusDropdownRef = ref<HTMLElement | null>(null)
 
     const workItemTypes = WORKITEM_TYPES
-    const statuses = STATUSES
 
     const hasActiveFilters = computed(() => {
       return props.searchQuery.length > 0 || 
@@ -235,7 +238,6 @@ export default defineComponent({
       typeDropdownRef,
       statusDropdownRef,
       workItemTypes,
-      statuses,
       hasActiveFilters,
       toggleType,
       toggleStatus

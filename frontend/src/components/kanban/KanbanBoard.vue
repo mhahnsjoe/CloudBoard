@@ -15,6 +15,7 @@
     <!-- Shared Board Canvas -->
     <BoardCanvas
       :workItems="workItems"
+      :columns="board?.columns || []"
       @create-workitem="$emit('create-workitem', $event)"
       @edit-workitem="$emit('edit-workitem', $event)"
       @delete-workitem="$emit('delete-workitem', $event)"

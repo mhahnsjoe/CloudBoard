@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as api from '@/services/api'
-import type { Board, BoardCreate } from '@/types/Project'
+import type { Board, BoardCreate, BoardColumn } from '@/types/Project'
 
 export const useBoardStore = defineStore('boards', () => {
   const boards = ref<Board[]>([])
@@ -118,6 +118,26 @@ export const useBoardStore = defineStore('boards', () => {
     return boards.value.find(b => b.id === boardId) || null
   }
 
+  /**
+   * Get ordered columns for a specific board
+   * @param boardId - The board ID
+   * @returns Sorted array of board columns
+   */
+  function getOrderedColumns(boardId: number): BoardColumn[] {
+    const board = boards.value.find(b => b.id === boardId)
+    if (!board?.columns) return []
+    return [...board.columns].sort((a, b) => a.order - b.order)
+  }
+
+  /**
+   * Get column names as array (for dropdowns, status selectors, etc.)
+   * @param boardId - The board ID
+   * @returns Array of column names in order
+   */
+  function getColumnNames(boardId: number): string[] {
+    return getOrderedColumns(boardId).map(c => c.name)
+  }
+
   function $reset() {
     boards.value = []
     currentProjectId.value = null
@@ -137,6 +157,8 @@ export const useBoardStore = defineStore('boards', () => {
     updateBoard,
     deleteBoard,
     getBoardById,
+    getOrderedColumns,
+    getColumnNames,
     $reset
   }
 })

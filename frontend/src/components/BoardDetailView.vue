@@ -77,6 +77,7 @@
       :boardId="boardId"
       :defaultStatus="defaultStatus"
       :sprintId="selectedSprintId"
+      :availableStatuses="availableStatuses"
       @close="closeWorkItemModal"
       @save="handleSaveWorkItem"
     />
@@ -99,12 +100,21 @@
             required
           />
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Board Type</label>
           <select v-model="boardForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
             <option v-for="type in BOARD_TYPES" :key="type">{{ type }}</option>
           </select>
+        </div>
+
+        <!-- Column Editor -->
+        <div v-if="showBoardModal" class="border-t border-gray-200 pt-4">
+          <ColumnEditor
+            :key="isEditingBoard ? 'edit' : 'create'"
+            :columns="boardForm.columns || []"
+            @update:columns="boardForm.columns = $event"
+          />
         </div>
       </div>
     </Modal>
@@ -126,17 +136,18 @@ import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem, returnWorkIte
 import { useConfirm } from '@/composables/useConfirm';
 import { useSprintStore } from '@/stores/sprint';
 import { useBoardStore } from '@/stores/boards';
-import type { Board } from '@/types/Project';
+import type { Board, BoardColumn } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
-import { STATUSES, BOARD_TYPES } from '@/types/Project';
+import { BOARD_TYPES, getStatusesFromBoard } from '@/types/Project';
 import WorkItemModal from './workItem/WorkItemModal.vue';
 import Modal from './common/Modal.vue';
 import SprintModal from './sprint/SprintModal.vue';
 import SprintBoardView from './sprint/SprintBoardView.vue';
 import KanbanBoardView from './kanban/KanbanBoard.vue';
-import { 
-  LoadingIcon, 
+import ColumnEditor from './board/ColumnEditor.vue';
+import {
+  LoadingIcon,
   PlusIcon,
   ClipboardIcon
 } from './icons';
@@ -151,7 +162,8 @@ export default defineComponent({
     PlusIcon,
     ClipboardIcon,
     SprintBoardView,
-    KanbanBoardView
+    KanbanBoardView,
+    ColumnEditor
   },
   setup() {
     const route = useRoute();
@@ -174,9 +186,10 @@ export default defineComponent({
     // Board Management
     const showBoardModal = ref(false);
     const isEditingBoard = ref(false);
-    const boardForm = ref<{ id?: number; name: string; type: string }>({
+    const boardForm = ref<{ id?: number; name: string; type: string; columns?: BoardColumn[] }>({
       name: "",
-      type: "Kanban"
+      type: "Kanban",
+      columns: undefined
     });
 
     // Sprint Management
@@ -195,6 +208,10 @@ export default defineComponent({
       }
       // Show items in selected sprint
       return workItems.value.filter(item => item.sprintId === selectedSprintId.value);
+    });
+
+    const availableStatuses = computed(() => {
+      return getStatusesFromBoard(board.value);
     });
 
     const fetchBoard = async () => {
@@ -343,7 +360,7 @@ export default defineComponent({
 
     // Board Management - Using Store
     const openCreateBoardModal = () => {
-      boardForm.value = { name: "", type: "Kanban" };
+      boardForm.value = { name: "", type: "Kanban", columns: undefined };
       isEditingBoard.value = false;
       showBoardModal.value = true;
     };
@@ -353,7 +370,8 @@ export default defineComponent({
       boardForm.value = {
         id: board.value.id,
         name: board.value.name,
-        type: board.value.type
+        type: board.value.type,
+        columns: board.value.columns ? [...board.value.columns] : []
       };
       isEditingBoard.value = true;
       showBoardModal.value = true;
@@ -376,7 +394,8 @@ export default defineComponent({
           await boardStore.updateBoard(projectId.value, boardForm.value.id, {
             name: boardForm.value.name,
             type: boardForm.value.type,
-            projectId: projectId.value
+            projectId: projectId.value,
+            columns: boardForm.value.columns
           });
           await fetchBoard();
         } else {
@@ -384,7 +403,8 @@ export default defineComponent({
           const newBoard = await boardStore.createBoard(projectId.value, {
             name: boardForm.value.name,
             type: boardForm.value.type,
-            projectId: projectId.value
+            projectId: projectId.value,
+            columns: boardForm.value.columns
           });
           // Navigate to the newly created board
           router.push(`/projects/${projectId.value}/boards/${newBoard.id}`);
@@ -491,9 +511,9 @@ export default defineComponent({
       showSprintModal,
       selectedSprintId,
       selectedSprint,
-      STATUSES,
       BOARD_TYPES,
       filteredWorkItems,
+      availableStatuses,
       switchBoard,
       handleSprintSelect,
       openCreateSprintModal,

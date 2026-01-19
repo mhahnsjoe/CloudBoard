@@ -71,6 +71,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
 import type { WorkItem, WorkItemType } from '@/types/WorkItem';
+import type { BoardColumn } from '@/types/Project';
 import WorkItemTypeBadge from '../workItem/WorkItemTypeBadge.vue';
 import { EditIcon, DeleteIcon, CalendarIcon, ClockIcon } from '@/components/icons';
 
@@ -87,6 +88,10 @@ export default defineComponent({
     workItem: {
       type: Object as PropType<WorkItem>,
       required: true
+    },
+    columns: {
+      type: Array as PropType<BoardColumn[]>,
+      default: () => []
     }
   },
   emits: ['dragstart', 'click', 'edit', 'delete', 'return-to-backlog'],
