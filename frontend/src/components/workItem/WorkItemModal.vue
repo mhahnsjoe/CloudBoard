@@ -82,11 +82,11 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select 
-                v-model="form.status" 
+              <select
+                v-model="form.status"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               >
-                <option v-for="status in STATUSES" :key="status">{{ status }}</option>
+                <option v-for="status in availableStatuses" :key="status">{{ status }}</option>
               </select>
             </div>
 
@@ -181,7 +181,7 @@ import { defineComponent, ref, computed, watch, type PropType } from 'vue'
 import type { WorkItem, WorkItemType } from '@/types/WorkItem'
 import type { Board } from '@/types/Project'
 import { WORKITEM_TYPES } from '@/types/WorkItem'
-import { PRIORITIES, STATUSES } from '@/types/Project'
+import { PRIORITIES, DEFAULT_STATUSES } from '@/types/Project'
 import { HIERARCHY_RULES } from '@/composables/useWorkItemTree'
 import WorkItemTypeBadge from './WorkItemTypeBadge.vue'
 import ParentSelector from './ParentSelector.vue'
@@ -227,6 +227,10 @@ export default defineComponent({
     sprintId: {
       type: Number as PropType<number | null>,
       default: null
+    },
+    availableStatuses: {
+      type: Array as PropType<string[]>,
+      default: () => [...DEFAULT_STATUSES]
     }
   },
   emits: ['close', 'save'],
@@ -378,7 +382,6 @@ export default defineComponent({
       validParentOptions,
       parentTypeHint,
       PRIORITIES,
-      STATUSES,
       getParentLabel,
       handleTypeChange,
       handleSave

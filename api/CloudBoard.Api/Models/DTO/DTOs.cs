@@ -19,6 +19,7 @@ namespace CloudBoard.Api.Models.DTO
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
         public BoardType Type { get; set; } = BoardType.Kanban;
+        public List<BoardColumnCreateDto>? Columns { get; set; }
     }
 
     public class BoardUpdateDto
@@ -26,6 +27,29 @@ namespace CloudBoard.Api.Models.DTO
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
         public BoardType Type { get; set; }
+        public List<BoardColumnDto>? Columns { get; set; }
+    }
+
+    // ==================== BOARD COLUMN DTOs ====================
+    /// <summary>
+    /// DTO for reading column data
+    /// </summary>
+    public class BoardColumnDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = null!;
+        public int Order { get; set; }
+        public string Category { get; set; } = "To Do";
+    }
+
+    /// <summary>
+    /// DTO for creating/updating columns (no Id needed for create)
+    /// </summary>
+    public class BoardColumnCreateDto
+    {
+        public string Name { get; set; } = null!;
+        public int Order { get; set; }
+        public string Category { get; set; } = "To Do";
     }
 
 }   

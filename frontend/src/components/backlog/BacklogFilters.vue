@@ -134,7 +134,7 @@
 import { defineComponent, ref, computed, type PropType, onMounted, onBeforeUnmount } from 'vue'
 import type { WorkItemType } from '@/types/WorkItem'
 import { WORKITEM_TYPES } from '@/types/WorkItem'
-import { STATUSES } from '@/types/Project'
+import { DEFAULT_STATUSES } from '@/types/Project'
 import WorkItemTypeBadge from '@/components/workItem/WorkItemTypeBadge.vue'
 import { SearchIcon } from '@/components/icons'
 
@@ -181,7 +181,7 @@ export default defineComponent({
     const statusDropdownRef = ref<HTMLElement | null>(null)
 
     const workItemTypes = WORKITEM_TYPES
-    const statuses = STATUSES
+    const statuses = DEFAULT_STATUSES
 
     const hasActiveFilters = computed(() => {
       return props.searchQuery.length > 0 || 

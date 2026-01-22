@@ -2,13 +2,38 @@
  * Utility functions for badge styling
  */
 
-export function getStatusBadgeClass(status: string): string {
+import type { BoardColumn } from '@/types/Project'
+
+/**
+ * Get badge class based on workflow category
+ */
+export function getStatusBadgeClassByCategory(category: string): string {
   const classes: Record<string, string> = {
     'To Do': 'bg-gray-100 text-gray-700',
     'In Progress': 'bg-blue-100 text-blue-700',
     'Done': 'bg-green-100 text-green-700'
   }
-  return classes[status] || 'bg-gray-100 text-gray-700'
+  return classes[category] || 'bg-gray-100 text-gray-700'
+}
+
+/**
+ * Get badge class for a status name
+ * If columns are provided, uses category-based styling
+ * Otherwise falls back to legacy name-based styling
+ */
+export function getStatusBadgeClass(status: string, columns?: BoardColumn[]): string {
+  if (columns) {
+    const column = columns.find(c => c.name === status)
+    if (column) return getStatusBadgeClassByCategory(column.category)
+  }
+
+  // Fallback to legacy behavior for backward compatibility
+  const legacyClasses: Record<string, string> = {
+    'To Do': 'bg-gray-100 text-gray-700',
+    'In Progress': 'bg-blue-100 text-blue-700',
+    'Done': 'bg-green-100 text-green-700'
+  }
+  return legacyClasses[status] || 'bg-gray-100 text-gray-700'
 }
 
 export function getPriorityBadgeClass(priority: string): string {
@@ -39,11 +64,34 @@ export function getSprintStatusClass(status: string): string {
   return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
-export function getStatusIconClass(status: string): string {
+/**
+ * Get icon class based on workflow category
+ */
+export function getStatusIconClassByCategory(category: string): string {
   const classes: Record<string, string> = {
     'To Do': 'text-gray-500',
     'In Progress': 'text-blue-500',
     'Done': 'text-green-500'
   }
-  return classes[status] || 'text-gray-500'
+  return classes[category] || 'text-gray-500'
+}
+
+/**
+ * Get icon class for a status name
+ * If columns are provided, uses category-based styling
+ * Otherwise falls back to legacy name-based styling
+ */
+export function getStatusIconClass(status: string, columns?: BoardColumn[]): string {
+  if (columns) {
+    const column = columns.find(c => c.name === status)
+    if (column) return getStatusIconClassByCategory(column.category)
+  }
+
+  // Fallback to legacy behavior for backward compatibility
+  const legacyClasses: Record<string, string> = {
+    'To Do': 'text-gray-500',
+    'In Progress': 'text-blue-500',
+    'Done': 'text-green-500'
+  }
+  return legacyClasses[status] || 'text-gray-500'
 }

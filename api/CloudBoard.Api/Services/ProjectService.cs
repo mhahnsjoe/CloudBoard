@@ -2,6 +2,7 @@ using CloudBoard.Api.Models;
 using Microsoft.EntityFrameworkCore;
 using CloudBoard.Api.Models.DTO;
 using CloudBoard.Api.Data;
+using CloudBoard.Api.Constants;
 
 namespace CloudBoard.Api.Services
 {
@@ -55,7 +56,7 @@ namespace CloudBoard.Api.Services
             // Automatically create a default Kanban board for the project
             var defaultBoard = new Board
             {
-                Name = "Main Board",
+                Name = projectDto.Name,
                 Description = "Default Kanban board",
                 Type = BoardType.Kanban,
                 ProjectId = project.Id,
@@ -65,11 +66,27 @@ namespace CloudBoard.Api.Services
             _context.Boards.Add(defaultBoard);
             await _context.SaveChangesAsync();
 
-            // Reload project with board
+            // Add default columns to the board
+            foreach (var (name, order, category) in BoardConstants.DefaultColumns)
+            {
+                var column = new BoardColumn
+                {
+                    Name = name,
+                    Order = order,
+                    Category = category,
+                    BoardId = defaultBoard.Id,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.BoardColumns.Add(column);
+            }
+            await _context.SaveChangesAsync();
+
+            // Reload project with board and columns
             var createdProject = await _context.Projects
                 .Include(p => p.Boards)
+                    .ThenInclude(b => b.Columns.OrderBy(c => c.Order))
                 .FirstOrDefaultAsync(p => p.Id == project.Id);
-            
+
             return createdProject!;
         }
 

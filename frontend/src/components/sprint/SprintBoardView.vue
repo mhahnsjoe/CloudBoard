@@ -32,6 +32,7 @@
     <!-- Shared Board Canvas -->
     <BoardCanvas
       :workItems="filteredWorkItems"
+      :columns="board?.columns || []"
       @create-workitem="$emit('create-workitem', $event)"
       @edit-workitem="$emit('edit-workitem', $event)"
       @delete-workitem="$emit('delete-workitem', $event)"
