@@ -54,7 +54,6 @@
           v-model:searchQuery="searchQuery"
           v-model:selectedTypes="selectedTypes"
           v-model:selectedStatuses="selectedStatuses"
-          :availableStatuses="availableStatuses"
           :filteredCount="treeHelpers.filteredItems.value.length"
           :totalCount="allWorkItems.length"
           @expand-all="treeHelpers.expandAll"
@@ -213,7 +212,6 @@ import {
 import { useConfirm } from '@/composables/useConfirm'
 import { useWorkItemTree, HIERARCHY_RULES, type TreeNode } from '@/composables/useWorkItemTree'
 import type { Board } from '@/types/Project'
-import { DEFAULT_STATUSES } from '@/types/Project'
 import type { WorkItem, WorkItemType, WorkItemCreate } from '@/types/WorkItem'
 import WorkItemModal from '@/components/workItem/WorkItemModal.vue'
 import MoveToBoardModal from '@/components/workItem/MoveToBoardModal.vue'
@@ -277,17 +275,6 @@ export default defineComponent({
 
     // Types that can be created at root level
     const creatableTypes: WorkItemType[] = ['Epic', 'Feature', 'PBI', 'Task', 'Bug']
-
-    // Available statuses - collect all unique statuses from all boards
-    const availableStatuses = computed(() => {
-      const statusSet = new Set<string>()
-      boards.value.forEach(board => {
-        if (board.columns && board.columns.length > 0) {
-          board.columns.forEach(col => statusSet.add(col.name))
-        }
-      })
-      return statusSet.size > 0 ? Array.from(statusSet) : [...DEFAULT_STATUSES]
-    })
 
     // Available parents for the modal
     const availableParents = computed(() => {
@@ -564,7 +551,6 @@ export default defineComponent({
       searchQuery,
       selectedTypes,
       selectedStatuses,
-      availableStatuses,
       creatableTypes,
       // Drag and Drop
       rootItems,

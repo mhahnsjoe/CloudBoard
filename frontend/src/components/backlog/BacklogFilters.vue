@@ -75,7 +75,7 @@
         >
           <div class="p-2 space-y-1">
             <label
-              v-for="status in availableStatuses"
+              v-for="status in statuses"
               :key="status"
               class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
             >
@@ -157,10 +157,6 @@ export default defineComponent({
       type: Array as PropType<string[]>,
       default: () => []
     },
-    availableStatuses: {
-      type: Array as PropType<string[]>,
-      default: () => [...DEFAULT_STATUSES]
-    },
     filteredCount: {
       type: Number,
       required: true
@@ -185,6 +181,7 @@ export default defineComponent({
     const statusDropdownRef = ref<HTMLElement | null>(null)
 
     const workItemTypes = WORKITEM_TYPES
+    const statuses = DEFAULT_STATUSES
 
     const hasActiveFilters = computed(() => {
       return props.searchQuery.length > 0 || 
@@ -238,6 +235,7 @@ export default defineComponent({
       typeDropdownRef,
       statusDropdownRef,
       workItemTypes,
+      statuses,
       hasActiveFilters,
       toggleType,
       toggleStatus

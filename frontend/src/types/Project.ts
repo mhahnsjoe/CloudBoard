@@ -4,13 +4,13 @@ export interface BoardColumn {
   id: number;
   name: string;
   order: number;
-  category: 'Proposed' | 'InProgress' | 'Resolved';
+  category: 'To Do' | 'In Progress' | 'Done';
 }
 
 export interface BoardColumnCreate {
   name: string;
   order: number;
-  category: 'Proposed' | 'InProgress' | 'Resolved';
+  category: 'To Do' | 'In Progress' | 'Done';
 }
 
 export interface Board {

@@ -9,9 +9,9 @@ import type { BoardColumn } from '@/types/Project'
  */
 export function getStatusBadgeClassByCategory(category: string): string {
   const classes: Record<string, string> = {
-    'Proposed': 'bg-gray-100 text-gray-700',
-    'InProgress': 'bg-blue-100 text-blue-700',
-    'Resolved': 'bg-green-100 text-green-700'
+    'To Do': 'bg-gray-100 text-gray-700',
+    'In Progress': 'bg-blue-100 text-blue-700',
+    'Done': 'bg-green-100 text-green-700'
   }
   return classes[category] || 'bg-gray-100 text-gray-700'
 }
@@ -69,9 +69,9 @@ export function getSprintStatusClass(status: string): string {
  */
 export function getStatusIconClassByCategory(category: string): string {
   const classes: Record<string, string> = {
-    'Proposed': 'text-gray-500',
-    'InProgress': 'text-blue-500',
-    'Resolved': 'text-green-500'
+    'To Do': 'text-gray-500',
+    'In Progress': 'text-blue-500',
+    'Done': 'text-green-500'
   }
   return classes[category] || 'text-gray-500'
 }

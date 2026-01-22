@@ -23,9 +23,9 @@ namespace CloudBoard.Api.Models
 
         /// <summary>
         /// Workflow category for analytics and styling.
-        /// Maps to Azure DevOps semantics: Proposed (not started), InProgress (active), Resolved (complete)
+        /// Valid values: "To Do" (not started), "In Progress" (active), "Done" (complete)
         /// </summary>
-        public string Category { get; set; } = "Proposed";
+        public string Category { get; set; } = "To Do";
 
         /// <summary>
         /// Audit timestamp

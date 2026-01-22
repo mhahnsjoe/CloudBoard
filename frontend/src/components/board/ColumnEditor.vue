@@ -66,9 +66,9 @@
                   v-model="column.category"
                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 >
-                  <option value="Proposed">Proposed (To Do)</option>
-                  <option value="InProgress">In Progress (Active)</option>
-                  <option value="Resolved">Resolved (Done)</option>
+                  <option value="To Do">To Do (not started)</option>
+                  <option value="In Progress">In Progress (active)</option>
+                  <option value="Done">Done (complete)</option>
                 </select>
               </div>
             </div>
@@ -109,9 +109,9 @@
     <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
       <p class="font-medium mb-1">About Categories:</p>
       <ul class="text-xs space-y-1 ml-4 list-disc">
-        <li><strong>Proposed:</strong> Work that hasn't started yet (typically left-most columns)</li>
-        <li><strong>InProgress:</strong> Active work being done (middle columns)</li>
-        <li><strong>Resolved:</strong> Completed work (typically right-most columns)</li>
+        <li><strong>To Do:</strong> Work that hasn't started yet (typically left-most columns)</li>
+        <li><strong>In Progress:</strong> Active work being done (middle columns)</li>
+        <li><strong>Done:</strong> Completed work (typically right-most columns)</li>
       </ul>
     </div>
   </div>
@@ -147,9 +147,9 @@ watch(
     if (shouldUseDefaults) {
       // Initialize with default columns if none provided
       const defaults = [
-        { id: 0, name: 'To Do', order: 0, category: 'Proposed', createdAt: new Date().toISOString(), boardId: 0 },
-        { id: 0, name: 'In Progress', order: 1, category: 'InProgress', createdAt: new Date().toISOString(), boardId: 0 },
-        { id: 0, name: 'Done', order: 2, category: 'Resolved', createdAt: new Date().toISOString(), boardId: 0 }
+        { id: 0, name: 'To Do', order: 0, category: 'To Do' as const, createdAt: new Date().toISOString(), boardId: 0 },
+        { id: 0, name: 'In Progress', order: 1, category: 'In Progress' as const, createdAt: new Date().toISOString(), boardId: 0 },
+        { id: 0, name: 'Done', order: 2, category: 'Done' as const, createdAt: new Date().toISOString(), boardId: 0 }
       ]
       localColumns.value = defaults
       // Immediately emit defaults so parent knows about them
@@ -189,7 +189,7 @@ const addColumn = () => {
     id: 0, // Will be assigned by backend
     name: '',
     order: newOrder,
-    category: 'InProgress',
+    category: 'In Progress',
     createdAt: new Date().toISOString(),
     boardId: 0
   })
@@ -239,9 +239,9 @@ const validateColumns = () => {
 
 const getCategoryBadgeClass = (category: string) => {
   const classes: Record<string, string> = {
-    'Proposed': 'bg-gray-100 text-gray-700',
-    'InProgress': 'bg-blue-100 text-blue-700',
-    'Resolved': 'bg-green-100 text-green-700'
+    'To Do': 'bg-gray-100 text-gray-700',
+    'In Progress': 'bg-blue-100 text-blue-700',
+    'Done': 'bg-green-100 text-green-700'
   }
   return classes[category] || 'bg-gray-100 text-gray-700'
 }

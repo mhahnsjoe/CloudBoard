@@ -23,16 +23,16 @@ namespace CloudBoard.Api.Constants
         /// <summary>
         /// Valid workflow categories for columns
         /// </summary>
-        public static readonly string[] ValidCategories = { "Proposed", "InProgress", "Resolved" };
+        public static readonly string[] ValidCategories = { "To Do", "In Progress", "Done" };
 
         /// <summary>
         /// Default columns created for new boards
         /// </summary>
         public static readonly (string Name, int Order, string Category)[] DefaultColumns = new[]
         {
-            ("To Do", 0, "Proposed"),
-            ("In Progress", 1, "InProgress"),
-            ("Done", 2, "Resolved")
+            ("To Do", 0, "To Do"),
+            ("In Progress", 1, "In Progress"),
+            ("Done", 2, "Done")
         };
     }
 }

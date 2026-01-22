@@ -39,7 +39,7 @@ namespace CloudBoard.Api.Models.DTO
         public int Id { get; set; }
         public string Name { get; set; } = null!;
         public int Order { get; set; }
-        public string Category { get; set; } = "Proposed";
+        public string Category { get; set; } = "To Do";
     }
 
     /// <summary>
@@ -49,7 +49,7 @@ namespace CloudBoard.Api.Models.DTO
     {
         public string Name { get; set; } = null!;
         public int Order { get; set; }
-        public string Category { get; set; } = "Proposed";
+        public string Category { get; set; } = "To Do";
     }
 
 }   
