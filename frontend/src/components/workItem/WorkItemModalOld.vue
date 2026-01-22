@@ -125,7 +125,7 @@
 import { defineComponent, ref, watch, type PropType } from 'vue';
 import type { WorkItem, WorkItemType } from '@/types/WorkItem';
 import { WORKITEM_TYPES } from '@/types/WorkItem';
-import { PRIORITIES, STATUSES } from '@/types/Project';
+import { PRIORITIES, DEFAULT_STATUSES } from '@/types/Project';
 import { ClockIcon, CalendarIcon } from '@/components/icons';
 
 export default defineComponent({
@@ -221,7 +221,7 @@ export default defineComponent({
       isEditing,
       form,
       PRIORITIES,
-      STATUSES,
+      STATUSES: DEFAULT_STATUSES,
       WORKITEM_TYPES,
       handleSave
     };

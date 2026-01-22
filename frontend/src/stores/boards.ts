@@ -82,12 +82,12 @@ export const useBoardStore = defineStore('boards', () => {
     error.value = null
 
     try {
-      await api.updateBoard(projectId, boardId, boardData)
-      
-      // Update local state
+      const response = await api.updateBoard(projectId, boardId, boardData)
+
+      // Update local state with the response from API (includes proper column IDs)
       const index = boards.value.findIndex(b => b.id === boardId)
       if (index !== -1) {
-        boards.value[index] = { ...boards.value[index]!, ...boardData, id: boardId }
+        boards.value[index] = response.data
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to update board'

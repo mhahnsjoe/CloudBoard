@@ -5,6 +5,8 @@ export interface BoardColumn {
   name: string;
   order: number;
   category: 'To Do' | 'In Progress' | 'Done';
+  createdAt?: string;
+  boardId?: number;
 }
 
 export interface BoardColumnCreate {
