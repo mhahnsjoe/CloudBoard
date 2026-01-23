@@ -81,13 +81,6 @@ builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
 .AddEntityFrameworkStores<CloudBoardContext>()
 .AddDefaultTokenProviders();
 
-// JWT Authentication
-var jwtSecret = builder.Configuration["Jwt:Secret"] 
-    ?? throw new InvalidOperationException("JWT Secret is not configured");
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] 
-    ?? throw new InvalidOperationException("JWT Issuer is not configured");
-var jwtAudience = builder.Configuration["Jwt:Audience"] 
-    ?? throw new InvalidOperationException("JWT Audience is not configured");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -96,6 +89,14 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    // JWT Authentication
+    var jwtSecret = builder.Configuration["Jwt:Secret"] 
+        ?? throw new InvalidOperationException("JWT Secret is not configured");
+    var jwtIssuer = builder.Configuration["Jwt:Issuer"] 
+        ?? throw new InvalidOperationException("JWT Issuer is not configured");
+    var jwtAudience = builder.Configuration["Jwt:Audience"] 
+        ?? throw new InvalidOperationException("JWT Audience is not configured");
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
