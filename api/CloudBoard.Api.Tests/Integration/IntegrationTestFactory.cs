@@ -31,7 +31,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
         {
             config.AddInMemoryCollection(new Dictionary<string, string>
             {
-                ["Jwt:Key"] = "TestSecretKeyForIntegrationTestsThatIsLongEnough123456789", 
+                ["Jwt:Secret"] = "TestSecretKeyForIntegrationTestsThatIsLongEnough123456789", 
                 ["Jwt:Issuer"] = "CloudBoardTestIssuer",
                 ["Jwt:Audience"] = "CloudBoardTestAudience"
             }!);

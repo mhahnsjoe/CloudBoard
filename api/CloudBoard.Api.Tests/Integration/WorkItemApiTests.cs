@@ -13,6 +13,7 @@ public class WorkItemApiTests : IntegrationTestBase
     public WorkItemApiTests(IntegrationTestFactory factory) : base(factory)
     {
     }
+    
     [Fact]
     public async Task CreateWorkItem_ValidInput_ReturnsCreated()
     {
