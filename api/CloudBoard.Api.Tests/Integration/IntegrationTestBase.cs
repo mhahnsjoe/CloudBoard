@@ -4,6 +4,7 @@ using CloudBoard.Api.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
@@ -32,6 +33,17 @@ public class IntegrationTestBase : IAsyncLifetime
         Factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
+                builder.ConfigureAppConfiguration((context, config) =>
+                {
+                    // Add test configuration including JWT secret
+                    config.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        ["Jwt:Secret"] = "TestSecretKeyForIntegrationTestsThatIsLongEnough123456789",
+                        ["Jwt:Issuer"] = "CloudBoardTestIssuer",
+                        ["Jwt:Audience"] = "CloudBoardTestAudience"
+                    }!);
+                });
+
                 builder.ConfigureServices(services =>
                 {
                     // Remove existing DbContext registration
