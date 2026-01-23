@@ -12,12 +12,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
-      
+          dotnet-version: '10.0.x'
+
       - name: Cache NuGet packages
         uses: actions/cache@v3
         with:
@@ -25,19 +25,21 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
-        run: dotnet restore ./api/CloudBoard.Api/CloudBoard.Api.csproj
-     
+        run: dotnet restore ./api/CloudBoard.Api.sln
+
       - name: Build
-        run: dotnet build ./api/CloudBoard.Api/CloudBoard.Api.csproj --no-restore --configuration Release
-      
-      - name: Run tests
-        run: |
-          if [ -d "./tests" ]; then
-            dotnet test ./tests --no-build --verbosity normal
-          else
-            echo "No tests directory found, skipping."
-          fi
+        run: dotnet build ./api/CloudBoard.Api.sln --no-restore --configuration Release
+
+      - name: Run unit tests
+        run: dotnet test ./api/CloudBoard.Api.Tests/CloudBoard.Api.Tests.csproj --no-build --verbosity normal --configuration Release --filter "FullyQualifiedName!~Integration"
+
+      - name: Run integration tests
+        run: dotnet test ./api/CloudBoard.Api.Tests/CloudBoard.Api.Tests.csproj --no-build --verbosity normal --configuration Release --filter "FullyQualifiedName~Integration"
+        env:
+          # Integration tests use Testcontainers which needs Docker
+          TESTCONTAINERS_RYUK_DISABLED: false
 
   frontend:
       runs-on: ubuntu-latest
@@ -57,6 +59,11 @@ jobs:
             cd frontend
             npm ci
 
+        - name: Run frontend tests
+          run: |
+            cd frontend
+            npm run test:unit -- --run
+
         - name: Build frontend
           run: |
             cd frontend
@@ -72,7 +79,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
       
       - name: Apply EF Updates
         working-directory: api/CloudBoard.Api
