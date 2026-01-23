@@ -14,24 +14,34 @@ namespace CloudBoard.Api.Services
     {
         private readonly CloudBoardContext _context;
         private readonly IWorkItemValidationService _validation;
+        private readonly ILogger<WorkItemService> _logger;
 
         public WorkItemService(
-            CloudBoardContext context, 
-            IWorkItemValidationService validation)
+            CloudBoardContext context,
+            IWorkItemValidationService validation,
+            ILogger<WorkItemService> logger)
         {
             _context = context;
             _validation = validation;
+            _logger = logger;
         }
 
         public async Task<WorkItem> CreateAsync(WorkItemCreateDto dto, int createdById)
         {
+            _logger.LogInformation(
+                "Creating work item: {Title}, Type: {Type}, Board: {BoardId}, CreatedBy: {UserId}",
+                dto.Title, dto.Type, dto.BoardId, createdById);
+
             //TODO: Implement better way to distinguish when a backlog item is created than using null
             if(dto.BoardId != null) //If boardId is set to null we are most likely creating a backlog item
             {
                 // Validate board exists
                 var board = await _context.Boards.FindAsync(dto.BoardId);
                 if (board == null)
+                {
+                    _logger.LogWarning("Board {BoardId} not found", dto.BoardId);
                     throw new KeyNotFoundException($"Board {dto.BoardId} not found");
+                }
                 dto.ProjectId = board.ProjectId; //Ugly fix for now TODO: find a better way to send projectId? Maybe this works but it feels wrong
             }
             // Validate parent relationship if specified
@@ -87,6 +97,10 @@ namespace CloudBoard.Api.Services
 
             _context.WorkItems.Add(workItem);
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Work item created: {WorkItemId} - {Title}",
+                workItem.Id, workItem.Title);
 
             return workItem;
         }
