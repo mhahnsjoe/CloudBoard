@@ -6,11 +6,13 @@ using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
 using System.Security.Claims;
 using CloudBoard.Api.Services;
+using Asp.Versioning;
 
 namespace CloudBoard.Api.Controllers
 {
     [ApiController]
-    [Route("api")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}")]
     [Authorize]
     public class SprintsController : ControllerBase
     {

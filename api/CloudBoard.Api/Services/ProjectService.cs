@@ -2,115 +2,125 @@ using CloudBoard.Api.Models;
 using Microsoft.EntityFrameworkCore;
 using CloudBoard.Api.Models.DTO;
 using CloudBoard.Api.Data;
-using CloudBoard.Api.Constants;
+using CloudBoard.Api.Common;
 
-namespace CloudBoard.Api.Services
+namespace CloudBoard.Api.Services;
+
+public class ProjectService : IProjectService
 {
+    private readonly CloudBoardContext _context;
+    private readonly ILogger<ProjectService> _logger;
 
-    public class ProjectService : IProjectService
+    public ProjectService(CloudBoardContext context, ILogger<ProjectService> logger)
     {
-        private readonly CloudBoardContext _context;
-        //TODO: Feature/Add-Logging-To-Backend
-        //private readonly ILogger<ProjectService> _logger;
+        _context = context;
+        _logger = logger;
+    }
 
-        public ProjectService(CloudBoardContext context, ILogger<ProjectService> logger)
+    public async Task<Result<List<Project>>> GetProjectsAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var projects = await _context.Projects
+            .Where(p => p.OwnerId == userId)
+            .Include(p => p.Boards)
+                .ThenInclude(b => b.WorkItems)
+            .ToListAsync(cancellationToken);
+
+        return Result<List<Project>>.Success(projects);
+    }
+
+    public async Task<Result<Project>> GetProjectByIdAsync(int id, int userId, CancellationToken cancellationToken = default)
+    {
+        var project = await _context.Projects
+            .Include(p => p.Boards)
+                .ThenInclude(b => b.WorkItems)
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+        if (project == null)
+            return Result<Project>.NotFound($"Project {id} not found");
+
+        if (project.OwnerId != userId)
+            return Result<Project>.Forbidden("You don't have access to this project");
+
+        return Result<Project>.Success(project);
+    }
+
+    public async Task<Result<Project>> CreateProjectAsync(ProjectCreateDto projectDto, int userId, CancellationToken cancellationToken = default)
+    {
+        var project = new Project
         {
-            _context = context;
-        }
+            Name = projectDto.Name,
+            Description = projectDto.Description,
+            CreatedAt = DateTime.UtcNow,
+            OwnerId = userId
+        };
 
-        public async Task<List<Project>> GetProjectsAsync(int userId, CancellationToken cancellationToken = default)
+        _context.Projects.Add(project);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Create default Kanban board
+        var defaultBoard = new Board
         {
-            var projects = await _context.Projects.Where(p => p.OwnerId == userId)
-                .Include(p => p.Boards)
-                    .ThenInclude(b => b.WorkItems)
-                .ToListAsync();
-            
-            return projects;
-        }
+            Name = projectDto.Name,
+            Description = "Default Kanban board",
+            Type = BoardType.Kanban,
+            ProjectId = project.Id,
+            CreatedAt = DateTime.UtcNow
+        };
 
-        public async Task<Project> GetProjectByIdAsync(int id, CancellationToken cancellationToken = default)
+        // Add default columns
+        defaultBoard.Columns = new List<BoardColumn>
         {
-            var project = await _context.Projects
-                .Include(p => p.Boards)
-                    .ThenInclude(b => b.WorkItems)
-                .FirstOrDefaultAsync(p => p.Id == id);
-            
-            if (project == null) 
-                throw new KeyNotFoundException();
-            
-            return project;
-        }
+            new() { Name = "To Do", Category = "To Do", Order = 0 },
+            new() { Name = "In Progress", Category = "In Progress", Order = 1 },
+            new() { Name = "Done", Category = "Done", Order = 2 }
+        };
 
-        public async Task<Project> CreateProjectAsync(ProjectCreateDto projectDto, int userId, CancellationToken cancellationToken = default)
-        {
-            var project = new Project
-            {
-                Name = projectDto.Name,
-                Description = projectDto.Description,
-                CreatedAt = DateTime.UtcNow,
-                OwnerId = userId
-            };
-            _context.Projects.Add(project);
-            await _context.SaveChangesAsync();
+        _context.Boards.Add(defaultBoard);
+        await _context.SaveChangesAsync(cancellationToken);
 
-            // Automatically create a default Kanban board for the project
-            var defaultBoard = new Board
-            {
-                Name = projectDto.Name,
-                Description = "Default Kanban board",
-                Type = BoardType.Kanban,
-                ProjectId = project.Id,
-                CreatedAt = DateTime.UtcNow
-            };
+        // Reload with includes
+        var createdProject = await _context.Projects
+            .Include(p => p.Boards)
+            .FirstAsync(p => p.Id == project.Id, cancellationToken);
 
-            _context.Boards.Add(defaultBoard);
-            await _context.SaveChangesAsync();
+        _logger.LogInformation("Created project {ProjectId} for user {UserId}", project.Id, userId);
 
-            // Add default columns to the board
-            foreach (var (name, order, category) in BoardConstants.DefaultColumns)
-            {
-                var column = new BoardColumn
-                {
-                    Name = name,
-                    Order = order,
-                    Category = category,
-                    BoardId = defaultBoard.Id,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _context.BoardColumns.Add(column);
-            }
-            await _context.SaveChangesAsync();
+        return Result<Project>.Success(createdProject);
+    }
 
-            // Reload project with board and columns
-            var createdProject = await _context.Projects
-                .Include(p => p.Boards)
-                    .ThenInclude(b => b.Columns.OrderBy(c => c.Order))
-                .FirstOrDefaultAsync(p => p.Id == project.Id);
+    public async Task<Result> UpdateProjectAsync(int id, ProjectUpdateDto projectDto, int userId, CancellationToken cancellationToken = default)
+    {
+        var project = await _context.Projects.FindAsync(new object[] { id }, cancellationToken);
 
-            return createdProject!;
-        }
+        if (project == null)
+            return Result.NotFound($"Project {id} not found");
 
-        public async Task UpdateProjectAsync(int id, ProjectUpdateDto projectDto, CancellationToken cancellationToken = default)
-        {
-            var project = await _context.Projects.FindAsync(id);
-            if (project == null)
-                throw new KeyNotFoundException();
-            
-            project.Name = projectDto.Name;
-            project.Description = projectDto.Description;
+        if (project.OwnerId != userId)
+            return Result.Forbidden("You don't have access to this project");
 
-            _context.Entry(project).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-        }
+        project.Name = projectDto.Name;
+        project.Description = projectDto.Description;
 
-        public async Task DeleteProjectAsync(int id, CancellationToken cancellationToken = default)
-        {
-            var project = await _context.Projects.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
-            if (project == null)
-                throw new KeyNotFoundException();
+        await _context.SaveChangesAsync(cancellationToken);
 
-            _context.Projects.Remove(project);
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
+        _logger.LogInformation("Updated project {ProjectId}", id);
+        return Result.Success();
+    }
+
+    public async Task<Result> DeleteProjectAsync(int id, int userId, CancellationToken cancellationToken = default)
+    {
+        var project = await _context.Projects.FindAsync(new object[] { id }, cancellationToken);
+
+        if (project == null)
+            return Result.NotFound($"Project {id} not found");
+
+        if (project.OwnerId != userId)
+            return Result.Forbidden("You don't have access to this project");
+
+        _context.Projects.Remove(project);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Deleted project {ProjectId}", id);
+        return Result.Success();
     }
 }

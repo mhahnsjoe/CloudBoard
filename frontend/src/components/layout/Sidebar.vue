@@ -263,10 +263,11 @@ import { defineComponent, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FolderIcon, PlusIcon, ClipboardIcon } from '@/components/icons'
 import Modal from '@/components/common/Modal.vue'
-import { getProjects, createProject } from '@/services/api'
 import type { Project } from '@/types/Project'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/boards'
+import { useProjectStore } from '@/stores/projects'
+import { storeToRefs } from 'pinia'
 import { useDropdown } from '@/composables/useDropdown'
 import { useClickOutside } from '@/composables/useClickOutside'
 
@@ -281,9 +282,10 @@ export default defineComponent({
   setup() {
     const route = useRoute()
     const router = useRouter()
-    const projects = ref<Project[]>([])
     const authStore = useAuthStore()
     const boardStore = useBoardStore()
+    const projectStore = useProjectStore()
+    const { projects } = storeToRefs(projectStore)
     const selectedProjectId = ref<number | null>(null)
     const showAddProjectModal = ref(false)
     const showAddBoardModal = ref(false)
@@ -341,9 +343,8 @@ export default defineComponent({
 
     const fetchProjects = async () => {
       try {
-        const response = await getProjects()
-        projects.value = response.data
-        
+        await projectStore.fetchProjects()
+
         if (route.params.projectId) {
           selectedProjectId.value = Number(route.params.projectId)
         } else if (projects.value.length > 0 && !selectedProjectId.value) {
@@ -391,22 +392,20 @@ export default defineComponent({
       }
 
       try {
-        const response = await createProject({
+        const newProject = await projectStore.createProject({
           name: newProjectName.value,
           description: newProjectDescription.value
         })
-        
+
         newProjectName.value = ''
         newProjectDescription.value = ''
         showAddProjectModal.value = false
-        
-        await fetchProjects()
-        
-        if (response.data && response.data.boards && response.data.boards.length > 0) {
-          selectedProjectId.value = response.data.id
-          await boardStore.fetchBoards(response.data.id)
-          const firstBoard = response.data.boards[0]
-          router.push(`/projects/${response.data.id}/boards/${firstBoard!.id}`)
+
+        if (newProject && newProject.boards && newProject.boards.length > 0) {
+          selectedProjectId.value = newProject.id
+          await boardStore.fetchBoards(newProject.id)
+          const firstBoard = newProject.boards[0]
+          router.push(`/projects/${newProject.id}/boards/${firstBoard!.id}`)
         }
       } catch (error) {
         console.error('Failed to create project:', error)

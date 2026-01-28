@@ -40,17 +40,17 @@ public class IntegrationTestBase : IAsyncLifetime
 
     private async Task SetupAuthenticationAsync()
     {
-        var registerResponse = await Client.PostAsJsonAsync("/api/auth/register", new
+        var registerResponse = await Client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             Email = "integration@test.com",
             Password = "TestPassword123!",
             Name = "Integration Test"
         });
 
-        // If it fails, we assume it's because the user already exists 
+        // If it fails, we assume it's because the user already exists
         // from a previous test run in this session.
 
-        var loginResponse = await Client.PostAsJsonAsync("/api/auth/login", new
+        var loginResponse = await Client.PostAsJsonAsync("/api/v1/auth/login", new
         {
             Email = "integration@test.com",
             Password = "TestPassword123!"
@@ -62,10 +62,10 @@ public class IntegrationTestBase : IAsyncLifetime
         Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", authResult?.Token);
     }
-    
+
     protected async Task<int> CreateTestProjectAsync(string name = "Test Project")
     {
-        var response = await Client.PostAsJsonAsync("/api/projects", new
+        var response = await Client.PostAsJsonAsync("/api/v1/projects", new
         {
             Name = name,
             Description = "Integration test project"
@@ -78,7 +78,7 @@ public class IntegrationTestBase : IAsyncLifetime
 
     protected async Task<int> GetDefaultBoardAsync(int projectId)
     {
-        var response = await Client.GetAsync($"/api/projects/{projectId}/boards");
+        var response = await Client.GetAsync($"/api/v1/projects/{projectId}/boards");
         response.EnsureSuccessStatusCode();
 
         var boards = await response.Content.ReadFromJsonAsync<List<BoardResponse>>();

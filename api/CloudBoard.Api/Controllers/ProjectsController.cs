@@ -1,100 +1,105 @@
-using CloudBoard.Api.Data;
 using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
+using CloudBoard.Api.Services;
+using CloudBoard.Api.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using CloudBoard.Api.Services;
+using Asp.Versioning;
 
-namespace CloudBoard.Api.Controllers
+namespace CloudBoard.Api.Controllers;
+
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
+[Authorize]
+public class ProjectsController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    [Authorize]
-    public class ProjectsController : ControllerBase
+    private readonly IProjectService _projectService;
+
+    public ProjectsController(IProjectService projectService)
     {
-        private readonly IProjectService _projetService;
+        _projectService = projectService;
+    }
 
-        public ProjectsController(IProjectService projectService)
-        {
-            _projetService = projectService;
-        }
+    private int GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.Parse(userIdClaim!);
+    }
 
-        private int GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return int.Parse(userIdClaim!);
-        }
+    /// <summary>
+    /// Gets all projects for the current user
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<Project>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetProjects()
+    {
+        var userId = GetCurrentUserId();
+        var result = await _projectService.GetProjectsAsync(userId);
+        return result.ToActionResult();
+    }
 
-        // GET: api/projects
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
-        {
-            var userId = GetCurrentUserId();
-            var projects = await _projetService.GetProjectsAsync(userId);
-            return projects;
-        }
+    /// <summary>
+    /// Gets a specific project by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(Project), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetProject(int id)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _projectService.GetProjectByIdAsync(id, userId);
+        return result.ToActionResult();
+    }
 
-        // GET: api/projects/1
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Project>> GetProject(int id)
-        {
-            try
-            {
-                var project = await _projetService.GetProjectByIdAsync(id);
-                return project;
-            }
-            catch(KeyNotFoundException)
-            {
-                return NotFound();
-            }
-        }
+    /// <summary>
+    /// Creates a new project
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(Project), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateProject(ProjectCreateDto projectDto)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _projectService.CreateProjectAsync(projectDto, userId);
+        return result.ToCreatedResult(this, nameof(GetProject), new { id = result.Value?.Id });
+    }
 
-        // POST: api/projects
-        [HttpPost]
-        public async Task<ActionResult<Project>> CreateProject(ProjectCreateDto projectDto)
-        {
-            var userId = GetCurrentUserId();
-            try
-            {
-                var createdProject = await _projetService.CreateProjectAsync(projectDto, userId);
-                return CreatedAtAction(nameof(GetProject), new { id = createdProject.Id }, createdProject);
-            }
-            catch(Exception)
-            {
-                //do Something here log etc not just bad request
-                //TODO: Add generic error handling
-                return BadRequest();
-            }
-        }
+    /// <summary>
+    /// Updates an existing project
+    /// </summary>
+    [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UpdateProject(int id, ProjectUpdateDto projectDto)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _projectService.UpdateProjectAsync(id, projectDto, userId);
 
-        // PUT: api/projects/1
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProject(int id, ProjectUpdateDto projectDto)
-        {
-            try {
-                await _projetService.UpdateProjectAsync(id, projectDto);
-                return NoContent();
-            }
-            catch(KeyNotFoundException)
-            {
-                return NotFound();
-            }
-        }
+        if (result.IsSuccess)
+            return NoContent();
 
-        // DELETE: api/projects/1
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProject(int id)
-        {
-            try
-            {
-                await _projetService.DeleteProjectAsync(id);
-                return NoContent();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-        }
+        return result.ToActionResult();
+    }
+
+    /// <summary>
+    /// Deletes a project
+    /// </summary>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> DeleteProject(int id)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _projectService.DeleteProjectAsync(id, userId);
+
+        if (result.IsSuccess)
+            return NoContent();
+
+        return result.ToActionResult();
     }
 }

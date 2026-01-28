@@ -22,7 +22,7 @@ public class WorkItemApiTests : IntegrationTestBase
         var boardId = await GetDefaultBoardAsync(projectId);
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var response = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Integration Test Task",
             Type = "Task",
@@ -47,7 +47,7 @@ public class WorkItemApiTests : IntegrationTestBase
         var boardId = await GetDefaultBoardAsync(projectId);
 
         // Create Epic
-        var epicResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var epicResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Parent Epic",
             Type = "Epic",
@@ -57,7 +57,7 @@ public class WorkItemApiTests : IntegrationTestBase
         var epic = await epicResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
 
         // Act - Create Feature under Epic
-        var featureResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var featureResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Child Feature",
             Type = "Feature",
@@ -81,7 +81,7 @@ public class WorkItemApiTests : IntegrationTestBase
         var boardId = await GetDefaultBoardAsync(projectId);
 
         // Create Task (cannot have children)
-        var taskResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var taskResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Parent Task",
             Type = "Task",
@@ -91,7 +91,7 @@ public class WorkItemApiTests : IntegrationTestBase
         var task = await taskResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
 
         // Act - Try to create PBI under Task (invalid)
-        var pbiResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var pbiResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Invalid Child",
             Type = "PBI",
@@ -111,7 +111,7 @@ public class WorkItemApiTests : IntegrationTestBase
         var projectId = await CreateTestProjectAsync();
         var boardId = await GetDefaultBoardAsync(projectId);
 
-        var createResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var createResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Original Title",
             Type = "Task",
@@ -122,7 +122,7 @@ public class WorkItemApiTests : IntegrationTestBase
 
         // Act
         var updateResponse = await Client.PutAsJsonAsync(
-            $"/api/boards/{boardId}/workitems/{workItem!.Id}",
+            $"/api/v1/boards/{boardId}/workitems/{workItem!.Id}",
             new
             {
                 Title = "Updated Title",
@@ -137,7 +137,7 @@ public class WorkItemApiTests : IntegrationTestBase
         updateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify update by fetching the item
-        var getResponse = await Client.GetAsync($"/api/boards/{boardId}/workitems/{workItem.Id}");
+        var getResponse = await Client.GetAsync($"/api/v1/boards/{boardId}/workitems/{workItem.Id}");
         var updated = await getResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
         updated!.Title.Should().Be("Updated Title");
         updated.Status.Should().Be("In Progress");
@@ -151,7 +151,7 @@ public class WorkItemApiTests : IntegrationTestBase
         var projectId = await CreateTestProjectAsync();
         var boardId = await GetDefaultBoardAsync(projectId);
 
-        var createResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var createResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "To Delete",
             Type = "Task",
@@ -162,14 +162,14 @@ public class WorkItemApiTests : IntegrationTestBase
 
         // Act
         var deleteResponse = await Client.DeleteAsync(
-            $"/api/boards/{boardId}/workitems/{workItem!.Id}");
+            $"/api/v1/boards/{boardId}/workitems/{workItem!.Id}");
 
         // Assert
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify deleted
         var getResponse = await Client.GetAsync(
-            $"/api/boards/{boardId}/workitems/{workItem.Id}");
+            $"/api/v1/boards/{boardId}/workitems/{workItem.Id}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -183,7 +183,7 @@ public class WorkItemApiTests : IntegrationTestBase
         // Create multiple items
         for (int i = 0; i < 3; i++)
         {
-            await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+            await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
             {
                 Title = $"Task {i}",
                 Type = "Task",
@@ -193,7 +193,7 @@ public class WorkItemApiTests : IntegrationTestBase
         }
 
         // Act
-        var response = await Client.GetAsync($"/api/boards/{boardId}/workitems");
+        var response = await Client.GetAsync($"/api/v1/boards/{boardId}/workitems");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -210,7 +210,7 @@ public class WorkItemApiTests : IntegrationTestBase
         var boardId = await GetDefaultBoardAsync(projectId);
 
         // Act - Create full hierarchy
-        var epicResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var epicResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Epic",
             Type = "Epic",
@@ -219,7 +219,7 @@ public class WorkItemApiTests : IntegrationTestBase
         });
         var epic = await epicResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
 
-        var featureResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var featureResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Feature",
             Type = "Feature",
@@ -229,7 +229,7 @@ public class WorkItemApiTests : IntegrationTestBase
         });
         var feature = await featureResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
 
-        var pbiResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var pbiResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "PBI",
             Type = "PBI",
@@ -239,7 +239,7 @@ public class WorkItemApiTests : IntegrationTestBase
         });
         var pbi = await pbiResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
 
-        var taskResponse = await Client.PostAsJsonAsync($"/api/boards/{boardId}/workitems", new
+        var taskResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
             Title = "Task",
             Type = "Task",
@@ -253,7 +253,7 @@ public class WorkItemApiTests : IntegrationTestBase
 
         // Verify hierarchy via GET with hierarchy
         var hierarchyResponse = await Client.GetAsync(
-            $"/api/boards/{boardId}/workitems/hierarchy");
+            $"/api/v1/boards/{boardId}/workitems/hierarchy");
         var roots = await hierarchyResponse.Content.ReadFromJsonAsync<List<WorkItemResponse>>();
 
         roots.Should().HaveCount(1);

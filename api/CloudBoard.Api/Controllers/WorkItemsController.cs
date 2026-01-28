@@ -4,6 +4,7 @@ using CloudBoard.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using Asp.Versioning;
 
 namespace CloudBoard.Api.Controllers
 {
@@ -12,7 +13,8 @@ namespace CloudBoard.Api.Controllers
     /// Delegates business logic to service layer for clean separation.
     /// </summary>
     [ApiController]
-    [Route("api/boards/{boardId}/workitems")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/boards/{boardId}/workitems")]
     [Produces("application/json")]
     [Authorize]
     public class WorkItemController : ControllerBase
@@ -218,7 +220,7 @@ namespace CloudBoard.Api.Controllers
             }
         }
         //Get all backlog items for a project (items without a board)
-        [HttpGet("/api/projects/{projectId}/backlog")]
+        [HttpGet("/api/v{version:apiVersion}/projects/{projectId}/backlog")]
         public async Task<ActionResult<IEnumerable<WorkItem>>> GetProjectBacklog(int projectId)
         {
             var workItems = await _workItemService.GetBacklogItemsAsync(projectId);
@@ -226,7 +228,7 @@ namespace CloudBoard.Api.Controllers
         }
 
         //Move item to a board (or back to backlog)
-        [HttpPatch("~/api/workitems/{id}/move-to-board")]
+        [HttpPatch("~/api/v{version:apiVersion}/workitems/{id}/move-to-board")]
         public async Task<IActionResult> MoveToBoard(int id, [FromBody] MoveToBoardDto dto)
         {
             try
@@ -246,7 +248,7 @@ namespace CloudBoard.Api.Controllers
         }
 
         //Create work item in project backlog (no board)
-        [HttpPost("/api/projects/{projectId}/backlog")]
+        [HttpPost("/api/v{version:apiVersion}/projects/{projectId}/backlog")]
         public async Task<ActionResult<WorkItem>> CreateBacklogItem(
             int projectId,
             WorkItemCreateDto dto)
@@ -264,7 +266,7 @@ namespace CloudBoard.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
-        [HttpPatch("/api/workitems/{id}/return-to-backlog")]
+        [HttpPatch("/api/v{version:apiVersion}/workitems/{id}/return-to-backlog")]
         public async Task<IActionResult> ReturnToBacklog(int id)
         {
             var userId = GetCurrentUserId();
@@ -275,7 +277,7 @@ namespace CloudBoard.Api.Controllers
         /// <summary>
         /// Reorder backlog items within the same level
         /// </summary>
-        [HttpPatch("/api/projects/{projectId}/backlog/reorder")]
+        [HttpPatch("/api/v{version:apiVersion}/projects/{projectId}/backlog/reorder")]
         public async Task<IActionResult> ReorderBacklogItems(int projectId, [FromBody] ReorderBacklogRequest request)
         {
             try

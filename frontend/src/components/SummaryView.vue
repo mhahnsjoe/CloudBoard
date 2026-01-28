@@ -102,12 +102,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted } from 'vue';
+import { defineComponent, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { getProjects } from '@/services/api';
 import type { Project } from '@/types/Project';
 import { LoadingIcon, FolderIcon, ClipboardIcon } from '@/components/icons';
 import EmptyState from '@/components/common/EmptyState.vue';
+import { useProjectStore } from '@/stores/projects';
+import { storeToRefs } from 'pinia';
 
 export default defineComponent({
   name: 'SummaryView',
@@ -119,8 +120,8 @@ export default defineComponent({
   },
   setup() {
     const router = useRouter();
-    const projects = ref<Project[]>([]);
-    const loading = ref(false);
+    const projectStore = useProjectStore();
+    const { projects, loading } = storeToRefs(projectStore);
 
     const totalBoards = computed(() => {
       return projects.value.reduce((sum, project) => sum + (project.boards?.length || 0), 0);
@@ -135,18 +136,6 @@ export default defineComponent({
       }, 0);
     });
 
-    const fetchProjects = async () => {
-      loading.value = true;
-      try {
-        const response = await getProjects();
-        projects.value = response.data;
-      } catch (error) {
-        console.error('Failed to fetch projects:', error);
-      } finally {
-        loading.value = false;
-      }
-    };
-
     const getProjectWorkItemCount = (project: Project) => {
       return project.boards?.reduce((sum, board) => {
         return sum + (board.workItems?.length || 0);
@@ -155,7 +144,7 @@ export default defineComponent({
 
     const navigateToProject = (projectId: number) => {
       const project = projects.value.find(p => p.id === projectId);
-      
+
       if (project && project.boards && project.boards.length > 0) {
         // Navigate to the first board of the project
         const firstBoard = project.boards[0];
@@ -165,7 +154,9 @@ export default defineComponent({
       }
     };
 
-    onMounted(fetchProjects);
+    onMounted(async () => {
+      await projectStore.fetchProjects();
+    });
 
     return {
       projects,
