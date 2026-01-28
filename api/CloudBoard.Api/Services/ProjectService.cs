@@ -19,21 +19,13 @@ public class ProjectService : IProjectService
 
     public async Task<Result<List<Project>>> GetProjectsAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var projects = await _context.Projects
-            .Where(p => p.OwnerId == userId)
-            .Include(p => p.Boards)
-                .ThenInclude(b => b.WorkItems)
-            .ToListAsync(cancellationToken);
-
+        var projects = await _context.Projects.GetByOwnerWithBoardsAsync(userId, cancellationToken);
         return Result<List<Project>>.Success(projects);
     }
 
     public async Task<Result<Project>> GetProjectByIdAsync(int id, int userId, CancellationToken cancellationToken = default)
     {
-        var project = await _context.Projects
-            .Include(p => p.Boards)
-                .ThenInclude(b => b.WorkItems)
-            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        var project = await _context.Projects.GetProjectWithBoardsAsync(id, cancellationToken);
 
         if (project == null)
             return Result<Project>.NotFound($"Project {id} not found");
