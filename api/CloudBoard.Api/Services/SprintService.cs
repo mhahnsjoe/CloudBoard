@@ -9,11 +9,9 @@ namespace CloudBoard.Api.Services
     public class SprintService  : ISprintService
     {
         private readonly CloudBoardContext _context;
-        
-        //TODO: Feature/Add-Logging-To-Backend
-        // private readonly ILogger<SprintService> _logger;
+        // TD-003: See ADR-005 - Add logging when sprint usage increases
 
-        public SprintService(CloudBoardContext context, ILogger<SprintService> logger)
+        public SprintService(CloudBoardContext context)
         {
             _context = context;
         }

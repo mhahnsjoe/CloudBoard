@@ -32,7 +32,7 @@ namespace CloudBoard.Api.Services
                 "Creating work item: {Title}, Type: {Type}, Board: {BoardId}, CreatedBy: {UserId}",
                 dto.Title, dto.Type, dto.BoardId, createdById);
 
-            //TODO: Implement better way to distinguish when a backlog item is created than using null
+            // TD-001: See ADR-005 for backlog item creation pattern improvement
             if(dto.BoardId != null) //If boardId is set to null we are most likely creating a backlog item
             {
                 // Validate board exists
@@ -42,7 +42,8 @@ namespace CloudBoard.Api.Services
                     _logger.LogWarning("Board {BoardId} not found", dto.BoardId);
                     throw new KeyNotFoundException($"Board {dto.BoardId} not found");
                 }
-                dto.ProjectId = board.ProjectId; //Ugly fix for now TODO: find a better way to send projectId? Maybe this works but it feels wrong
+                // TD-002: See ADR-005 for projectId assignment improvement
+                dto.ProjectId = board.ProjectId;
             }
             // Validate parent relationship if specified
             WorkItem? parent = null;
@@ -249,7 +250,7 @@ namespace CloudBoard.Api.Services
         {
             var workItem = await _context.WorkItems
                 .Include(w => w.Board)
-                    .ThenInclude(b => b!.Project) //TODO: Check if ! is a possible bug situation
+                    .ThenInclude(b => b!.Project) // TD-005: See ADR-005 for null-forgiving operator review
                 .FirstOrDefaultAsync(w => w.Id == sprintId);
                 
             if (workItem == null)
@@ -272,16 +273,9 @@ namespace CloudBoard.Api.Services
             workItem.SprintId = dto.SprintId;
             await _context.SaveChangesAsync();
         }
-        public async Task<IEnumerable<WorkItem>> GetBacklogItemsAsync(int projectId)
+        public async Task<IEnumerable<WorkItem>> GetBacklogItemsAsync(int projectId, CancellationToken ct = default)
         {
-            // Get all work items for this project that have no board assigned
-            // Order by BacklogOrder (nulls last), then by Id as fallback
-            var backlog = await _context.WorkItems
-                .Where(w => w.ProjectId == projectId && w.BoardId == null)
-                .OrderBy(w => w.BacklogOrder ?? int.MaxValue)
-                .ThenBy(w => w.Id)
-                .ToListAsync();
-            return backlog;
+            return await _context.WorkItems.GetBacklogAsync(projectId, ct);
         }
 
         public async Task MoveToBoardAsync(int workItemId, int? boardId, int userId)
@@ -294,8 +288,7 @@ namespace CloudBoard.Api.Services
             if (workItem == null)
                 throw new KeyNotFoundException("Work item not found");
 
-            // Verify user owns this project
-            // TODO: add project ownership verification logic
+            // TD-004: See ADR-005 for project ownership verification logic
 
             if (boardId.HasValue)
             {
