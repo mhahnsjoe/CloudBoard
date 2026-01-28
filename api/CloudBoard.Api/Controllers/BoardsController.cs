@@ -5,11 +5,13 @@ using CloudBoard.Api.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Asp.Versioning;
 
 namespace CloudBoard.Api.Controllers
 {
     [ApiController]
-    [Route("api/projects/{projectId}/boards")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/projects/{projectId}/boards")]
     [Authorize]
     public class BoardsController : ControllerBase
     {

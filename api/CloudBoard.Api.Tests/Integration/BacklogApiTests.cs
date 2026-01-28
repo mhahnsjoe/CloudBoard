@@ -20,7 +20,7 @@ public class BacklogApiTests : IntegrationTestBase
         var projectId = await CreateTestProjectAsync();
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/projects/{projectId}/backlog", new
+        var response = await Client.PostAsJsonAsync($"/api/v1/projects/{projectId}/backlog", new
         {
             Title = "Backlog Item",
             Type = "PBI",
@@ -45,7 +45,7 @@ public class BacklogApiTests : IntegrationTestBase
         // Create multiple backlog items
         for (int i = 0; i < 3; i++)
         {
-            await Client.PostAsJsonAsync($"/api/projects/{projectId}/backlog", new
+            await Client.PostAsJsonAsync($"/api/v1/projects/{projectId}/backlog", new
             {
                 Title = $"Backlog Item {i}",
                 Type = "PBI",
@@ -55,7 +55,7 @@ public class BacklogApiTests : IntegrationTestBase
         }
 
         // Act
-        var response = await Client.GetAsync($"/api/projects/{projectId}/backlog");
+        var response = await Client.GetAsync($"/api/v1/projects/{projectId}/backlog");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -75,7 +75,7 @@ public class BacklogApiTests : IntegrationTestBase
         var projectId = await CreateTestProjectAsync();
         var boardId = await GetDefaultBoardAsync(projectId);
 
-        var createResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/backlog", new
+        var createResponse = await Client.PostAsJsonAsync($"/api/v1/projects/{projectId}/backlog", new
         {
             Title = "Move Me",
             Type = "Task",
@@ -86,14 +86,14 @@ public class BacklogApiTests : IntegrationTestBase
 
         // Act
         var moveResponse = await Client.PatchAsJsonAsync(
-            $"/api/workitems/{item!.Id}/move-to-board",
+            $"/api/v1/workitems/{item!.Id}/move-to-board",
             new { BoardId = boardId });
 
         // Assert
         moveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify item is now on board
-        var getResponse = await Client.GetAsync($"/api/boards/{boardId}/workitems/{item.Id}");
+        var getResponse = await Client.GetAsync($"/api/v1/boards/{boardId}/workitems/{item.Id}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var movedItem = await getResponse.Content.ReadFromJsonAsync<BacklogItemResponse>();
