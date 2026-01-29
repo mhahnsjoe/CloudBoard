@@ -1,8 +1,7 @@
-using CloudBoard.Api.Data;
 using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
 using CloudBoard.Api.Models.Extensions;
-using Microsoft.EntityFrameworkCore;
+using CloudBoard.Api.Repositories;
 
 namespace CloudBoard.Api.Services
 {
@@ -12,16 +11,25 @@ namespace CloudBoard.Api.Services
     /// </summary>
     public class WorkItemService : IWorkItemService
     {
-        private readonly CloudBoardContext _context;
+        private readonly IWorkItemRepository _workItemRepository;
+        private readonly IBoardRepository _boardRepository;
+        private readonly IProjectRepository _projectRepository;
+        private readonly ISprintRepository _sprintRepository;
         private readonly IWorkItemValidationService _validation;
         private readonly ILogger<WorkItemService> _logger;
 
         public WorkItemService(
-            CloudBoardContext context,
+            IWorkItemRepository workItemRepository,
+            IBoardRepository boardRepository,
+            IProjectRepository projectRepository,
+            ISprintRepository sprintRepository,
             IWorkItemValidationService validation,
             ILogger<WorkItemService> logger)
         {
-            _context = context;
+            _workItemRepository = workItemRepository;
+            _boardRepository = boardRepository;
+            _projectRepository = projectRepository;
+            _sprintRepository = sprintRepository;
             _validation = validation;
             _logger = logger;
         }
@@ -36,7 +44,7 @@ namespace CloudBoard.Api.Services
             if(dto.BoardId != null) //If boardId is set to null we are most likely creating a backlog item
             {
                 // Validate board exists
-                var board = await _context.Boards.FindAsync(dto.BoardId);
+                var board = await _boardRepository.GetByIdAsync(dto.BoardId.Value);
                 if (board == null)
                 {
                     _logger.LogWarning("Board {BoardId} not found", dto.BoardId);
@@ -49,7 +57,7 @@ namespace CloudBoard.Api.Services
             WorkItem? parent = null;
             if (dto.ParentId.HasValue)
             {
-                parent = await _context.WorkItems.FindAsync(dto.ParentId.Value);
+                parent = await _workItemRepository.GetByIdAsync(dto.ParentId.Value);
                 if (parent == null)
                     throw new KeyNotFoundException("Parent workItem not found");
 
@@ -66,12 +74,7 @@ namespace CloudBoard.Api.Services
             if (dto.BoardId == null)
             {
                 // Get the highest BacklogOrder for this project and parent level
-                var maxOrder = await _context.WorkItems
-                    .Where(w => w.ProjectId == dto.ProjectId
-                        && w.BoardId == null
-                        && w.ParentId == dto.ParentId)
-                    .MaxAsync(w => (int?)w.BacklogOrder);
-
+                var maxOrder = await _workItemRepository.GetMaxBacklogOrderAsync(dto.ProjectId, dto.ParentId);
                 backlogOrder = (maxOrder ?? -100) + 100; // Start at 0, increment by 100
             }
 
@@ -96,8 +99,8 @@ namespace CloudBoard.Api.Services
                 BacklogOrder = backlogOrder
             };
 
-            _context.WorkItems.Add(workItem);
-            await _context.SaveChangesAsync();
+            _workItemRepository.Add(workItem);
+            await _workItemRepository.SaveChangesAsync();
 
             _logger.LogInformation(
                 "Work item created: {WorkItemId} - {Title}",
@@ -108,10 +111,7 @@ namespace CloudBoard.Api.Services
 
         public async Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto)
         {
-            var workItem = await _context.WorkItems
-                .Include(t => t.Parent)
-                .Include(t => t.Children)
-                .FirstOrDefaultAsync(t => t.Id == id);
+            var workItem = await _workItemRepository.GetWithHierarchyAsync(id);
 
             if (workItem == null)
                 throw new KeyNotFoundException($"WorkItem {id} not found");
@@ -125,7 +125,7 @@ namespace CloudBoard.Api.Services
 
                 if (dto.ParentId.HasValue)
                 {
-                    var newParent = await _context.WorkItems.FindAsync(dto.ParentId.Value);
+                    var newParent = await _workItemRepository.GetByIdAsync(dto.ParentId.Value);
                     if (newParent == null)
                         throw new KeyNotFoundException("New parent not found");
 
@@ -149,7 +149,7 @@ namespace CloudBoard.Api.Services
             workItem.Priority = dto.Priority;
             workItem.Type = dto.Type;
             workItem.Description = dto.Description;
-            workItem.DueDate = dto.DueDate.HasValue 
+            workItem.DueDate = dto.DueDate.HasValue
                 ? DateTime.SpecifyKind(dto.DueDate.Value, DateTimeKind.Utc)
                 : null;
             workItem.EstimatedHours = dto.EstimatedHours;
@@ -157,15 +157,13 @@ namespace CloudBoard.Api.Services
             workItem.ParentId = dto.ParentId;
             workItem.SprintId = dto.SprintId;
 
-            await _context.SaveChangesAsync();
+            await _workItemRepository.SaveChangesAsync();
             return workItem;
         }
 
         public async Task DeleteAsync(int id)
         {
-            var workItem = await _context.WorkItems
-                .Include(t => t.Children)
-                .FirstOrDefaultAsync(t => t.Id == id);
+            var workItem = await _workItemRepository.GetWithHierarchyAsync(id);
 
             if (workItem == null)
                 throw new KeyNotFoundException($"workItem {id} not found");
@@ -174,54 +172,32 @@ namespace CloudBoard.Api.Services
             if (!validation.IsValid)
                 throw new InvalidOperationException(validation.ErrorMessage);
 
-            _context.WorkItems.Remove(workItem);
-            await _context.SaveChangesAsync();
+            _workItemRepository.Remove(workItem);
+            await _workItemRepository.SaveChangesAsync();
         }
 
         public async Task<WorkItem?> GetByIdAsync(int id, bool includeHierarchy = false)
         {
-            var query = _context.WorkItems.AsQueryable();
-
             if (includeHierarchy)
             {
-                query = query
-                    .Include(t => t.Parent)
-                    .Include(t => t.Children)
-                        .ThenInclude(c => c.Children)
-                            .ThenInclude(c => c.Children);
+                return await _workItemRepository.GetWithHierarchyAsync(id);
             }
-
-            return await query.FirstOrDefaultAsync(t => t.Id == id);
+            return await _workItemRepository.GetByIdAsync(id);
         }
 
         public async Task<IEnumerable<WorkItem>> GetByBoardAsync(int boardId, bool includeHierarchy = false)
         {
-            var query = _context.WorkItems.Where(t => t.BoardId == boardId);
-
-            if (includeHierarchy)
-            {
-                query = query
-                    .Include(t => t.Children)
-                        .ThenInclude(c => c.Children)
-                            .ThenInclude(c => c.Children);
-            }
-
-            return await query.ToListAsync();
+            return await _workItemRepository.GetByBoardAsync(boardId);
         }
 
         public async Task<IEnumerable<WorkItem>> GetHierarchyRootsAsync(int boardId)
         {
-            return await _context.WorkItems
-                .Where(t => t.BoardId == boardId && t.ParentId == null)
-                .Include(t => t.Children)
-                    .ThenInclude(c => c.Children)
-                        .ThenInclude(c => c.Children)
-                .ToListAsync();
+            return await _workItemRepository.GetRootsByBoardAsync(boardId);
         }
 
         public async Task MoveToParentAsync(int itemId, int? newParentId)
         {
-            var item = await _context.WorkItems.FindAsync(itemId);
+            var item = await _workItemRepository.GetByIdAsync(itemId);
             if (item == null)
                 throw new KeyNotFoundException($"Item {itemId} not found");
 
@@ -230,14 +206,12 @@ namespace CloudBoard.Api.Services
                 throw new InvalidOperationException(validation.ErrorMessage);
 
             item.ParentId = newParentId;
-            await _context.SaveChangesAsync();
+            await _workItemRepository.SaveChangesAsync();
         }
 
         public async Task<IEnumerable<WorkItem>> GetPathToRootAsync(int itemId)
         {
-            var item = await _context.WorkItems
-                .Include(t => t.Parent)
-                .FirstOrDefaultAsync(t => t.Id == itemId);
+            var item = await _workItemRepository.GetWithHierarchyAsync(itemId);
 
             if (item == null)
                 return Enumerable.Empty<WorkItem>();
@@ -246,44 +220,39 @@ namespace CloudBoard.Api.Services
         }
 
 
-        public async Task AssignToSprintAsync(int sprintId, AssignSprintDto dto, int userId)
+        public async Task AssignToSprintAsync(int workItemId, AssignSprintDto dto, int userId)
         {
-            var workItem = await _context.WorkItems
-                .Include(w => w.Board)
-                    .ThenInclude(b => b!.Project) // TD-005: See ADR-005 for null-forgiving operator review
-                .FirstOrDefaultAsync(w => w.Id == sprintId);
-                
+            var workItem = await _workItemRepository.GetWithFullContextAsync(workItemId);
+
             if (workItem == null)
-                throw new KeyNotFoundException($"Item {sprintId} not found");
+                throw new KeyNotFoundException($"Item {workItemId} not found");
 
             if (workItem.Board?.Project?.OwnerId != userId)
-                throw new UnauthorizedAccessException($"Item {sprintId} is not owned by the user");
+                throw new UnauthorizedAccessException($"Item {workItemId} is not owned by the user");
 
             // If sprintId is provided, verify it belongs to the same board
             if (dto.SprintId.HasValue)
             {
-                var sprint = await _context.Sprints.FindAsync(dto.SprintId.Value);
+                var sprint = await _sprintRepository.GetByIdAsync(dto.SprintId.Value);
                 if (sprint == null)
-                    throw new KeyNotFoundException($"Sprint {sprintId} not found");
+                    throw new KeyNotFoundException($"Sprint {dto.SprintId} not found");
 
                 if (sprint.BoardId != workItem.BoardId)
                     throw new InvalidOperationException($"Sprint must belong to the same board");
             }
 
             workItem.SprintId = dto.SprintId;
-            await _context.SaveChangesAsync();
+            await _workItemRepository.SaveChangesAsync();
         }
+
         public async Task<IEnumerable<WorkItem>> GetBacklogItemsAsync(int projectId, CancellationToken ct = default)
         {
-            return await _context.WorkItems.GetBacklogAsync(projectId, ct);
+            return await _workItemRepository.GetBacklogAsync(projectId, ct);
         }
 
         public async Task MoveToBoardAsync(int workItemId, int? boardId, int userId)
         {
-            var workItem = await _context.WorkItems
-                .Include(w => w.Board)
-                    .ThenInclude(b => b!.Project)
-                .FirstOrDefaultAsync(w => w.Id == workItemId);
+            var workItem = await _workItemRepository.GetWithFullContextAsync(workItemId);
 
             if (workItem == null)
                 throw new KeyNotFoundException("Work item not found");
@@ -292,20 +261,20 @@ namespace CloudBoard.Api.Services
 
             if (boardId.HasValue)
             {
-                var board = await _context.Boards.FindAsync(boardId.Value);
+                var board = await _boardRepository.GetByIdAsync(boardId.Value);
                 if (board == null)
                     throw new KeyNotFoundException("Board not found");
             }
 
             workItem.BoardId = boardId;
-            
+
             // If moving to backlog, also clear sprint assignment
             if (!boardId.HasValue)
             {
                 workItem.SprintId = null;
             }
 
-            await _context.SaveChangesAsync();
+            await _workItemRepository.SaveChangesAsync();
         }
 
         /// <summary>
@@ -313,10 +282,7 @@ namespace CloudBoard.Api.Services
         /// </summary>
         public async Task ReturnToBacklogAsync(int workItemId, int userId)
         {
-            var workItem = await _context.WorkItems
-                .Include(w => w.Board)
-                    .ThenInclude(b => b!.Project)
-                .FirstOrDefaultAsync(w => w.Id == workItemId);
+            var workItem = await _workItemRepository.GetWithFullContextAsync(workItemId);
 
             if (workItem == null)
                 throw new KeyNotFoundException($"Work item {workItemId} not found");
@@ -327,11 +293,11 @@ namespace CloudBoard.Api.Services
 
             // Clear board assignment (return to backlog)
             workItem.BoardId = null;
-            
+
             // Also clear sprint assignment since it belongs to the board
             workItem.SprintId = null;
 
-            await _context.SaveChangesAsync();
+            await _workItemRepository.SaveChangesAsync();
         }
 
         /// <summary>
@@ -340,7 +306,7 @@ namespace CloudBoard.Api.Services
         public async Task ReorderBacklogItemsAsync(int projectId, List<Controllers.ItemOrder> itemOrders, int userId)
         {
             // Verify project exists and user has access
-            var project = await _context.Projects.FindAsync(projectId);
+            var project = await _projectRepository.GetByIdAsync(projectId);
             if (project == null)
                 throw new KeyNotFoundException($"Project {projectId} not found");
 
@@ -349,9 +315,7 @@ namespace CloudBoard.Api.Services
 
             // Get all items to be reordered
             var itemIds = itemOrders.Select(io => io.ItemId).ToList();
-            var items = await _context.WorkItems
-                .Where(w => itemIds.Contains(w.Id) && w.ProjectId == projectId && w.BoardId == null)
-                .ToListAsync();
+            var items = await _workItemRepository.GetBacklogItemsByIdsAsync(projectId, itemIds);
 
             // Verify all items exist and belong to the backlog
             if (items.Count != itemIds.Count)
@@ -364,7 +328,7 @@ namespace CloudBoard.Api.Services
                 item.BacklogOrder = itemOrder.Order;
             }
 
-            await _context.SaveChangesAsync();
+            await _workItemRepository.SaveChangesAsync();
         }
     }
 }

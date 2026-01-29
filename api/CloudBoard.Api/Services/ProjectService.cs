@@ -1,31 +1,35 @@
 using CloudBoard.Api.Models;
-using Microsoft.EntityFrameworkCore;
 using CloudBoard.Api.Models.DTO;
-using CloudBoard.Api.Data;
+using CloudBoard.Api.Repositories;
 using CloudBoard.Api.Common;
 
 namespace CloudBoard.Api.Services;
 
 public class ProjectService : IProjectService
 {
-    private readonly CloudBoardContext _context;
+    private readonly IProjectRepository _projectRepository;
+    private readonly IBoardRepository _boardRepository;
     private readonly ILogger<ProjectService> _logger;
 
-    public ProjectService(CloudBoardContext context, ILogger<ProjectService> logger)
+    public ProjectService(
+        IProjectRepository projectRepository,
+        IBoardRepository boardRepository,
+        ILogger<ProjectService> logger)
     {
-        _context = context;
+        _projectRepository = projectRepository;
+        _boardRepository = boardRepository;
         _logger = logger;
     }
 
     public async Task<Result<List<Project>>> GetProjectsAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var projects = await _context.Projects.GetByOwnerWithBoardsAsync(userId, cancellationToken);
+        var projects = await _projectRepository.GetByOwnerWithBoardsAsync(userId, cancellationToken);
         return Result<List<Project>>.Success(projects);
     }
 
     public async Task<Result<Project>> GetProjectByIdAsync(int id, int userId, CancellationToken cancellationToken = default)
     {
-        var project = await _context.Projects.GetProjectWithBoardsAsync(id, cancellationToken);
+        var project = await _projectRepository.GetWithBoardsAndWorkItemsAsync(id, cancellationToken);
 
         if (project == null)
             return Result<Project>.NotFound($"Project {id} not found");
@@ -46,8 +50,8 @@ public class ProjectService : IProjectService
             OwnerId = userId
         };
 
-        _context.Projects.Add(project);
-        await _context.SaveChangesAsync(cancellationToken);
+        _projectRepository.Add(project);
+        await _projectRepository.SaveChangesAsync(cancellationToken);
 
         // Create default Kanban board
         var defaultBoard = new Board
@@ -67,22 +71,20 @@ public class ProjectService : IProjectService
             new() { Name = "Done", Category = "Done", Order = 2 }
         };
 
-        _context.Boards.Add(defaultBoard);
-        await _context.SaveChangesAsync(cancellationToken);
+        _boardRepository.Add(defaultBoard);
+        await _boardRepository.SaveChangesAsync(cancellationToken);
 
         // Reload with includes
-        var createdProject = await _context.Projects
-            .Include(p => p.Boards)
-            .FirstAsync(p => p.Id == project.Id, cancellationToken);
+        var createdProject = await _projectRepository.GetWithBoardsAsync(project.Id, cancellationToken);
 
         _logger.LogInformation("Created project {ProjectId} for user {UserId}", project.Id, userId);
 
-        return Result<Project>.Success(createdProject);
+        return Result<Project>.Success(createdProject!);
     }
 
     public async Task<Result> UpdateProjectAsync(int id, ProjectUpdateDto projectDto, int userId, CancellationToken cancellationToken = default)
     {
-        var project = await _context.Projects.FindAsync(new object[] { id }, cancellationToken);
+        var project = await _projectRepository.GetByIdAsync(id, cancellationToken);
 
         if (project == null)
             return Result.NotFound($"Project {id} not found");
@@ -93,7 +95,7 @@ public class ProjectService : IProjectService
         project.Name = projectDto.Name;
         project.Description = projectDto.Description;
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _projectRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Updated project {ProjectId}", id);
         return Result.Success();
@@ -101,7 +103,7 @@ public class ProjectService : IProjectService
 
     public async Task<Result> DeleteProjectAsync(int id, int userId, CancellationToken cancellationToken = default)
     {
-        var project = await _context.Projects.FindAsync(new object[] { id }, cancellationToken);
+        var project = await _projectRepository.GetByIdAsync(id, cancellationToken);
 
         if (project == null)
             return Result.NotFound($"Project {id} not found");
@@ -109,8 +111,8 @@ public class ProjectService : IProjectService
         if (project.OwnerId != userId)
             return Result.Forbidden("You don't have access to this project");
 
-        _context.Projects.Remove(project);
-        await _context.SaveChangesAsync(cancellationToken);
+        _projectRepository.Remove(project);
+        await _projectRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted project {ProjectId}", id);
         return Result.Success();
