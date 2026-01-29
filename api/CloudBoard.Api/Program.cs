@@ -86,7 +86,8 @@ builder.Services.AddSwaggerGen(c =>
 
 // Database
 builder.Services.AddDbContext<CloudBoardContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default"), o => 
+        o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
 // Identity
 builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
