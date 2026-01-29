@@ -49,6 +49,7 @@
         @delete-workitem="handleDelete"
         @update-status="handleUpdateWorkItemStatus"
         @return-to-backlog="handleReturnToBacklog"
+        @add-child-task="handleAddChildTask"
       />
 
       <!-- Kanban Board (for Kanban and Backlog boards) -->
@@ -76,8 +77,11 @@
       :workItem="selectedWorkItem"
       :boardId="boardId"
       :defaultStatus="defaultStatus"
+      :defaultType="defaultType"
+      :parentId="defaultParentId"
       :sprintId="selectedSprintId"
       :availableStatuses="availableStatuses"
+      :availableParents="workItems"
       @close="closeWorkItemModal"
       @save="handleSaveWorkItem"
     />
@@ -136,6 +140,7 @@ import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem, returnWorkIte
 import { useConfirm } from '@/composables/useConfirm';
 import { useSprintStore } from '@/stores/sprint';
 import { useBoardStore } from '@/stores/boards';
+import { useToast } from '@/composables/useToast';
 import type { Board, BoardColumn } from '@/types/Project';
 import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
@@ -173,6 +178,7 @@ export default defineComponent({
     const { confirm } = useConfirm();
     const sprintStore = useSprintStore();
     const boardStore = useBoardStore();
+    const { success, error: toastError, info } = useToast();
 
     const board = ref<Board | null>(null);
     const workItems = ref<WorkItem[]>([]);
@@ -182,6 +188,8 @@ export default defineComponent({
     const showWorkItemModal = ref(false);
     const selectedWorkItem = ref<WorkItem | null>(null);
     const defaultStatus = ref<string>('To Do');
+    const defaultParentId = ref<number | null>(null);
+    const defaultType = ref<WorkItemType>('Task');
 
     // Board Management
     const showBoardModal = ref(false);
@@ -233,6 +241,14 @@ export default defineComponent({
       if (!boardId.value) return;
       try {
         await sprintStore.fetchSprints(boardId.value);
+        
+        // Auto-select active sprint if one exists and nothing is selected
+        if (selectedSprintId.value === null) {
+          const activeSprint = sprintStore.sprints.find(s => s.status === 'Active');
+          if (activeSprint) {
+            selectedSprintId.value = activeSprint.id;
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch sprints:', error);
       }
@@ -271,9 +287,10 @@ export default defineComponent({
         }
         closeSprintModal();
         await fetchSprints();
-      } catch (error) {
-        console.error('Failed to save sprint:', error);
-        alert('Failed to save sprint');
+        success('Sprint saved successfully');
+      } catch (err) {
+        console.error('Failed to save sprint:', err);
+        toastError('Failed to save sprint');
       }
     };
 
@@ -281,9 +298,10 @@ export default defineComponent({
       try {
         await sprintStore.startSprint(sprintId);
         await fetchSprints();
-      } catch (error) {
-        console.error('Failed to start sprint:', error);
-        alert('Failed to start sprint. Make sure no other sprint is active.');
+        success('Sprint started!');
+      } catch (err) {
+        console.error('Failed to start sprint:', err);
+        toastError('Failed to start sprint. Make sure no other sprint is active.');
       }
     };
 
@@ -293,10 +311,10 @@ export default defineComponent({
           const result = await sprintStore.completeSprint(sprintId);
           await fetchSprints();
           await fetchBoard();
-          alert(`Sprint completed! ${result.movedToBacklog} items moved to backlog.`);
-        } catch (error) {
-          console.error('Failed to complete sprint:', error);
-          alert('Failed to complete sprint');
+          success(`Sprint completed! ${result.movedToBacklog} items moved to backlog.`);
+        } catch (err) {
+          console.error('Failed to complete sprint:', err);
+          toastError('Failed to complete sprint');
         }
       }
     };
@@ -308,9 +326,10 @@ export default defineComponent({
           selectedSprintId.value = null;
           await fetchSprints();
           await fetchBoard();
-        } catch (error) {
-          console.error('Failed to delete sprint:', error);
-          alert('Failed to delete sprint');
+          success('Sprint deleted');
+        } catch (err) {
+          console.error('Failed to delete sprint:', err);
+          toastError('Failed to delete sprint');
         }
       }
     };
@@ -326,9 +345,20 @@ export default defineComponent({
       showWorkItemModal.value = true;
     };
 
+    const handleAddChildTask = (parentWorkItem: WorkItem) => {
+      // info('Debug: Add Child Task called'); 
+      selectedWorkItem.value = null;
+      defaultParentId.value = parentWorkItem.id;
+      defaultStatus.value = parentWorkItem.status;
+      defaultType.value = 'Task'; // Always create tasks as children
+      showWorkItemModal.value = true;
+    };
+
     const closeWorkItemModal = () => {
       showWorkItemModal.value = false;
       selectedWorkItem.value = null;
+      defaultParentId.value = null;
+      defaultType.value = 'Task';
     };
 
     const handleSaveWorkItem = async (workItemData: WorkItem | WorkItemCreate) => {
@@ -384,7 +414,7 @@ export default defineComponent({
 
     const submitBoardForm = async () => {
       if (!boardForm.value.name.trim()) {
-        alert('Board name is required');
+        toastError('Board name is required');
         return;
       }
 
@@ -408,11 +438,12 @@ export default defineComponent({
           });
           // Navigate to the newly created board
           router.push(`/projects/${projectId.value}/boards/${newBoard.id}`);
+          success('Board created');
         }
         closeBoardModal();
-      } catch (error) {
-        console.error('Failed to save board:', error);
-        alert('Failed to save board');
+      } catch (err) {
+        console.error('Failed to save board:', err);
+        toastError('Failed to save board');
       }
     };
 
@@ -433,9 +464,10 @@ export default defineComponent({
             board.value = null;
             workItems.value = [];
           }
-        } catch (error) {
-          console.error('Failed to delete board:', error);
-          alert('Failed to delete board');
+          success('Board deleted');
+        } catch (err) {
+          console.error('Failed to delete board:', err);
+          toastError('Failed to delete board');
         }
       }
     };
@@ -456,10 +488,11 @@ export default defineComponent({
       if (confirm('Return this item to the backlog? It will be removed from this board.')) {
         try {
           await returnWorkItemToBacklog(workItem.id)
-          await fetchBoard() // Refresh board - item will disappear
-        } catch (error) {
-          console.error('Failed to return to backlog:', error)
-          alert('Failed to return item to backlog')
+          await fetchBoard()
+          success('Item returned to backlog')
+        } catch (err) {
+          console.error('Failed to return to backlog:', err)
+          toastError('Failed to return item to backlog')
         }
       }
     }
@@ -534,7 +567,10 @@ export default defineComponent({
       submitBoardForm,
       handleDeleteCurrentBoard,
       handleUpdateWorkItemStatus,
-      handleReturnToBacklog
+      handleReturnToBacklog,
+      handleAddChildTask,
+      defaultParentId,
+      defaultType
     };
   }
 });

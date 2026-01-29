@@ -8,14 +8,300 @@ namespace CloudBoard.Api.Services
     {
         private readonly ISprintRepository _sprintRepository;
         private readonly IBoardRepository _boardRepository;
-        // TD-003: See ADR-005 - Add logging when sprint usage increases
+        private readonly IWorkItemRepository _workItemRepository;
+        private readonly IWorkItemHistoryRepository _historyRepository;
 
         public SprintService(
             ISprintRepository sprintRepository,
-            IBoardRepository boardRepository)
+            IBoardRepository boardRepository,
+            IWorkItemRepository workItemRepository,
+            IWorkItemHistoryRepository historyRepository)
         {
             _sprintRepository = sprintRepository;
             _boardRepository = boardRepository;
+            _workItemRepository = workItemRepository;
+            _historyRepository = historyRepository;
+        }
+
+        public async Task<SprintPlanningContextDto> GetSprintPlanningContextAsync(
+            int boardId, 
+            int userId, 
+            CancellationToken cancellationToken = default)
+        {
+            // Verify board access
+            var board = await _boardRepository.GetWithProjectAsync(boardId, cancellationToken);
+            if (board == null || board.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException("Board not found or access denied");
+
+            // Get all sprints for the board
+            var sprints = await _sprintRepository.GetByBoardAsync(boardId, cancellationToken);
+
+            // Get backlog items from the project (items without board assignment)
+            var backlogItems = await _workItemRepository.GetBacklogAsync(board.ProjectId, cancellationToken);
+            
+            // Only show root items (no parent) to avoid double-counting capacity
+            var rootItems = backlogItems.Where(w => w.ParentId == null).ToList();
+            
+            var unassignedItems = rootItems
+                .Select(w =>
+                {
+                    var children = backlogItems.Where(c => c.ParentId == w.Id).ToList();
+                    var totalHours = (w.EstimatedHours ?? 0) + children.Sum(c => c.EstimatedHours ?? 0);
+                    
+                    return new WorkItemSummaryDto
+                    {
+                        Id = w.Id,
+                        Title = w.Title,
+                        Type = w.Type.ToString(),
+                        Status = w.Status,
+                        Priority = w.Priority,
+                        EstimatedHours = totalHours,
+                        ParentId = w.ParentId,
+                        ParentTitle = w.Parent?.Title,
+                        ChildCount = children.Count,
+                        Children = children.Select(c => new WorkItemSummaryDto
+                        {
+                            Id = c.Id,
+                            Title = c.Title,
+                            Type = c.Type.ToString(),
+                            Status = c.Status,
+                            Priority = c.Priority,
+                            EstimatedHours = c.EstimatedHours,
+                            ParentId = c.ParentId,
+                            ParentTitle = w.Title,
+                            ChildCount = 0,
+                            Children = new()
+                        }).ToList()
+                    };
+                })
+                .ToList();
+
+            return new SprintPlanningContextDto
+            {
+                Sprints = sprints.Select(MapToDto).ToList(),
+                BacklogItems = unassignedItems,
+                TotalBacklogHours = unassignedItems.Sum(i => i.EstimatedHours ?? 0),
+                TotalBacklogItems = unassignedItems.Count
+            };
+        }
+
+        public async Task<BulkOperationResultDto> BulkAssignToSprintAsync(
+            int sprintId, 
+            List<int> workItemIds, 
+            int userId, 
+            CancellationToken cancellationToken = default)
+        {
+            var sprint = await _sprintRepository.GetWithFullContextAsync(sprintId, cancellationToken);
+            if (sprint == null)
+                throw new KeyNotFoundException("Sprint not found");
+
+            if (sprint.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException();
+
+            if (sprint.Status == SprintStatus.Completed)
+                throw new InvalidOperationException("Cannot add items to a completed sprint");
+
+            var result = new BulkOperationResultDto();
+
+            foreach (var workItemId in workItemIds)
+            {
+                try
+                {
+                    var workItem = await _workItemRepository.GetByIdAsync(workItemId, cancellationToken);
+                    if (workItem == null)
+                    {
+                        result.FailedCount++;
+                        result.Errors.Add($"Work item {workItemId} not found");
+                        continue;
+                    }
+
+                    // Validate: item must be from project backlog OR same board
+                    if (workItem.BoardId.HasValue && workItem.BoardId != sprint.BoardId)
+                    {
+                        result.FailedCount++;
+                        result.Errors.Add($"Work item {workItemId} belongs to different board");
+                        continue;
+                    }
+
+                    // Validate: item must belong to same project
+                    if (workItem.ProjectId != sprint.Board!.ProjectId)
+                    {
+                        result.FailedCount++;
+                        result.Errors.Add($"Work item {workItemId} belongs to different project");
+                        continue;
+                    }
+
+                    // If from backlog, assign to board
+                    if (!workItem.BoardId.HasValue)
+                    {
+                        await TrackChange(workItemId, "BoardId", null, sprint.BoardId.ToString(), userId);
+                        workItem.BoardId = sprint.BoardId;
+                    }
+
+                    await TrackChange(workItemId, "SprintId", workItem.SprintId?.ToString(), sprintId.ToString(), userId);
+                    workItem.SprintId = sprintId;
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailedCount++;
+                    result.Errors.Add($"Failed to assign item {workItemId}: {ex.Message}");
+                }
+            }
+
+            await _sprintRepository.SaveChangesAsync(cancellationToken);
+            return result;
+        }
+
+        public async Task<BulkOperationResultDto> BulkUnassignFromSprintAsync(
+            int sprintId, 
+            List<int> workItemIds, 
+            int userId, 
+            CancellationToken cancellationToken = default)
+        {
+            var sprint = await _sprintRepository.GetWithFullContextAsync(sprintId, cancellationToken);
+            if (sprint == null)
+                throw new KeyNotFoundException("Sprint not found");
+
+            if (sprint.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException();
+
+            var result = new BulkOperationResultDto();
+
+            foreach (var workItemId in workItemIds)
+            {
+                try
+                {
+                    var workItem = sprint.WorkItems.FirstOrDefault(w => w.Id == workItemId);
+                    if (workItem == null)
+                    {
+                        result.FailedCount++;
+                        result.Errors.Add($"Work item {workItemId} not in this sprint");
+                        continue;
+                    }
+
+                    await TrackChange(workItemId, "SprintId", workItem.SprintId?.ToString(), null, userId);
+                    workItem.SprintId = null;
+                    
+                    // Return item to project backlog by clearing BoardId
+                    if (workItem.BoardId.HasValue)
+                    {
+                        await TrackChange(workItemId, "BoardId", workItem.BoardId.ToString(), null, userId);
+                        workItem.BoardId = null;
+                    }
+                    
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailedCount++;
+                    result.Errors.Add($"Failed to unassign item {workItemId}: {ex.Message}");
+                }
+            }
+
+            await _sprintRepository.SaveChangesAsync(cancellationToken);
+            return result;
+        }
+
+        public async Task<BoardVelocityDto> GetBoardVelocityAsync(
+            int boardId, 
+            int userId, 
+            int sprintCount = 6, 
+            CancellationToken cancellationToken = default)
+        {
+            var board = await _boardRepository.GetWithProjectAsync(boardId, cancellationToken);
+            if (board == null || board.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException("Board not found or access denied");
+
+            var completedSprints = (await _sprintRepository.GetByBoardAsync(boardId, cancellationToken))
+                .Where(s => s.Status == SprintStatus.Completed)
+                .OrderByDescending(s => s.EndDate)
+                .Take(sprintCount)
+                .ToList();
+
+            var velocities = completedSprints.Select(s => new SprintVelocityDto
+            {
+                SprintId = s.Id,
+                SprintName = s.Name,
+                StartDate = s.StartDate,
+                EndDate = s.EndDate,
+                PlannedHours = s.TotalEstimatedHours,
+                CompletedHours = s.CompletedEstimatedHours,
+                PlannedItems = s.TotalWorkItems,
+                CompletedItems = s.CompletedWorkItems
+            }).ToList();
+
+            return new BoardVelocityDto
+            {
+                BoardId = boardId,
+                SprintVelocities = velocities,
+                AverageVelocityHours = velocities.Any() ? velocities.Average(v => v.CompletedHours) : 0,
+                AverageVelocityItems = velocities.Any() ? (decimal)velocities.Average(v => v.CompletedItems) : 0,
+                TotalSprintsAnalyzed = velocities.Count
+            };
+        }
+
+        public async Task<SprintCapacityDto> GetSprintCapacityAsync(
+            int sprintId, 
+            int userId, 
+            CancellationToken cancellationToken = default)
+        {
+            var sprint = await _sprintRepository.GetWithFullContextAsync(sprintId, cancellationToken);
+            if (sprint == null)
+                throw new KeyNotFoundException("Sprint not found");
+
+            if (sprint.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException();
+
+            var allocatedHours = sprint.TotalEstimatedHours;
+            var capacityHours = sprint.CapacityHours ?? 0;
+
+            return new SprintCapacityDto
+            {
+                SprintId = sprintId,
+                TotalCapacityHours = capacityHours,
+                AllocatedHours = allocatedHours,
+                RemainingHours = Math.Max(0, capacityHours - allocatedHours),
+                UtilizationPercentage = capacityHours > 0 ? (allocatedHours / capacityHours) * 100 : 0
+            };
+        }
+
+        public async Task SetSprintCapacityAsync(
+            int sprintId, 
+            decimal capacityHours, 
+            int userId, 
+            CancellationToken cancellationToken = default)
+        {
+            var sprint = await _sprintRepository.GetWithFullContextAsync(sprintId, cancellationToken);
+            if (sprint == null)
+                throw new KeyNotFoundException("Sprint not found");
+
+            if (sprint.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException();
+
+            if (capacityHours < 0)
+                throw new InvalidOperationException("Capacity cannot be negative");
+
+            sprint.CapacityHours = capacityHours;
+            await _sprintRepository.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task UpdateRetrospectiveAsync(
+            int sprintId, 
+            string retrospective, 
+            int userId, 
+            CancellationToken cancellationToken = default)
+        {
+            var sprint = await _sprintRepository.GetWithFullContextAsync(sprintId, cancellationToken);
+            if (sprint == null)
+                throw new KeyNotFoundException("Sprint not found");
+
+            if (sprint.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException();
+
+            sprint.Retrospective = retrospective;
+            sprint.RetrospectiveDate = DateTime.UtcNow;
+            await _sprintRepository.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<SprintDto> GetSprintAsync(int sprintId, int userId, CancellationToken cancellationToken = default)
@@ -209,39 +495,91 @@ namespace CloudBoard.Api.Services
             var sprint = await _sprintRepository.GetWithFullContextAsync(id, cancellationToken);
 
             if (sprint == null)
-                throw new KeyNotFoundException();
+                throw new KeyNotFoundException("Sprint not found");
 
             if (sprint.Board?.Project?.OwnerId != userId)
                 throw new UnauthorizedAccessException();
 
+            var history = await _historyRepository.GetBySprintAsync(id, cancellationToken);
+            
             var totalHours = sprint.TotalEstimatedHours;
             var sprintDuration = (sprint.EndDate.Date - sprint.StartDate.Date).Days + 1;
             var dailyIdealBurn = sprintDuration > 0 ? totalHours / sprintDuration : 0;
 
             var burndownData = new List<BurndownPointDto>();
 
-            // Generate data points for each day
+            // For history calculation, we need the "current" state of all items ever involved
+            var itemsByHistory = history.Select(h => h.WorkItem).DistinctBy(w => w.Id).ToList();
+            
+            // Items currently in sprint might not have history yet
+            var currentItemsInSprint = await _workItemRepository.GetBySprintAsync(id, cancellationToken);
+            
+            var allRelevantItems = itemsByHistory.UnionBy(currentItemsInSprint, w => w.Id).ToList();
+
             for (int day = 0; day <= sprintDuration; day++)
             {
                 var date = sprint.StartDate.Date.AddDays(day);
+                var endOfDay = date.Date.AddDays(1).AddSeconds(-1);
 
-                // For simplicity, we'll calculate remaining work based on completion percentage
-                // In a real system, you'd track historical state changes
-                var idealRemaining = Math.Max(0, totalHours - (day * dailyIdealBurn));
+                decimal actualRemaining = 0;
 
-                // Current remaining (this is simplified - actual would need historical data)
-                var actualRemaining = date <= DateTime.UtcNow.Date
-                    ? totalHours - sprint.CompletedEstimatedHours
-                    : totalHours;
+                if (date > DateTime.UtcNow.Date)
+                {
+                    // For future dates, use current remaining hours
+                    actualRemaining = currentItemsInSprint
+                        .Where(w => w.Status != "Done")
+                        .Sum(w => w.EstimatedHours ?? 0);
+                }
+                else
+                {
+                    // Calculate historical remaining hours
+                    foreach (var item in allRelevantItems)
+                    {
+                        var state = GetItemStateAt(item, history, endOfDay);
+                        if (state.SprintId == sprint.Id && state.Status != "Done")
+                        {
+                            actualRemaining += state.Estimate;
+                        }
+                    }
+                }
 
                 burndownData.Add(new BurndownPointDto
                 {
                     Date = date,
                     RemainingHours = actualRemaining,
-                    IdealRemainingHours = idealRemaining
+                    IdealRemainingHours = Math.Max(0, totalHours - (day * dailyIdealBurn))
                 });
             }
+
             return burndownData;
+        }
+
+        private (int? SprintId, string Status, decimal Estimate) GetItemStateAt(
+            WorkItem item, 
+            List<WorkItemHistory> history, 
+            DateTime endOfDay)
+        {
+            // Start with current state
+            int? sprintId = item.SprintId;
+            string status = item.Status;
+            decimal estimate = item.EstimatedHours ?? 0;
+
+            // Undo changes that happened after endOfDay
+            var changesToUndo = history
+                .Where(h => h.WorkItemId == item.Id && h.ChangedAt > endOfDay)
+                .OrderByDescending(h => h.ChangedAt);
+
+            foreach (var change in changesToUndo)
+            {
+                if (change.FieldName == "Status") 
+                    status = change.OldValue ?? status;
+                else if (change.FieldName == "SprintId") 
+                    sprintId = string.IsNullOrEmpty(change.OldValue) ? null : int.Parse(change.OldValue);
+                else if (change.FieldName == "EstimatedHours") 
+                    estimate = string.IsNullOrEmpty(change.OldValue) ? 0 : decimal.Parse(change.OldValue);
+            }
+
+            return (sprintId, status, estimate);
         }
 
         private static SprintDto MapToDto(Sprint sprint)
@@ -261,7 +599,11 @@ namespace CloudBoard.Api.Services
                 ProgressPercentage = sprint.ProgressPercentage,
                 TotalEstimatedHours = sprint.TotalEstimatedHours,
                 CompletedEstimatedHours = sprint.CompletedEstimatedHours,
-                DaysRemaining = sprint.DaysRemaining
+                DaysRemaining = sprint.DaysRemaining,
+                CapacityHours = sprint.CapacityHours,
+                CapacityUtilization = sprint.CapacityUtilization,
+                Retrospective = sprint.Retrospective,
+                RetrospectiveDate = sprint.RetrospectiveDate
             };
         }
 
@@ -273,6 +615,23 @@ namespace CloudBoard.Api.Services
                 item.SprintId = null;
             }
             return incompleteItems.Count;
+        }
+
+        private async Task TrackChange(int workItemId, string fieldName, string? oldValue, string? newValue, int userId)
+        {
+            if (oldValue == newValue) return;
+
+            var history = new WorkItemHistory
+            {
+                WorkItemId = workItemId,
+                FieldName = fieldName,
+                OldValue = oldValue,
+                NewValue = newValue,
+                ChangedAt = DateTime.UtcNow,
+                ChangedById = userId
+            };
+
+            _historyRepository.Add(history);
         }
     }
 }

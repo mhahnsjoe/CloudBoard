@@ -12,11 +12,31 @@
       @create-sprint="$emit('create-sprint')"
     >
       <template #sprint-selector>
-        <SprintSelector
-          :sprints="sprints"
-          :selectedSprintId="selectedSprintId"
-          @select="$emit('select-sprint', $event)"
-        />
+        <div class="flex items-center gap-4">
+          <SprintSelector
+            :sprints="sprints"
+            :selectedSprintId="selectedSprintId"
+            @select="$emit('select-sprint', $event)"
+          />
+          
+          <nav class="flex items-center gap-2 border-l border-gray-200 pl-4 h-8">
+            <router-link
+              :to="`/projects/${board?.projectId}/boards/${boardId}/sprint-planning`"
+              class="text-sm font-medium text-gray-600 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-all"
+              active-class="text-blue-600 bg-blue-50"
+            >
+              Planning
+            </router-link>
+            <router-link
+              v-if="selectedSprintId"
+              :to="`/projects/${board?.projectId}/boards/${boardId}/sprints/${selectedSprintId}/summary`"
+              class="text-sm font-medium text-gray-600 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-all"
+              active-class="text-blue-600 bg-blue-50"
+            >
+              Insights
+            </router-link>
+          </nav>
+        </div>
       </template>
     </BoardHeader>
 
@@ -38,6 +58,7 @@
       @delete-workitem="$emit('delete-workitem', $event)"
       @update-status="(workItem, newStatus) => $emit('update-status', workItem, newStatus)"
       @return-to-backlog="$emit('return-to-backlog', $event)"
+      @add-child-task="$emit('add-child-task', $event)"
     />
   </div>
 </template>
@@ -79,6 +100,7 @@ defineEmits<{
   'delete-workitem': [id: number]
   'update-status': [workItem: WorkItem, newStatus: string]
   'return-to-backlog': [workItem: WorkItem]
+  'add-child-task': [parentWorkItem: WorkItem]
 }>()
 
 const selectedSprint = computed(() => {
@@ -87,11 +109,27 @@ const selectedSprint = computed(() => {
 })
 
 const filteredWorkItems = computed(() => {
+  let items: WorkItem[]
+  
   if (props.selectedSprintId === null) {
     // Show backlog items (items without sprint)
-    return props.workItems.filter(item => !item.sprintId)
+    items = props.workItems.filter(item => !item.sprintId)
+  } else {
+    // Show items in selected sprint
+    items = props.workItems.filter(item => item.sprintId === props.selectedSprintId)
   }
-  // Show items in selected sprint
-  return props.workItems.filter(item => item.sprintId === props.selectedSprintId)
+  
+  // Group hierarchically - only show root items with children
+  const rootItems = items.filter(item => !item.parentId)
+  
+  return rootItems.map(item => {
+    const children = items.filter(c => c.parentId === item.id)
+    
+    return {
+      ...item,
+      children: children,
+      childCount: children.length
+    }
+  })
 })
 </script>

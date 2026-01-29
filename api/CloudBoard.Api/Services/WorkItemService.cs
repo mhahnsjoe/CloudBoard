@@ -15,6 +15,7 @@ namespace CloudBoard.Api.Services
         private readonly IBoardRepository _boardRepository;
         private readonly IProjectRepository _projectRepository;
         private readonly ISprintRepository _sprintRepository;
+        private readonly IWorkItemHistoryRepository _historyRepository;
         private readonly IWorkItemValidationService _validation;
         private readonly ILogger<WorkItemService> _logger;
 
@@ -23,6 +24,7 @@ namespace CloudBoard.Api.Services
             IBoardRepository boardRepository,
             IProjectRepository projectRepository,
             ISprintRepository sprintRepository,
+            IWorkItemHistoryRepository historyRepository,
             IWorkItemValidationService validation,
             ILogger<WorkItemService> logger)
         {
@@ -30,6 +32,7 @@ namespace CloudBoard.Api.Services
             _boardRepository = boardRepository;
             _projectRepository = projectRepository;
             _sprintRepository = sprintRepository;
+            _historyRepository = historyRepository;
             _validation = validation;
             _logger = logger;
         }
@@ -102,6 +105,13 @@ namespace CloudBoard.Api.Services
             _workItemRepository.Add(workItem);
             await _workItemRepository.SaveChangesAsync();
 
+            // Record initial state
+            await TrackChange(workItem.Id, "Status", null, workItem.Status, createdById);
+            if (workItem.SprintId.HasValue)
+                await TrackChange(workItem.Id, "SprintId", null, workItem.SprintId.ToString(), createdById);
+            if (workItem.EstimatedHours.HasValue)
+                await TrackChange(workItem.Id, "EstimatedHours", null, workItem.EstimatedHours.ToString(), createdById);
+
             _logger.LogInformation(
                 "Work item created: {WorkItemId} - {Title}",
                 workItem.Id, workItem.Title);
@@ -109,7 +119,7 @@ namespace CloudBoard.Api.Services
             return workItem;
         }
 
-        public async Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto)
+        public async Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto, int currentUserId)
         {
             var workItem = await _workItemRepository.GetWithHierarchyAsync(id);
 
@@ -143,6 +153,11 @@ namespace CloudBoard.Api.Services
                     throw new InvalidOperationException(typeValidation.ErrorMessage);
             }
 
+            // Track changes
+            await TrackChange(workItem.Id, "Status", workItem.Status, dto.Status, currentUserId);
+            await TrackChange(workItem.Id, "SprintId", workItem.SprintId?.ToString(), dto.SprintId?.ToString(), currentUserId);
+            await TrackChange(workItem.Id, "EstimatedHours", workItem.EstimatedHours?.ToString(), dto.EstimatedHours?.ToString(), currentUserId);
+
             // Update properties
             workItem.Title = dto.Title;
             workItem.Status = dto.Status;
@@ -159,6 +174,23 @@ namespace CloudBoard.Api.Services
 
             await _workItemRepository.SaveChangesAsync();
             return workItem;
+        }
+
+        private async Task TrackChange(int workItemId, string fieldName, string? oldValue, string? newValue, int userId)
+        {
+            if (oldValue == newValue) return;
+
+            var history = new WorkItemHistory
+            {
+                WorkItemId = workItemId,
+                FieldName = fieldName,
+                OldValue = oldValue,
+                NewValue = newValue,
+                ChangedAt = DateTime.UtcNow,
+                ChangedById = userId
+            };
+
+            _historyRepository.Add(history);
         }
 
         public async Task DeleteAsync(int id)

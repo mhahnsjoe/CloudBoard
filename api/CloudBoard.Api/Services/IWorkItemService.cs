@@ -10,7 +10,7 @@ namespace CloudBoard.Api.Services
     public interface IWorkItemService
     {
         Task<WorkItem> CreateAsync(WorkItemCreateDto dto, int createdById);
-        Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto);
+        Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto, int userId);
         Task DeleteAsync(int id);
         Task<WorkItem?> GetByIdAsync(int id, bool includeHierarchy = false);
         Task<IEnumerable<WorkItem>> GetByBoardAsync(int boardId, bool includeHierarchy = false);

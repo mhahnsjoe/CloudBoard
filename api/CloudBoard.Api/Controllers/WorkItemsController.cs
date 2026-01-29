@@ -117,7 +117,8 @@ namespace CloudBoard.Api.Controllers
             try
             {
                 updatedWorkItem.BoardId = boardId; // Ensure consistency
-                await _workItemService.UpdateAsync(id, updatedWorkItem);
+                var userId = GetCurrentUserId();
+                await _workItemService.UpdateAsync(id, updatedWorkItem, userId);
                 return NoContent();
             }
             catch (InvalidOperationException ex)

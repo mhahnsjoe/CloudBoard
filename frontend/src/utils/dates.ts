@@ -24,7 +24,9 @@ export function formatDate(
  * Format a date range for a sprint
  * @param sprint - Sprint object with startDate and endDate
  */
-export function formatDateRange(sprint: Sprint): string {
+export function formatDateRange(sprint: Sprint | null | undefined): string {
+  if (!sprint) return 'N/A'
+
   const start = new Date(sprint.startDate).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric'

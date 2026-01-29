@@ -32,6 +32,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         var boardRepo = new BoardRepository(context);
         var projectRepo = new ProjectRepository(context);
         var sprintRepo = new SprintRepository(context);
+        var historyRepo = new WorkItemHistoryRepository(context);
         var mockValidation = validation ?? new Mock<IWorkItemValidationService>().Object;
 
         return new WorkItemService(
@@ -39,6 +40,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
             boardRepo,
             projectRepo,
             sprintRepo,
+            historyRepo,
             mockValidation,
             NullLogger<WorkItemService>.Instance);
     }
@@ -269,7 +271,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         };
 
         // Act
-        var result = await service.UpdateAsync(100, dto);
+        var result = await service.UpdateAsync(100, dto, 1);
 
         // Assert
         result.Title.Should().Be("Updated Title");
@@ -289,7 +291,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         var dto = new WorkItemUpdateDto { Title = "Test", BoardId = 1 };
 
         // Act & Assert
-        await FluentActions.Invoking(() => service.UpdateAsync(999, dto))
+        await FluentActions.Invoking(() => service.UpdateAsync(999, dto, 1))
             .Should().ThrowAsync<KeyNotFoundException>();
     }
 
@@ -319,7 +321,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         };
 
         // Act & Assert
-        await FluentActions.Invoking(() => service.UpdateAsync(100, dto))
+        await FluentActions.Invoking(() => service.UpdateAsync(100, dto, 1))
             .Should().ThrowAsync<InvalidOperationException>();
     }
 

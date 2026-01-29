@@ -15,6 +15,7 @@ namespace CloudBoard.Api.Data
         public DbSet<WorkItem> WorkItems => Set<WorkItem>();
         public DbSet<Sprint> Sprints => Set<Sprint>();
         public DbSet<BoardColumn> BoardColumns => Set<BoardColumn>();
+        public DbSet<WorkItemHistory> WorkItemHistories => Set<WorkItemHistory>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -23,9 +24,10 @@ namespace CloudBoard.Api.Data
             ConfigureProjectRelationships(modelBuilder);
             ConfigureBoardRelationships(modelBuilder);
             ConfigureBoardColumns(modelBuilder);
-            ConfigureWorkItemelationships(modelBuilder);
+            ConfigureWorkItemRelationships(modelBuilder);
             ConfigureWorkItemHierarchy(modelBuilder);
             ConfigureSprintRelationships(modelBuilder);
+            ConfigureWorkItemHistoryRelationships(modelBuilder);
         }
 
         private void ConfigureProjectRelationships(ModelBuilder modelBuilder)
@@ -100,7 +102,7 @@ namespace CloudBoard.Api.Data
             modelBuilder.Entity<Sprint>().HasIndex(s => s.BoardId);
             modelBuilder.Entity<Sprint>().HasIndex(s => s.Status);
         }
-        private void ConfigureWorkItemelationships(ModelBuilder modelBuilder)
+        private void ConfigureWorkItemRelationships(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<WorkItem>()
                 .HasOne(w => w.Project)
@@ -136,6 +138,24 @@ namespace CloudBoard.Api.Data
             modelBuilder.Entity<WorkItem>().HasIndex(t => new { t.BoardId, t.Type });
             modelBuilder.Entity<WorkItem>().HasIndex(t => t.Status);
             modelBuilder.Entity<WorkItem>().HasIndex(t => t.AssignedToId);
+        }
+
+        private void ConfigureWorkItemHistoryRelationships(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<WorkItemHistory>()
+                .HasOne(h => h.WorkItem)
+                .WithMany()
+                .HasForeignKey(h => h.WorkItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<WorkItemHistory>()
+                .HasOne(h => h.ChangedBy)
+                .WithMany()
+                .HasForeignKey(h => h.ChangedById)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<WorkItemHistory>().HasIndex(h => h.WorkItemId);
+            modelBuilder.Entity<WorkItemHistory>().HasIndex(h => h.ChangedAt);
         }
     }
 }

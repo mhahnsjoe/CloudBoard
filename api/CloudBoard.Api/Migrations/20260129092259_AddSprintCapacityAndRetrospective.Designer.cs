@@ -3,6 +3,7 @@ using System;
 using CloudBoard.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CloudBoard.Api.Migrations
 {
     [DbContext(typeof(CloudBoardContext))]
-    partial class CloudBoardContextModelSnapshot : ModelSnapshot
+    [Migration("20260129092259_AddSprintCapacityAndRetrospective")]
+    partial class AddSprintCapacityAndRetrospective
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -319,45 +322,6 @@ namespace CloudBoard.Api.Migrations
                     b.ToTable("WorkItems");
                 });
 
-            modelBuilder.Entity("CloudBoard.Api.Models.WorkItemHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("ChangedById")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("FieldName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("NewValue")
-                        .HasColumnType("text");
-
-                    b.Property<string>("OldValue")
-                        .HasColumnType("text");
-
-                    b.Property<int>("WorkItemId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChangedAt");
-
-                    b.HasIndex("ChangedById");
-
-                    b.HasIndex("WorkItemId");
-
-                    b.ToTable("WorkItemHistories");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<int>", b =>
                 {
                     b.Property<int>("Id")
@@ -579,25 +543,6 @@ namespace CloudBoard.Api.Migrations
                     b.Navigation("Project");
 
                     b.Navigation("Sprint");
-                });
-
-            modelBuilder.Entity("CloudBoard.Api.Models.WorkItemHistory", b =>
-                {
-                    b.HasOne("CloudBoard.Api.Models.User", "ChangedBy")
-                        .WithMany()
-                        .HasForeignKey("ChangedById")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CloudBoard.Api.Models.WorkItem", "WorkItem")
-                        .WithMany()
-                        .HasForeignKey("WorkItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ChangedBy");
-
-                    b.Navigation("WorkItem");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>

@@ -42,9 +42,10 @@
           :workItem="workItem"
           :columns="props.columns"
           @dragstart="onDragStart($event, workItem)"
-          @edit="$emit('edit-workitem', workItem)"
+          @edit="$emit('edit-workitem', $event)"
           @delete="$emit('delete-workitem', workItem.id)"
           @return-to-backlog="$emit('return-to-backlog', workItem)"
+          @add-child-task="$emit('add-child-task', $event)"
         />
         <!-- Empty State -->
         <div
@@ -79,6 +80,7 @@ const emit = defineEmits<{
   'delete-workitem': [id: number]
   'update-status': [workItem: WorkItem, newStatus: string]
   'return-to-backlog': [workItem: WorkItem]
+  'add-child-task': [parentWorkItem: WorkItem]
 }>()
 
 const draggedWorkItem = ref<WorkItem | null>(null)
