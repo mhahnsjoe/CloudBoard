@@ -1,11 +1,11 @@
 using CloudBoard.Api.Data;
 using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
+using CloudBoard.Api.Repositories;
 using CloudBoard.Api.Services;
 using CloudBoard.Api.Tests.Fixtures;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -13,7 +13,7 @@ namespace CloudBoard.Api.Tests.Services;
 
 /// <summary>
 /// Tests for WorkItemService CRUD operations and business logic.
-/// Uses real in-memory database with mocked validation service for isolation.
+/// Uses real in-memory database with real repositories and mocked validation service.
 /// </summary>
 public class WorkItemServiceTests : IClassFixture<DbContextFixture>
 {
@@ -22,6 +22,25 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
     public WorkItemServiceTests(DbContextFixture fixture)
     {
         _fixture = fixture;
+    }
+
+    private WorkItemService CreateService(
+        CloudBoardContext context,
+        IWorkItemValidationService? validation = null)
+    {
+        var workItemRepo = new WorkItemRepository(context);
+        var boardRepo = new BoardRepository(context);
+        var projectRepo = new ProjectRepository(context);
+        var sprintRepo = new SprintRepository(context);
+        var mockValidation = validation ?? new Mock<IWorkItemValidationService>().Object;
+
+        return new WorkItemService(
+            workItemRepo,
+            boardRepo,
+            projectRepo,
+            sprintRepo,
+            mockValidation,
+            NullLogger<WorkItemService>.Instance);
     }
 
     #region CreateAsync Tests
@@ -37,7 +56,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         mockValidation.Setup(v => v.ValidateParentChild(It.IsAny<WorkItemType>(), It.IsAny<WorkItemType>()))
             .Returns(ValidationResult.Success());
 
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context, mockValidation.Object);
 
         var dto = new WorkItemCreateDto
         {
@@ -66,8 +85,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         using var context = _fixture.CreateContext();
         await SeedBasicData(context);
 
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         var dto = new WorkItemCreateDto
         {
@@ -109,8 +127,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         });
         await context.SaveChangesAsync();
 
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         var dto = new WorkItemCreateDto
         {
@@ -136,8 +153,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         using var context = _fixture.CreateContext();
         await SeedBasicData(context);
 
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         var dto = new WorkItemCreateDto
         {
@@ -160,8 +176,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         using var context = _fixture.CreateContext();
         await SeedBasicData(context);
 
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         var dto = new WorkItemCreateDto
         {
@@ -204,7 +219,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         mockValidation.Setup(v => v.ValidateParentChild(It.IsAny<WorkItemType>(), It.IsAny<WorkItemType>()))
             .Returns(ValidationResult.Success());
 
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context, mockValidation.Object);
 
         var dto = new WorkItemCreateDto
         {
@@ -240,7 +255,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         mockValidation.Setup(v => v.ValidateTypeChange(It.IsAny<WorkItem>(), It.IsAny<WorkItemType>()))
             .Returns(ValidationResult.Success());
 
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context, mockValidation.Object);
 
         var dto = new WorkItemUpdateDto
         {
@@ -269,8 +284,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
     {
         // Arrange
         using var context = _fixture.CreateContext();
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         var dto = new WorkItemUpdateDto { Title = "Test", BoardId = 1 };
 
@@ -294,7 +308,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         mockValidation.Setup(v => v.ValidateTypeChange(It.IsAny<WorkItem>(), WorkItemType.Epic))
             .Returns(ValidationResult.Failure("PBI cannot have Epic as child"));
 
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context, mockValidation.Object);
 
         var dto = new WorkItemUpdateDto
         {
@@ -325,7 +339,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         mockValidation.Setup(v => v.ValidateDelete(It.IsAny<WorkItem>()))
             .Returns(ValidationResult.Success());
 
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context, mockValidation.Object);
 
         // Act
         await service.DeleteAsync(100);
@@ -348,7 +362,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         mockValidation.Setup(v => v.ValidateDelete(It.IsAny<WorkItem>()))
             .Returns(ValidationResult.Failure("Has children"));
 
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context, mockValidation.Object);
 
         // Act & Assert
         await FluentActions.Invoking(() => service.DeleteAsync(100))
@@ -371,8 +385,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         context.Boards.Add(new Board { Id = 2, Name = "Board 2", ProjectId = 1 });
         await SeedWorkItem(context, 200, "Board 2 Item", null, WorkItemType.Task, 2);
 
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         // Act
         var results = await service.GetByBoardAsync(1);
@@ -401,8 +414,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         );
         await context.SaveChangesAsync();
 
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         // Reorder: C, A, B
         var newOrders = new List<CloudBoard.Api.Controllers.ItemOrder>
@@ -431,8 +443,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
     {
         // Arrange
         using var context = _fixture.CreateContext();
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         // Act & Assert
         await FluentActions.Invoking(() =>
@@ -447,8 +458,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         using var context = _fixture.CreateContext();
         await SeedBasicData(context);
 
-        var mockValidation = new Mock<IWorkItemValidationService>();
-        var service = new WorkItemService(context, mockValidation.Object, NullLogger<WorkItemService>.Instance);
+        var service = CreateService(context);
 
         // Act & Assert - User 999 doesn't own project 1
         await FluentActions.Invoking(() =>
