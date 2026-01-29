@@ -11,8 +11,7 @@ namespace CloudBoard.Api.Tests.Integration;
 public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     // 1. Define the container here so it's shared
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("cloudboard_test")
         .WithUsername("test")
         .WithPassword("test")
@@ -48,7 +47,8 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
             // Add the Test Database using the container connection string
             services.AddDbContext<CloudBoardContext>(options =>
-                options.UseNpgsql(_postgres.GetConnectionString()));
+                options.UseNpgsql(_postgres.GetConnectionString(), o =>
+                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
         });
     }
 

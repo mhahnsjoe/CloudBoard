@@ -76,7 +76,7 @@ namespace CloudBoard.Api.Services
         }
 
 
-        //TODO: Check if maybe this should be moved but placed here for now
+        // TD-006: See ADR-005 for service location review
          private string GenerateJwtToken(User user)
         {
             var jwtSecret = _configuration["Jwt:Secret"] ?? "YourSuperSecretKeyForJWTTokenGeneration123!";
