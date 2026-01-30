@@ -1,6 +1,11 @@
 using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
 using CloudBoard.Api.Repositories;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System;
 
 namespace CloudBoard.Api.Services
 {
@@ -10,6 +15,13 @@ namespace CloudBoard.Api.Services
         private readonly IBoardRepository _boardRepository;
         private readonly IWorkItemRepository _workItemRepository;
         private readonly IWorkItemHistoryRepository _historyRepository;
+
+        private static readonly WorkItemType[] AllowedSprintTypes = 
+        {
+            WorkItemType.PBI,
+            WorkItemType.Task,
+            WorkItemType.Bug
+        };
 
         public SprintService(
             ISprintRepository sprintRepository,
@@ -128,6 +140,13 @@ namespace CloudBoard.Api.Services
                     {
                         result.FailedCount++;
                         result.Errors.Add($"Work item {workItemId} belongs to different project");
+                        continue;
+                    }
+
+                    if (!AllowedSprintTypes.Contains(workItem.Type))
+                    {
+                        result.FailedCount++;
+                        result.Errors.Add($"Work item {workItemId} type '{workItem.Type}' cannot be added to sprints. Only PBI, Task, and Bug allowed.");
                         continue;
                     }
 
@@ -632,6 +651,137 @@ namespace CloudBoard.Api.Services
             };
 
             _historyRepository.Add(history);
+        }
+
+        public async Task<TaskboardDto> GetTaskboardAsync(
+            int sprintId, 
+            int userId, 
+            CancellationToken cancellationToken = default)
+        {
+            var sprint = await _sprintRepository.GetWithFullContextAsync(sprintId, cancellationToken);
+            
+            if (sprint == null)
+                throw new KeyNotFoundException("Sprint not found");
+
+            if (sprint.Board?.Project?.OwnerId != userId)
+                throw new UnauthorizedAccessException();
+
+            // Get board columns for status headers
+            var columns = sprint.Board.Columns
+                .OrderBy(c => c.Order)
+                .Select(c => c.Name)
+                .ToList();
+
+            if (!columns.Any())
+                columns = new List<string> { "To Do", "In Progress", "Done" };
+
+            // Get all sprint work items
+            var sprintItems = await _workItemRepository.GetBySprintAsync(sprintId, cancellationToken);
+
+            // Filter to PBI and standalone Bug as row headers
+            var parentItems = sprintItems
+                .Where(w => w.Type == WorkItemType.PBI || 
+                           (w.Type == WorkItemType.Bug && !w.ParentId.HasValue))
+                .ToList();
+
+            // Build taskboard rows
+            var rows = parentItems.Select(parent =>
+            {
+                var childTasks = sprintItems
+                    .Where(w => w.ParentId == parent.Id && 
+                               (w.Type == WorkItemType.Task || w.Type == WorkItemType.Bug))
+                    .ToList();
+
+                var totalHours = childTasks.Sum(t => t.EstimatedHours ?? 0);
+                var completedHours = childTasks
+                    .Where(t => t.Status == "Done")
+                    .Sum(t => t.EstimatedHours ?? 0);
+                
+                var remainingHours = childTasks.Sum(t => t.RemainingHours ?? 0);
+
+                if (parent.Type == WorkItemType.PBI || (parent.Type == WorkItemType.Bug && !parent.ParentId.HasValue))
+                {
+                    totalHours += parent.EstimatedHours ?? 0;
+                    if (parent.Status == "Done")
+                        completedHours += parent.EstimatedHours ?? 0;
+                    
+                    remainingHours += parent.RemainingHours ?? 0;
+                }
+
+                return new TaskboardRowDto
+                {
+                    Id = parent.Id,
+                    Title = parent.Title,
+                    Type = parent.Type.ToString(),
+                    Status = parent.Status,
+                    Priority = parent.Priority,
+                    TotalHours = totalHours,
+                    CompletedHours = completedHours,
+                    RemainingHours = remainingHours,
+                    ProgressPercentage = totalHours > 0 ? (completedHours / totalHours) * 100 : 0,
+                    Tasks = childTasks.Select(task => new TaskboardTaskDto
+                    {
+                        Id = task.Id,
+                        Title = task.Title,
+                        Type = task.Type.ToString(),
+                        Status = task.Status,
+                        Priority = task.Priority,
+                        EstimatedHours = task.EstimatedHours,
+                        ActualHours = task.ActualHours,
+                        RemainingHours = task.RemainingHours,
+                        ParentId = parent.Id,
+                        AssignedToId = task.AssignedToId,
+                        AssignedToName = task.AssignedTo?.Name
+                    }).ToList()
+                };
+            }).ToList();
+
+            // Handle orphan tasks (tasks without parent but in sprint)
+            var orphanTasks = sprintItems
+                .Where(w => w.Type == WorkItemType.Task && !w.ParentId.HasValue)
+                .ToList();
+
+            if (orphanTasks.Any())
+            {
+                rows.Add(new TaskboardRowDto
+                {
+                    Id = 0,
+                    Title = "Unparented Tasks",
+                    Type = "Unparented",
+                    Status = "N/A",
+                    Priority = "N/A",
+                    TotalHours = orphanTasks.Sum(t => t.EstimatedHours ?? 0),
+                    CompletedHours = orphanTasks.Where(t => t.Status == "Done").Sum(t => t.EstimatedHours ?? 0),
+                    RemainingHours = orphanTasks.Sum(t => t.RemainingHours ?? 0),
+                    ProgressPercentage = 0,
+                    Tasks = orphanTasks.Select(task => new TaskboardTaskDto
+                    {
+                        Id = task.Id,
+                        Title = task.Title,
+                        Type = task.Type.ToString(),
+                        Status = task.Status,
+                        Priority = task.Priority,
+                        EstimatedHours = task.EstimatedHours,
+                        ActualHours = task.ActualHours,
+                        RemainingHours = task.RemainingHours,
+                        ParentId = 0,
+                        AssignedToId = task.AssignedToId,
+                        AssignedToName = task.AssignedTo?.Name
+                    }).ToList()
+                });
+            }
+
+            return new TaskboardDto
+            {
+                SprintId = sprintId,
+                SprintName = sprint.Name,
+                Columns = columns,
+                Rows = rows,
+                TotalHours = rows.Sum(r => r.TotalHours),
+                CompletedHours = rows.Sum(r => r.CompletedHours),
+                TotalTasks = rows.Sum(r => r.Tasks.Count),
+                CompletedTasks = rows.Sum(r => r.Tasks.Count(t => t.Status == "Done"))
+            };
         }
     }
 }

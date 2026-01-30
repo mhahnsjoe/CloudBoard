@@ -4,10 +4,10 @@
       <!-- Breadcrumbs -->
       <nav class="flex items-center text-sm text-gray-500 mb-6 gap-2">
         <router-link :to="`/projects/${projectId}/boards/${boardId}`" class="hover:text-blue-600 transition-colors">
-          Board
+          Sprint
         </router-link>
         <span>/</span>
-        <span class="text-gray-900 font-medium">Sprint Insights</span>
+        <span class="text-gray-900 font-medium">Insights</span>
       </nav>
 
       <!-- Header -->

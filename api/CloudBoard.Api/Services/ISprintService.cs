@@ -74,5 +74,10 @@ namespace CloudBoard.Api.Services
             string retrospective, 
             int userId, 
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets taskboard data for a sprint (PBI rows with task columns)
+        /// </summary>
+        Task<TaskboardDto> GetTaskboardAsync(int sprintId, int userId, CancellationToken ct = default);
     }
 }

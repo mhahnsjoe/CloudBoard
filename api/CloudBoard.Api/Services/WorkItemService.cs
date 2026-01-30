@@ -99,7 +99,8 @@ namespace CloudBoard.Api.Services
                 CreatedById = createdById,
                 AssignedToId = dto.AssignedToId,
                 SprintId = dto.SprintId,
-                BacklogOrder = backlogOrder
+                BacklogOrder = backlogOrder,
+                RemainingHours = dto.Status == "Done" ? 0 : (dto.RemainingHours ?? dto.EstimatedHours)
             };
 
             _workItemRepository.Add(workItem);
@@ -157,6 +158,7 @@ namespace CloudBoard.Api.Services
             await TrackChange(workItem.Id, "Status", workItem.Status, dto.Status, currentUserId);
             await TrackChange(workItem.Id, "SprintId", workItem.SprintId?.ToString(), dto.SprintId?.ToString(), currentUserId);
             await TrackChange(workItem.Id, "EstimatedHours", workItem.EstimatedHours?.ToString(), dto.EstimatedHours?.ToString(), currentUserId);
+            await TrackChange(workItem.Id, "RemainingHours", workItem.RemainingHours?.ToString(), dto.RemainingHours?.ToString(), currentUserId);
 
             // Update properties
             workItem.Title = dto.Title;
@@ -169,6 +171,7 @@ namespace CloudBoard.Api.Services
                 : null;
             workItem.EstimatedHours = dto.EstimatedHours;
             workItem.ActualHours = dto.ActualHours;
+            workItem.RemainingHours = dto.Status == "Done" ? 0 : (dto.RemainingHours ?? (dto.Status != workItem.Status ? (dto.RemainingHours ?? dto.EstimatedHours ?? workItem.RemainingHours) : workItem.RemainingHours));
             workItem.ParentId = dto.ParentId;
             workItem.SprintId = dto.SprintId;
 

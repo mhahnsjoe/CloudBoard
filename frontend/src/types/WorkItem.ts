@@ -9,6 +9,7 @@ export interface WorkItem {
   dueDate?: string;
   estimatedHours?: number;
   actualHours?: number;
+  remainingHours?: number;
   boardId: number;
   sprintId?: number | null;
   backlogOrder?: number | null;
@@ -33,7 +34,8 @@ export interface WorkItemCreate {
   description?: string;
   dueDate?: string;
   estimatedHours?: number;
-  boardId?: number | null; 
+  remainingHours?: number;
+  boardId?: number | null;
   projectId?: number;       //for backlog items
   parentId?: number;
 }
@@ -48,6 +50,7 @@ export interface WorkItemEdit {
   dueDate?: string;
   estimatedHours?: number;
   actualHours?: number;
+  remainingHours?: number;
   boardId: number;
   parentId?: number;  // Added for hierarchy support
   sprintId?: number | null;

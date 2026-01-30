@@ -28,6 +28,13 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: "/projects/:projectId/boards/:boardId/taskboard",
+    name: "Taskboard",
+    component: () => import('@/components/BoardDetailView.vue'),
+    props: true,
+    meta: { requiresAuth: true }
+  },
+  {
     path: "/projects/:projectId/backlog",
     name: "Backlog",
     component: () => import('@/components/backlog/BacklogView.vue'),
