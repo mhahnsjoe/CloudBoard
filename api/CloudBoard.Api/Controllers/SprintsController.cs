@@ -7,6 +7,7 @@ using CloudBoard.Api.Models.DTO;
 using System.Security.Claims;
 using CloudBoard.Api.Services;
 using Asp.Versioning;
+using Serilog;
 
 namespace CloudBoard.Api.Controllers
 {
@@ -89,6 +90,7 @@ namespace CloudBoard.Api.Controllers
         [HttpPut("sprints/{id}")]
         public async Task<IActionResult> UpdateSprint(int id, UpdateSprintDto dto)
         {
+            Log.Information("Updating Sprint {Id}. Name: {Name}, Status: {Status}", id, dto.Name, dto.Status);
             var userId = GetUserId();
 
             try
@@ -264,7 +266,10 @@ namespace CloudBoard.Api.Controllers
             var userId = GetUserId();
             try
             {
+                Log.Information("BulkAssign inputs: SprintId={SprintId}, ItemIds={ItemIds}", id, string.Join(",", dto.WorkItemIds ?? new List<int>()));
                 var result = await _sprintService.BulkAssignToSprintAsync(id, dto.WorkItemIds, userId);
+                Log.Information("BulkAssign result: Success={Success}, Failed={Failed}, Errors={Errors}", 
+                    result.SuccessCount, result.FailedCount, string.Join("; ", result.Errors));
                 return Ok(result);
             }
             catch (KeyNotFoundException)

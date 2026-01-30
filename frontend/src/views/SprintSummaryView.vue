@@ -73,7 +73,10 @@
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div class="text-sm text-gray-500 mb-1">Time Remaining</div>
           <div class="text-3xl font-bold text-gray-900">
-            {{ sprint?.daysRemaining }} Days
+            {{ (sprint?.daysRemaining || 0) < 0 
+                ? `Ended ${Math.abs(sprint?.daysRemaining || 0)} days ago` 
+                : `${sprint?.daysRemaining} Days` 
+            }}
           </div>
           <div class="text-xs text-gray-400 mt-2">
             Until {{ sprint ? formatDate(sprint.endDate) : '' }}

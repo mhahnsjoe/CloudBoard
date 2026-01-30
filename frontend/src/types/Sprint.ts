@@ -33,6 +33,7 @@ export interface UpdateSprintDto {
   startDate?: string
   endDate?: string
   goal?: string
+  status?: SprintStatus
 }
 
 export interface SprintStats {

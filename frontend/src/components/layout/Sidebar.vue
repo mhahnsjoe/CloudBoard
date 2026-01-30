@@ -3,9 +3,7 @@
      <!-- Logo/Header -->
     <div class="p-3 border-b border-gray-700 bg-gray-900">
       <div class="flex items-center gap-3 px-2">
-        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <span class="text-white font-bold text-sm">CB</span>
-        </div>
+        <img :src="logo" alt="CloudBoard" class="w-20 h-20 rounded-full object-cover bg-white" />
         <h1 class="text-lg font-bold text-white">CloudBoard</h1>
       </div>
     </div>
@@ -263,6 +261,7 @@ import { defineComponent, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FolderIcon, PlusIcon, ClipboardIcon } from '@/components/icons'
 import Modal from '@/components/common/Modal.vue'
+import logo from '@/assets/cb.png'
 import type { Project } from '@/types/Project'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/boards'
@@ -487,7 +486,8 @@ export default defineComponent({
       openCreateBoardModal,
       handleCreateProject,
       handleCreateBoard,
-      fetchProjects
+      fetchProjects,
+      logo
     }
   }
 })

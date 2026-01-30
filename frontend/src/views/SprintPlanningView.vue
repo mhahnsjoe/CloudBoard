@@ -80,8 +80,10 @@ import SprintPlanningBoard from '@/components/sprint/SprintPlanningBoard.vue'
 import SprintModal from '@/components/sprint/SprintModal.vue'
 import SprintCapacityModal from '@/components/sprint/SprintCapacityModal.vue'
 import { LoadingIcon } from '@/components/icons'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
+const { error: toastError, success: toastSuccess } = useToast()
 const projectId = computed(() => Number(route.params.projectId))
 const boardId = computed(() => Number(route.params.boardId))
 
@@ -112,13 +114,28 @@ const fetchPlanningContext = async () => {
     planningContext.value = contextRes.data
     projectName.value = boardRes.data.name || 'Project'
     
+    // Check URL query param first
+    if (route.query.sprintId) {
+      const queryId = Number(route.query.sprintId)
+      const exists = planningContext.value.sprints.find(s => s.id === queryId)
+      if (exists) {
+        selectedSprintId.value = queryId
+      }
+    }
+
     // Auto-select active sprint if exists and none selected
     if (!selectedSprintId.value) {
       const activeSprint = planningContext.value.sprints.find(s => s.status === 'Active')
       if (activeSprint) {
         selectedSprintId.value = activeSprint.id
-      } else if (planningContext.value.sprints.length > 0) {
-        selectedSprintId.value = planningContext.value.sprints[0].id
+      } else {
+        // Prefer Planning sprints over Completed ones
+        const planSprint = planningContext.value.sprints.find(s => s.status === 'Planning')
+        if (planSprint) {
+          selectedSprintId.value = planSprint.id
+        } else if (planningContext.value.sprints.length > 0) {
+          selectedSprintId.value = planningContext.value.sprints[0].id
+        }
       }
     }
   } catch (error) {
@@ -190,10 +207,14 @@ const handleSelectSprint = (sprintId: number | null) => {
 const handleMoveToSprint = async (itemIds: number[]) => {
   if (!selectedSprintId.value) return
   try {
-    await bulkAssignToSprint(selectedSprintId.value, itemIds)
+    const res = await bulkAssignToSprint(selectedSprintId.value, itemIds)
+    if (res.data.failedCount > 0) {
+      toastError(`Failed to assign items:\n${res.data.errors.join('\n')}`)
+    }
     await Promise.all([fetchPlanningContext(), fetchSprintData()])
   } catch (error) {
     console.error('Failed to assign items:', error)
+    toastError('Failed to assign items to sprint')
   }
 }
 
@@ -226,8 +247,9 @@ const handleStartSprint = async (sprintId: number) => {
   try {
     await startSprint(sprintId)
     await fetchPlanningContext()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to start sprint:', error)
+    toastError(error.response?.data || 'Failed to start sprint. Another sprint might be active.')
   }
 }
 

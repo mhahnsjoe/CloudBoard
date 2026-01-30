@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    font-size: 14.5px;
+  }
+}
+
 /* Your custom styles */
 @layer components {
   .btn {
@@ -32,11 +38,11 @@
     @apply bg-white p-6 rounded-lg w-11/12 max-w-3xl max-h-[90vh] flex flex-col;
   }
 
-  .modal > h2 {
+  .modal>h2 {
     @apply flex-shrink-0;
   }
 
-  .modal > :not(h2):not(.modal-actions) {
+  .modal> :not(h2):not(.modal-actions) {
     @apply overflow-y-auto flex-1 min-h-0;
   }
 
@@ -55,6 +61,7 @@
   .loading {
     @apply text-gray-600;
   }
+
   .nav-item {
     @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition-all mb-2 cursor-pointer;
   }
@@ -82,5 +89,5 @@
   .rotate-90 {
     transform: rotate(90deg);
   }
-  
+
 }

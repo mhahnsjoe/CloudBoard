@@ -14,6 +14,7 @@ namespace CloudBoard.Api.Models.DTO
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string? Goal { get; set; }
+        public SprintStatus? Status { get; set; }
     }
 
     public class SprintDto

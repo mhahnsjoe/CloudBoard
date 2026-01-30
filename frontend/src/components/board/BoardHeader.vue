@@ -67,20 +67,12 @@
         {{ board?.type }}
       </span>
 
-      <!-- Sprint Selector Slot -->
-      <slot name="sprint-selector"></slot>
+
     </div>
 
     <!-- Board Actions -->
     <div class="flex items-center gap-2">
-      <button
-        v-if="!hideSprintButton"
-        @click="$emit('create-sprint')"
-        class="px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-all flex items-center gap-2"
-      >
-        <PlusIcon className="w-4 h-4" />
-        Create Sprint
-      </button>
+
       <button
         @click="$emit('edit-board')"
         class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
@@ -117,12 +109,10 @@ interface Props {
   board: Board | null
   boardId: number
   projectBoards: Board[]
-  hideSprintButton?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
-  hideSprintButton: false
-})
+
+defineProps<Props>()
 
 defineEmits<{
   'switch-board': [boardId: number]

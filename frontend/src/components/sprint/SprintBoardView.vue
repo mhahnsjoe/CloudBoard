@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- Board Header with Sprint Selector -->
+    <!-- Board Header -->
     <BoardHeader
       :board="board"
       :boardId="boardId"
@@ -10,62 +10,66 @@
       @edit-board="$emit('edit-board')"
       @delete-board="$emit('delete-board')"
       @create-sprint="$emit('create-sprint')"
-    >
-      <template #sprint-selector>
-        <div class="flex items-center gap-4">
-          <SprintSelector
-            :sprints="sprints"
-            :selectedSprintId="selectedSprintId"
-            @select="$emit('select-sprint', $event)"
-          />
-          
-          <!-- View Toggle -->
-          <div v-if="selectedSprintId" class="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200 ml-2">
-            <button
-              @click="toggleView('kanban')"
-              class="px-3 py-1 text-xs font-medium rounded-md transition-all"
-              :class="viewMode === 'kanban' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900'"
-            >
-              Board
-            </button>
-            <button
-              @click="toggleView('taskboard')"
-              class="px-3 py-1 text-xs font-medium rounded-md transition-all"
-              :class="viewMode === 'taskboard' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900'"
-            >
-              Taskboard
-            </button>
-          </div>
+    />
 
-          <nav class="flex items-center gap-2 border-l border-gray-200 pl-4 h-8">
-            <router-link
-              :to="`/projects/${board?.projectId}/boards/${boardId}/sprint-planning`"
-              class="text-sm font-medium text-gray-600 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-all"
-              active-class="text-blue-600 bg-blue-50"
-            >
-              Planning
-            </router-link>
-            <router-link
-              v-if="selectedSprintId"
-              :to="`/projects/${board?.projectId}/boards/${boardId}/sprints/${selectedSprintId}/summary`"
-              class="text-sm font-medium text-gray-600 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-all"
-              active-class="text-blue-600 bg-blue-50"
-            >
-              Insights
-            </router-link>
-          </nav>
-        </div>
-      </template>
-    </BoardHeader>
-
-    <!-- Sprint Info Bar -->
+    <!-- Sprint Info Bar with Selector and Controls -->
     <SprintInfoBar
       :sprint="selectedSprint"
       @start-sprint="$emit('start-sprint', $event)"
       @complete-sprint="$emit('complete-sprint', $event)"
       @edit-sprint="$emit('edit-sprint', $event)"
       @delete-sprint="$emit('delete-sprint', $event)"
-    />
+    >
+      <template #controls>
+         <div v-if="selectedSprintId" class="flex items-center gap-4">
+            <!-- View Toggle -->
+            <div class="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+              <button
+                @click="toggleView('kanban')"
+                class="px-3 py-1 text-xs font-medium rounded-md transition-all"
+                :class="viewMode === 'kanban' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900'"
+              >
+                Board
+              </button>
+              <button
+                @click="toggleView('taskboard')"
+                class="px-3 py-1 text-xs font-medium rounded-md transition-all"
+                :class="viewMode === 'taskboard' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900'"
+              >
+                Taskboard
+              </button>
+            </div>
+
+            <nav class="flex items-center gap-2">
+              <router-link
+                v-if="selectedSprint?.status === 'Planning'"
+                :to="`/projects/${board?.projectId}/boards/${boardId}/sprint-planning?sprintId=${selectedSprintId}`"
+                class="text-xs font-medium text-gray-600 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-all"
+                active-class="text-blue-600 bg-blue-50"
+              >
+                Planning
+              </router-link>
+              <router-link
+                v-if="selectedSprintId"
+                :to="`/projects/${board?.projectId}/boards/${boardId}/sprints/${selectedSprintId}/summary`"
+                class="text-xs font-medium text-gray-600 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-all"
+                active-class="text-blue-600 bg-blue-50"
+              >
+                Insights
+              </router-link>
+            </nav>
+        </div>
+      </template>
+      
+      <template #actions>
+        <SprintSelector
+          :sprints="sprints"
+          :selectedSprintId="selectedSprintId"
+          @select="$emit('select-sprint', $event)"
+          @create="$emit('create-sprint')"
+        />
+      </template>
+    </SprintInfoBar>
 
     <!-- Shared Board Canvas (Kanban View) -->
     <BoardCanvas

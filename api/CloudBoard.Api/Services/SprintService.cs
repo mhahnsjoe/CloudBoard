@@ -419,6 +419,13 @@ namespace CloudBoard.Api.Services
             if (dto.Goal != null)
                 sprint.Goal = dto.Goal;
 
+            if (dto.Status.HasValue)
+            {
+                // Validate status transition if needed, or just allow it as admin override
+                // Specifically allowing revert to Planning as requested
+                sprint.Status = dto.Status.Value;
+            }
+
             await _sprintRepository.SaveChangesAsync(cancellationToken);
         }
 
