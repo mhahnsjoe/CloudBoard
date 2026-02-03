@@ -34,7 +34,7 @@ public class WorkItemValidationServiceTests : IClassFixture<DbContextFixture>
     [InlineData(WorkItemType.PBI, WorkItemType.Bug, true)]
     [InlineData(WorkItemType.Task, WorkItemType.Bug, false)]
     [InlineData(WorkItemType.Task, WorkItemType.Task, false)]
-    [InlineData(WorkItemType.Bug, WorkItemType.Task, false)]
+    [InlineData(WorkItemType.Bug, WorkItemType.Task, true)]
     public void ValidateParentChild_EnforcesHierarchyRules(
         WorkItemType parentType,
         WorkItemType childType,

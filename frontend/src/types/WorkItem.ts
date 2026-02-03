@@ -24,6 +24,8 @@ export interface WorkItem {
   totalEstimatedHours?: number;
   totalActualHours?: number;
   completionPercentage?: number;
+  assignedToId?: number | null;
+  assignedToName?: string;
 }
 
 export interface WorkItemCreate {
@@ -38,6 +40,7 @@ export interface WorkItemCreate {
   boardId?: number | null;
   projectId?: number;       //for backlog items
   parentId?: number;
+  sprintId?: number | null;
 }
 
 export interface WorkItemEdit {
@@ -98,7 +101,7 @@ export const TYPE_HIERARCHY: Record<WorkItemType, {
   },
   'Bug': {
     level: -1, // Flexible
-    canHaveChildren: [],
+    canHaveChildren: ['Task'],
     displayName: 'Bug',
     iconClass: 'bug-icon',
     color: 'red'
@@ -124,4 +127,58 @@ export function getIconClass(type: WorkItemType): string {
 
 export function getTypeColor(type: WorkItemType): string {
   return TYPE_HIERARCHY[type].color;
+}
+
+// Work item detail view types
+export interface WorkItemDetailDto {
+  id: number
+  title: string
+  description: string | null
+  type: WorkItemType
+  status: string
+  priority: string
+  createdAt: string
+  dueDate: string | null
+  estimatedHours: number | null
+  actualHours: number | null
+  remainingHours: number | null
+
+  boardId: number | null
+  boardName: string | null
+  sprintId: number | null
+  sprintName: string | null
+
+  parent: WorkItemLinkDto | null
+  ancestors: WorkItemLinkDto[]
+  children: WorkItemChildDto[]
+
+  totalChildCount: number
+  completedChildCount: number
+  totalEstimatedHours: number
+  completedHours: number
+  progressPercentage: number
+
+  assignedToId: number | null
+  assignedToName: string | null
+  createdById: number
+  createdByName: string
+}
+
+export interface WorkItemLinkDto {
+  id: number
+  title: string
+  type: WorkItemType
+  status: string
+  boardId: number | null
+}
+
+export interface WorkItemChildDto {
+  id: number
+  title: string
+  type: WorkItemType
+  status: string
+  priority: string
+  estimatedHours: number | null
+  assignedToId: number | null
+  assignedToName: string | null
 }

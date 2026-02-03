@@ -11,9 +11,11 @@ import type {
   SprintPlanningContext,
   BulkOperationResult,
   BoardVelocity,
+
   SprintCapacity
 } from "../types/Sprint";
 import type { Taskboard } from "../types/Taskboard";
+import type { WorkItemDetailDto } from "../types/WorkItem";
 
 // Auth types
 export interface LoginCredentials {
@@ -135,7 +137,10 @@ export const updateSprintRetrospective = (sprintId: number, retrospective: strin
 // Backlog endpoints
 export const getProjectBacklog = (projectId: number) => api.get<WorkItem[]>(`/projects/${projectId}/backlog`);
 export const createBacklogItem = (projectId: number, workItem: WorkItemCreate) => api.post<WorkItem>(`/projects/${projectId}/backlog`, workItem);
-export const moveToBoard = (workItemId: number, boardId: number | null) => api.patch(`/workitems/${workItemId}/move-to-board`, { boardId });
+export const moveToBoard = (workItemId: number, boardId: number | null, sprintId?: number | null) => api.patch(`/workitems/${workItemId}/move-to-board`, { boardId, sprintId });
 export const returnWorkItemToBacklog = (workItemId: number) => api.patch(`/workitems/${workItemId}/return-to-backlog`);
 export const reorderBacklogItems = (projectId: number, itemOrders: Array<{ itemId: number; order: number }>) =>
   api.patch(`/projects/${projectId}/backlog/reorder`, { itemOrders });
+
+export const getWorkItemDetails = (workItemId: number) =>
+  api.get<WorkItemDetailDto>(`/workitems/${workItemId}/details`);

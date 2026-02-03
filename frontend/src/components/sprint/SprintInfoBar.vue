@@ -1,32 +1,40 @@
 <template>
-  <div class="sticky top-0 z-40 bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-6">
+  <div class="sticky top-0 z-40 bg-white border-x border-t border-gray-200 rounded-t-xl shadow-sm p-4">
     <div class="flex flex-col gap-4">
       
       <!-- TOP ROW: Title/Controls & Dates/Actions -->
       <div class="flex justify-between items-center gap-4">
-        <!-- LEFT: Title, Status, Controls -->
-        <div class="flex items-center gap-4 min-w-0">
-          <div v-if="sprint" class="flex items-center gap-3 min-w-0">
-             <h1 class="text-xl font-bold text-gray-900 tracking-tight truncate">
-              {{ sprint.name }}
-            </h1>
-            <span 
-              class="text-xs px-2.5 py-0.5 rounded-full font-medium border flex-shrink-0"
+        <!-- LEFT: Controls (Tabs) -->
+        <div class="flex items-center gap-4 min-w-0 flex-1">
+          <!-- Controls Slot (Toggle Buttons) -->
+          <div class="flex-shrink-0">
+             <slot name="controls"></slot>
+          </div>
+        </div>
+
+        <!-- RIGHT: Status, Dates, Selector, Menu -->
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <!-- Goal (Moved here) -->
+           <div v-if="sprint?.goal" class="flex items-center gap-2 max-w-md" :title="sprint.goal">
+              <span class="text-xs font-bold text-gray-500 tracking-wide">Sprint goal:</span>
+              <span class="text-sm text-gray-700 font-medium truncate block">{{ sprint.goal }}</span>
+           </div>
+           <div v-if="sprint && !sprint.goal" class="text-xs text-gray-400 italic">No goal set</div>
+
+          <!-- Vertical Divider -->
+          <div class="w-px h-5 bg-gray-200 mx-1"></div>
+
+          <!-- Status Badge -->
+          <div v-if="sprint">
+             <span 
+              class="text-xs px-2.5 py-1 rounded-full font-medium border"
               :class="getSprintStatusClass(sprint.status)"
             >
               {{ sprint.status }}
             </span>
           </div>
-          <div v-else class="text-xl font-bold text-gray-400">
-            No Sprint Selected
-          </div>
-          
-          <!-- Controls Slot (Toggle Buttons) -->
-          <slot name="controls"></slot>
-        </div>
 
-        <!-- RIGHT: Dates, Selector, Menu -->
-        <div class="flex items-center gap-4 flex-shrink-0">
+          <!-- Date Range -->
           <div v-if="sprint" class="flex items-center gap-1.5 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
               <CalendarIcon class="w-4 h-4 text-gray-400" />
               <span class="whitespace-nowrap font-medium">{{ formatDateRange(sprint) }}</span>
@@ -89,17 +97,8 @@
         </div>
       </div>
 
-      <!-- BOTTOM ROW: Goal & Stats -->
-      <div v-if="sprint" class="flex justify-between items-center gap-4 pt-3 border-t border-gray-100">
-         <!-- Goal -->
-         <div class="flex items-start gap-2 text-sm flex-1 min-w-0">
-            <span v-if="sprint.goal" class="text-xs font-bold text-blue-600 uppercase tracking-wide flex-shrink-0 mt-0.5">Goal:</span>
-            <p v-if="sprint.goal" class="text-gray-700 font-medium truncate max-w-2xl" :title="sprint.goal">
-              {{ sprint.goal }}
-            </p>
-            <span v-else class="text-gray-400 italic">No goal set</span>
-         </div>
-
+      <!-- BOTTOM ROW: Stats Only (Goal removed) -->
+      <div v-if="sprint" class="flex justify-end items-center gap-4 pt-3 border-t border-gray-100">
          <!-- Stats -->
          <div class="flex items-center gap-6 text-sm text-gray-500 flex-shrink-0">
             <!-- Days Remaining -->

@@ -1,92 +1,77 @@
 <template> <!--TODO: RENAME TO WORKITEM CARD? BoardCanvas use this for both sprint & kanban-->
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all">
+  <div 
+    class="bg-white rounded-lg shadow-sm border border-gray-200 border-l-[3px] overflow-hidden hover:shadow-md transition-all"
+    :class="getBorderClass(workItem.type)"
+  >
     <!-- Parent Item -->
     <div
-      class="p-4 cursor-move group"
+      class="p-3 cursor-move group relative"
       draggable="true"
       @dragstart="$emit('dragstart', workItem)"
     >
-      <!-- WorkItem Type Badge -->
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-2">
-          <!-- Expand/Collapse Button for Parents or PBIs/Features/Bugs -->
+      <!-- Header: Type, ID, Title, Priority -->
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <WorkItemTypeBadge :type="workItem.type as WorkItemType" :iconOnly="true" class="flex-shrink-0" />
+          <span class="text-sm font-bold text-gray-900 flex-shrink-0">{{ workItem.id }}</span>
           <button
-            v-if="hasChildren || workItem.type === 'PBI' || workItem.type === 'Feature' || workItem.type === 'Bug'"
-            @click.stop="toggleExpanded"
-            class="flex-shrink-0 text-gray-400 hover:text-gray-600"
+            type="button"
+            @click.stop="$emit('view-details', workItem.id)"
+            class="text-sm font-normal text-gray-900 hover:text-blue-600 truncate text-left leading-tight min-w-0"
+            :title="workItem.title"
           >
-            <svg
-              class="w-4 h-4 transition-transform"
-              :class="{ 'rotate-90': isExpanded }"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <WorkItemTypeBadge :type="workItem.type as WorkItemType" />
-          <span v-if="hasChildren" class="text-xs text-blue-600 font-medium">
-            {{ workItem.children.length }}
-          </span>
-        </div>
-        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <!-- Return to Backlog -->
-          <button
-            @click.stop="$emit('return-to-backlog', workItem)"
-            class="p-1 hover:bg-purple-50 rounded transition"
-            title="Return to Backlog"
-          >
-            <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
-            </svg>
-          </button>
-          <button
-            @click.stop="$emit('edit', workItem)"
-            class="p-1 hover:bg-gray-100 rounded transition"
-          >
-            <EditIcon className="w-4 h-4 text-gray-600" />
-          </button>
-          <button
-            @click.stop="$emit('delete', workItem.id)"
-            class="p-1 hover:bg-red-50 rounded transition"
-          >
-            <DeleteIcon className="w-4 h-4 text-red-600" />
+            {{ workItem.title }}
           </button>
         </div>
+        
+        <span :class="getPriorityClass(workItem.priority)" class="px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold uppercase tracking-wider flex-shrink-0 border border-current border-opacity-20">
+          {{ workItem.priority }}
+        </span>
       </div>
 
-      <!-- WorkItem Title -->
-      <h3 class="text-sm font-medium text-gray-800 mb-2">
-        {{ workItem.title }}
-      </h3>
-
       <!-- WorkItem Description (if exists) -->
-      <p v-if="workItem.description" class="text-xs text-gray-600 mb-3 line-clamp-2">
+      <p v-if="workItem.description" class="text-xs text-gray-500 mb-3 line-clamp-2 pl-6">
         {{ workItem.description }}
       </p>
 
-      <!-- WorkItem Meta Information -->
-      <div class="flex items-center justify-between text-xs text-gray-500">
-        <!-- Priority Badge -->
-        <span :class="getPriorityClass(workItem.priority)" class="px-2 py-1 rounded">
-          {{ workItem.priority }}
-        </span>
-
-        <!-- Due Date (if exists and with overdue warning) -->
-        <div v-if="workItem.dueDate" class="flex items-center gap-1">
-          <CalendarIcon className="w-3 h-3" />
-          <span :class="{ 'text-red-600 font-medium': isOverdue(workItem.dueDate) }">
-            {{ formatDueDate(workItem.dueDate) }}
-          </span>
+      <!-- Footer: Assignee & Meta -->
+      <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+        <!-- Left: Assignee -->
+        <div class="flex items-center gap-1.5 text-xs text-gray-600 min-w-0">
+          <div v-if="workItem.assignedToName" class="flex items-center gap-1.5 min-w-0" :title="workItem.assignedToName">
+              <div class="w-5 h-5 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-[10px] font-medium border border-blue-200 flex-shrink-0">
+                {{ getInitials(workItem.assignedToName) }}
+              </div>
+              <span class="font-medium truncate max-w-[90px]">{{ workItem.assignedToName }}</span>
+          </div>
+          <div v-else class="flex items-center gap-1.5 text-gray-400 min-w-0" title="Unassigned">
+              <div class="w-5 h-5 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+              </div>
+              <span class="italic text-[10px]">Unassigned</span>
+          </div>
         </div>
 
-        <!-- Time Tracking (if exists) - Show aggregated hours for parents -->
-        <div v-if="totalEstimatedHours || workItem.actualHours" class="flex items-center gap-1">
-          <ClockIcon className="w-3 h-3" />
-          <span :title="hasChildren ? 'Total including children' : ''">
-            {{ workItem.actualHours || 0 }}/{{ totalEstimatedHours }}h
-          </span>
+        <!-- Right: Stats -->
+        <div class="flex items-center gap-2 text-xs text-gray-500 flex-shrink-0">
+           <!-- Child Count Arrow -->
+           <button 
+             v-if="hasChildren || workItem.type === 'PBI' || workItem.type === 'Feature' || workItem.type === 'Bug'"
+             @click.stop="toggleExpanded"
+             class="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-[3px] hover:bg-yellow-100 transition-colors" 
+             :class="{ 'bg-yellow-100 border-yellow-300 text-yellow-800': isExpanded }"
+             title="Toggle Child Tasks"
+           >
+             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+             <span v-if="workItem.children && workItem.children.length > 0">{{ workItem.children.length }}</span>
+             <span v-else>0</span>
+             <svg class="w-2.5 h-2.5 transition-transform" :class="{ 'rotate-180': isExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+           </button>
+
+           <!-- Hours -->
+           <div v-if="totalEstimatedHours" class="text-xs text-gray-500 font-mono" title="Total Estimated Hours">
+             {{ totalEstimatedHours }}h
+           </div>
         </div>
       </div>
     </div>
@@ -103,22 +88,18 @@
         @click.stop
       >
         <div class="flex items-center gap-2 flex-1 min-w-0">
-          <WorkItemTypeBadge :type="child.type as WorkItemType" size="xs" />
-          <span class="truncate text-gray-700">{{ child.title }}</span>
+          <WorkItemTypeBadge :type="child.type as WorkItemType" size="xs" :iconOnly="true" />
+          <button 
+            @click.stop="$emit('view-details', child.id)"
+            class="truncate text-gray-700 hover:text-blue-600 font-medium text-left"
+          >
+            {{ child.title }}
+          </button>
         </div>
         <div class="flex items-center gap-2">
           <span v-if="child.estimatedHours" class="text-gray-500 font-medium">
             {{ child.estimatedHours }}h
           </span>
-          <div class="flex items-center gap-1 opacity-0 group-hover/child:opacity-100 transition-opacity">
-            <button
-              @click.stop="$emit('edit', child)"
-              class="p-1 hover:bg-gray-100 rounded transition"
-              title="Edit child item"
-            >
-              <EditIcon className="w-3 h-3 text-gray-600" />
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -146,13 +127,12 @@ import { defineComponent, type PropType, ref, computed } from 'vue';
 import type { WorkItem, WorkItemType } from '@/types/WorkItem';
 import type { BoardColumn } from '@/types/Project';
 import WorkItemTypeBadge from '../workItem/WorkItemTypeBadge.vue';
-import { EditIcon, DeleteIcon, CalendarIcon, ClockIcon } from '@/components/icons';
+import { DeleteIcon, CalendarIcon, ClockIcon } from '@/components/icons';
 
 export default defineComponent({
   name: 'KanbanCard',
   components: {
     WorkItemTypeBadge,
-    EditIcon,
     DeleteIcon,
     CalendarIcon,
     ClockIcon
@@ -167,7 +147,7 @@ export default defineComponent({
       default: () => []
     }
   },
-  emits: ['dragstart', 'click', 'edit', 'delete', 'return-to-backlog', 'add-child-task'],
+  emits: ['dragstart', 'click', 'delete', 'return-to-backlog', 'add-child-task', 'view-details'],
   setup(props) {
     const isExpanded = ref(false)
     
@@ -179,7 +159,7 @@ export default defineComponent({
       if (!hasChildren.value) {
         return props.workItem.estimatedHours || 0
       }
-      const childHours = props.workItem.children.reduce((sum: number, c: WorkItem) => sum + (c.estimatedHours || 0), 0)
+      const childHours = (props.workItem.children || []).reduce((sum: number, c: WorkItem) => sum + (c.estimatedHours || 0), 0)
       return (props.workItem.estimatedHours || 0) + childHours
     })
     
@@ -224,6 +204,19 @@ export default defineComponent({
     onAddChildTask() {
       console.log('Add Task Clicked for:', this.workItem);
       this.$emit('add-child-task', this.workItem);
+    },
+    getInitials(name: string) {
+      return name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '';
+    },
+    getBorderClass(type: string) {
+      const classes: Record<string, string> = {
+        'Task': 'border-l-yellow-400',
+        'Bug': 'border-l-red-500',
+        'PBI': 'border-l-blue-500',
+        'Feature': 'border-l-purple-500',
+        'Epic': 'border-l-orange-500'
+      };
+      return classes[type] || 'border-l-gray-300';
     }
   }
 });

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run type-check:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet add reference:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet list:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(npm run build:*)",
+      "Bash(ls:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet --version:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

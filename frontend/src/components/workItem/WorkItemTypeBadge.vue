@@ -24,7 +24,7 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
     </svg>
     
-    {{ type }}
+    <span v-if="!iconOnly" class="ml-1">{{ type }}</span>
   </span>
 </template>
 
@@ -35,12 +35,28 @@ export default defineComponent({
   name: 'WorkItemTypeBadge',
   props: {
     type: {
-      type: String as PropType<'Task' | 'Bug' | 'PBI' |'Feature' | 'Epic'>,
+      type: String as PropType<'Task' | 'Bug' | 'PBI' |'Feature' | 'Epic' | 'Unparented'>,
       required: true
+    },
+    iconOnly: {
+      type: Boolean,
+      default: false
     }
   },
   methods: {
     getBadgeClass() {
+      if (this.iconOnly) {
+         const classes: Record<string, string> = {
+          'Task': 'text-yellow-600',
+          'Bug': 'text-red-600',
+          'PBI': 'text-blue-600',
+          'Feature': 'text-purple-600',
+          'Epic': 'text-orange-600',
+          'Unparented': 'text-gray-500'
+        };
+        return (classes[this.type] || 'text-gray-600') + ' bg-transparent p-0';
+      }
+
       const classes: Record<string, string> = {
         'Task': 'bg-yellow-100 text-yellow-700',
         'Bug': 'bg-red-100 text-red-700',

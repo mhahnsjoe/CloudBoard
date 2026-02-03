@@ -29,6 +29,11 @@ public class WorkItemRepository : Repository<WorkItem>, IWorkItemRepository
             .Include(w => w.Children)
             .Include(w => w.Board)
                 .ThenInclude(b => b!.Project)
+            .Include(w => w.Sprint)
+            .Include(w => w.AssignedTo)
+            .Include(w => w.CreatedBy)
+            .Include(w => w.Children)
+                .ThenInclude(c => c.AssignedTo)
             .FirstOrDefaultAsync(w => w.Id == id, ct);
     }
 
@@ -48,6 +53,9 @@ public class WorkItemRepository : Repository<WorkItem>, IWorkItemRepository
     {
         return await DbSet
             .Where(w => w.BoardId == boardId && w.ParentId == null)
+            .Include(w => w.AssignedTo)
+            .Include(w => w.Children)
+                .ThenInclude(c => c.AssignedTo)
             .Include(w => w.Children)
                 .ThenInclude(c => c.Children)
                     .ThenInclude(c => c.Children)
@@ -78,6 +86,7 @@ public class WorkItemRepository : Repository<WorkItem>, IWorkItemRepository
         return await DbSet
             .Where(w => w.SprintId == sprintId)
             .Include(w => w.Children)
+            .Include(w => w.AssignedTo)
             .OrderBy(w => w.Status)
             .ToListAsync(ct);
     }

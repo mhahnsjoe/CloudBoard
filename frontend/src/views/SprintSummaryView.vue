@@ -27,6 +27,25 @@
         </div>
 
         <div class="flex items-center gap-4">
+          <!-- Navigation Tabs -->
+          <div class="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+             <router-link
+               :to="`/projects/${projectId}/boards/${boardId}`"
+               class="px-4 py-1.5 text-xs font-medium rounded-md transition-all text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
+             >
+               Taskboard
+             </router-link>
+             <router-link
+               :to="`/projects/${projectId}/boards/${boardId}`"
+               class="px-4 py-1.5 text-xs font-medium rounded-md transition-all text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
+             >
+               Board
+             </router-link>
+             <div class="px-4 py-1.5 text-xs font-medium rounded-md transition-all bg-white shadow-sm text-blue-600">
+               Analytics
+             </div>
+          </div>
+
           <SprintSelector
             :sprints="allSprints"
             :selectedSprintId="sprintId"

@@ -21,44 +21,38 @@
       @delete-sprint="$emit('delete-sprint', $event)"
     >
       <template #controls>
-         <div v-if="selectedSprintId" class="flex items-center gap-4">
-            <!-- View Toggle -->
-            <div class="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
-              <button
-                @click="toggleView('kanban')"
-                class="px-3 py-1 text-xs font-medium rounded-md transition-all"
-                :class="viewMode === 'kanban' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900'"
-              >
-                Board
-              </button>
-              <button
-                @click="toggleView('taskboard')"
-                class="px-3 py-1 text-xs font-medium rounded-md transition-all"
-                :class="viewMode === 'taskboard' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900'"
-              >
-                Taskboard
-              </button>
-            </div>
+          <div v-if="selectedSprintId" class="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+             <!-- Taskboard Tab -->
+             <button
+               @click="toggleView('taskboard')"
+               class="px-4 py-1.5 text-xs font-medium rounded-md transition-all"
+               :class="viewMode === 'taskboard' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'"
+             >
+               Taskboard
+             </button>
 
-            <nav class="flex items-center gap-2">
-              <router-link
-                v-if="selectedSprint?.status === 'Planning'"
-                :to="`/projects/${board?.projectId}/boards/${boardId}/sprint-planning?sprintId=${selectedSprintId}`"
-                class="text-xs font-medium text-gray-600 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-all"
-                active-class="text-blue-600 bg-blue-50"
-              >
-                Planning
-              </router-link>
-              <router-link
-                v-if="selectedSprintId"
-                :to="`/projects/${board?.projectId}/boards/${boardId}/sprints/${selectedSprintId}/summary`"
-                class="text-xs font-medium text-gray-600 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-all"
-                active-class="text-blue-600 bg-blue-50"
-              >
-                Insights
-              </router-link>
-            </nav>
-        </div>
+             <!-- Board (Kanban) Tab -->
+             <button
+               @click="toggleView('kanban')"
+               class="px-4 py-1.5 text-xs font-medium rounded-md transition-all"
+               :class="viewMode === 'kanban' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'"
+             >
+               Board
+             </button>
+
+             <!-- Analytics Tab -->
+             <button
+               @click="toggleView('analytics')"
+               class="px-4 py-1.5 text-xs font-medium rounded-md transition-all"
+               :class="viewMode === 'analytics' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'"
+             >
+               Analytics
+             </button>
+          </div>
+          
+          <!-- Planning Link (Separate, if needed, but user said 'just 3 tabs', so hiding it or moving it. 
+               The user specifically said JUST have the three tabs. I will remove Planning from this specific bar. 
+               Users can access planning via other means or I'll leave it out as requested.) -->
       </template>
       
       <template #actions>
@@ -76,12 +70,14 @@
       v-if="viewMode === 'kanban'"
       :workItems="filteredWorkItems"
       :columns="board?.columns || []"
+      :allowCreate="selectedSprint?.status === 'Planning'"
       @create-workitem="$emit('create-workitem', $event)"
       @edit-workitem="$emit('edit-workitem', $event)"
       @delete-workitem="$emit('delete-workitem', $event)"
       @update-status="(item, status) => $emit('update-status', item, status)"
       @return-to-backlog="$emit('return-to-backlog', $event)"
       @add-child-task="$emit('add-child-task', $event)"
+      @view-details="$emit('view-details', $event)"
     />
 
     <!-- Taskboard View -->
@@ -89,10 +85,17 @@
       v-else-if="viewMode === 'taskboard'"
       :taskboard="taskboardData"
       :loading="loadingTaskboard"
-      @edit-workitem="$emit('edit-workitem', $event)"
+      @view-details="$emit('view-details', $event)"
       @add-task="onAddTask"
-      @edit-task="$emit('edit-workitem', $event)"
       @update-task-status="handleUpdateTaskStatus"
+    />
+
+    <!-- Analytics View -->
+    <SprintAnalytics 
+      v-else-if="viewMode === 'analytics' && selectedSprint"
+      :sprint="selectedSprint"
+      :boardId="boardId"
+      @update-sprint="$emit('update-sprint', $event)"
     />
   </div>
 </template>
@@ -110,6 +113,7 @@ import SprintInfoBar from '../sprint/SprintInfoBar.vue'
 import SprintSelector from '../sprint/SprintSelector.vue'
 import BoardCanvas from '../board/BoardCanvas.vue'
 import SprintTaskboard from './taskboard/SprintTaskboard.vue'
+import SprintAnalytics from './SprintAnalytics.vue'
 
 export default defineComponent({
   name: 'SprintBoardView',
@@ -118,7 +122,8 @@ export default defineComponent({
     SprintInfoBar,
     SprintSelector,
     BoardCanvas,
-    SprintTaskboard
+    SprintTaskboard,
+    SprintAnalytics
   },
   props: {
     board: {
@@ -162,7 +167,9 @@ export default defineComponent({
     'delete-workitem',
     'update-status',
     'return-to-backlog',
-    'add-child-task'
+    'add-child-task',
+    'view-details',
+    'update-sprint'
   ],
   setup(props, { emit }) {
     const route = useRoute()
@@ -173,42 +180,25 @@ export default defineComponent({
       return props.sprints.find(s => s.id === props.selectedSprintId)
     })
 
-    const filteredWorkItems = computed(() => {
-      let items: WorkItem[]
-      
-      if (props.selectedSprintId === null) {
-        // Show backlog items (items without sprint)
-        items = props.workItems.filter(item => !item.sprintId)
-      } else {
-        // Show items in selected sprint
-        items = props.workItems.filter(item => item.sprintId === props.selectedSprintId)
-      }
-      
-      // Group hierarchically - only show root items with children
-      const rootItems = items.filter(item => !item.parentId)
-      
-      return rootItems.map(item => {
-        const children = items.filter(c => c.parentId === item.id)
-        
-        return {
-          ...item,
-          children: children,
-          childCount: children.length
-        }
-      })
-    })
+    // We no longer need to filter/group here as BoardDetailView handles sprint filtering
+    // and BoardCanvas handles hierarchical grouping.
+    const filteredWorkItems = computed(() => props.workItems)
 
-    const viewMode = ref<'kanban' | 'taskboard'>(route.name === 'Taskboard' ? 'taskboard' : 'kanban')
+    const getInitialViewMode = (): 'kanban' | 'taskboard' | 'analytics' => {
+      const view = route.query.view as string
+      if (['kanban', 'taskboard', 'analytics'].includes(view)) {
+         return view as 'kanban' | 'taskboard' | 'analytics'
+      }
+      return route.name === 'Taskboard' ? 'taskboard' : 'kanban'
+    }
+
+    const viewMode = ref<'kanban' | 'taskboard' | 'analytics'>(getInitialViewMode())
     const taskboardData = ref<Taskboard | null>(null)
     const loadingTaskboard = ref(false)
 
-    const toggleView = (mode: 'kanban' | 'taskboard') => {
+    const toggleView = (mode: 'kanban' | 'taskboard' | 'analytics') => {
       viewMode.value = mode
-      const path = mode === 'taskboard' 
-        ? `/projects/${props.board?.projectId}/boards/${props.boardId}/taskboard`
-        : `/projects/${props.board?.projectId}/boards/${props.boardId}`
-      
-      router.push(path)
+      router.replace({ ...route, query: { ...route.query, view: mode } })
     }
 
     const fetchTaskboard = async () => {
@@ -231,8 +221,18 @@ export default defineComponent({
       }
     }, { immediate: true })
 
+    watch(() => route.query.view, (newView) => {
+      const mode = newView as string
+      if (['kanban', 'taskboard', 'analytics'].includes(mode)) {
+        viewMode.value = mode as 'kanban' | 'taskboard' | 'analytics'
+      }
+    })
+
     watch(() => route.name, (newName) => {
-      viewMode.value = newName === 'Taskboard' ? 'taskboard' : 'kanban'
+      // Prioritize query param, fallback to route name logic
+      if (!route.query.view) {
+        viewMode.value = newName === 'Taskboard' ? 'taskboard' : 'kanban'
+      }
     })
 
     // Re-fetch when items might have changed

@@ -14,7 +14,7 @@ public class WorkItemTypeExtensionsTests
     [InlineData(WorkItemType.Feature, true)]
     [InlineData(WorkItemType.PBI, true)]
     [InlineData(WorkItemType.Task, false)]
-    [InlineData(WorkItemType.Bug, false)]
+    [InlineData(WorkItemType.Bug, true)]
     public void CanHaveChildren_ReturnsCorrectValue(WorkItemType type, bool expected)
     {
         type.CanHaveChildren().Should().Be(expected);

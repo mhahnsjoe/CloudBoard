@@ -76,6 +76,26 @@ namespace CloudBoard.Api.Controllers
         }
 
         /// <summary>
+        /// Gets detailed view of a work item including hierarchy info
+        /// </summary>
+        [HttpGet("~/api/v{version:apiVersion}/workitems/{id}/details")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WorkItemDetailDto>> GetWorkItemDetails(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var details = await _workItemService.GetDetailsAsync(id, userId);
+                return Ok(details);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+        }
+
+        /// <summary>
         /// Creates a new workItem
         /// </summary>
         [HttpPost]
@@ -235,7 +255,7 @@ namespace CloudBoard.Api.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                await _workItemService.MoveToBoardAsync(id, dto.BoardId, userId);
+                await _workItemService.MoveToBoardAsync(id, dto.BoardId, dto.SprintId, userId);
                 return NoContent();
             }
             catch (KeyNotFoundException ex)
@@ -245,6 +265,10 @@ namespace CloudBoard.Api.Controllers
             catch (UnauthorizedAccessException)
             {
                 return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 

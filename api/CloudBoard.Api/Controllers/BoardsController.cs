@@ -29,6 +29,7 @@ namespace CloudBoard.Api.Controllers
             var boards = await _context.Boards
                 .Where(b => b.ProjectId == projectId)
                 .Include(b => b.WorkItems)
+                    .ThenInclude(w => w.AssignedTo)
                 .Include(b => b.Columns.OrderBy(c => c.Order))
                 .ToListAsync();
 
@@ -41,6 +42,7 @@ namespace CloudBoard.Api.Controllers
         {
             var board = await _context.Boards
                 .Include(b => b.WorkItems)
+                    .ThenInclude(w => w.AssignedTo)
                 .Include(b => b.Columns.OrderBy(c => c.Order))
                 .FirstOrDefaultAsync(b => b.Id == id && b.ProjectId == projectId);
 

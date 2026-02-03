@@ -114,27 +114,30 @@ const fetchPlanningContext = async () => {
     planningContext.value = contextRes.data
     projectName.value = boardRes.data.name || 'Project'
     
-    // Check URL query param first
-    if (route.query.sprintId) {
-      const queryId = Number(route.query.sprintId)
-      const exists = planningContext.value.sprints.find(s => s.id === queryId)
-      if (exists) {
-        selectedSprintId.value = queryId
+    const context = planningContext.value
+    if (context) {
+      // Check URL query param first
+      if (route.query.sprintId) {
+        const queryId = Number(route.query.sprintId)
+        const exists = context.sprints.find(s => s.id === queryId)
+        if (exists) {
+          selectedSprintId.value = queryId
+        }
       }
-    }
 
-    // Auto-select active sprint if exists and none selected
-    if (!selectedSprintId.value) {
-      const activeSprint = planningContext.value.sprints.find(s => s.status === 'Active')
-      if (activeSprint) {
-        selectedSprintId.value = activeSprint.id
-      } else {
-        // Prefer Planning sprints over Completed ones
-        const planSprint = planningContext.value.sprints.find(s => s.status === 'Planning')
-        if (planSprint) {
-          selectedSprintId.value = planSprint.id
-        } else if (planningContext.value.sprints.length > 0) {
-          selectedSprintId.value = planningContext.value.sprints[0].id
+      // Auto-select active sprint if exists and none selected
+      if (!selectedSprintId.value) {
+        const activeSprint = context.sprints.find(s => s.status === 'Active')
+        if (activeSprint) {
+          selectedSprintId.value = activeSprint.id
+        } else {
+          // Prefer Planning sprints over Completed ones
+          const planSprint = context.sprints.find(s => s.status === 'Planning')
+          if (planSprint) {
+            selectedSprintId.value = planSprint.id
+          } else if (context.sprints.length > 0) {
+            selectedSprintId.value = context.sprints[0].id
+          }
         }
       }
     }
@@ -178,8 +181,8 @@ const fetchSprintData = async () => {
         status: w.status,
         priority: w.priority,
         estimatedHours: totalHours,
-        parentId: w.parentId,
-        parentTitle: w.parentTitle,
+        parentId: w.parentId ?? null,
+        parentTitle: w.parent?.title ?? null,
         childCount: children.length,
         children: children.map(c => ({
           id: c.id,
@@ -187,14 +190,14 @@ const fetchSprintData = async () => {
           type: c.type,
           status: c.status,
           priority: c.priority,
-          estimatedHours: c.estimatedHours,
-          parentId: c.parentId,
-          parentTitle: w.title,
+          estimatedHours: c.estimatedHours ?? 0,
+          parentId: c.parentId ?? null,
+          parentTitle: w.title ?? null,
           childCount: 0,
-          children: []
+          children: [] as WorkItemSummary[]
         }))
       }
-    })
+    }) as WorkItemSummary[]
   } catch (error) {
     console.error('Failed to fetch sprint data:', error)
   }

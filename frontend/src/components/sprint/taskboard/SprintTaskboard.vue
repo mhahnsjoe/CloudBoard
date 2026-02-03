@@ -1,5 +1,5 @@
 <template>
-  <div class="sprint-taskboard overflow-auto border border-gray-200 rounded-lg shadow-sm">
+  <div class="sprint-taskboard overflow-auto border-x border-b border-gray-200 rounded-b-xl shadow-sm">
     <!-- Loading State -->
     <div v-if="loading" class="flex flex-col items-center justify-center py-20 bg-white">
       <LoadingIcon className="w-10 h-10 text-blue-600 animate-spin" />
@@ -9,33 +9,31 @@
     <!-- Taskboard Grid -->
     <div v-else-if="taskboard" class="min-w-fit bg-white">
       <!-- Column Headers -->
-      <div class="flex border-b-2 border-gray-300 bg-gray-50 sticky top-0 z-30">
-        <div class="w-64 flex-shrink-0 p-4 font-bold text-gray-700 border-r border-gray-200 sticky left-0 bg-gray-50 z-40">
+      <div class="flex border-b border-gray-200 bg-white sticky top-0 z-30 shadow-sm">
+        <div class="w-64 flex-shrink-0 p-4 font-bold text-gray-700 border-r border-gray-200 sticky left-0 bg-white z-40 uppercase tracking-wider text-sm flex items-center">
           Work Items
         </div>
         <div 
           v-for="column in taskboard.columns" 
           :key="column"
-          class="flex-1 min-w-[200px] p-4 font-bold text-gray-700 border-r border-gray-200 text-center uppercase tracking-wider text-sm"
-          :class="{ 'bg-green-100/50': column === 'Done' }"
+          class="flex-1 min-w-[200px] p-4 font-bold text-gray-700 border-r border-gray-200 text-left flex items-center uppercase tracking-wider text-sm bg-white"
         >
           {{ column }}
-          <span class="text-xs text-gray-500 ml-1 font-normal">
-            ({{ getColumnTaskCount(column) }})
+          <span class="text-xs text-gray-500 ml-2 font-normal bg-gray-100 px-2 py-0.5 rounded-full">
+            {{ getColumnTaskCount(column) }}
           </span>
         </div>
       </div>
 
       <!-- Rows -->
-      <div class="taskboard-content">
+      <div class="taskboard-content flex flex-col gap-2">
         <TaskboardRow
           v-for="row in taskboard.rows"
           :key="row.id"
           :row="row"
           :columns="taskboard.columns"
-          @edit-row="$emit('edit-workitem', $event)"
+          @view-details="$emit('view-details', $event)"
           @add-task="$emit('add-task', $event)"
-          @edit-task="$emit('edit-task', $event)"
           @delete-task="$emit('delete-task', $event)"
           @update-task-status="handleUpdateTaskStatus"
         />
@@ -51,40 +49,7 @@
         <p class="text-gray-500">PBIs and standalone Bugs added to the sprint will appear here as rows.</p>
       </div>
 
-      <!-- Summary Footer -->
-      <div 
-        v-if="taskboard.rows.length > 0"
-        class="flex border-t-2 border-gray-300 bg-gray-100 sticky bottom-0 z-30"
-      >
-        <div class="w-64 flex-shrink-0 p-4 font-bold text-gray-800 border-r border-gray-200 sticky left-0 bg-gray-100">
-          <div class="flex justify-between items-center">
-            <span>TOTAL:</span>
-            <span class="text-blue-700">{{ taskboard.totalTasks }} TASKS</span>
-          </div>
-          <div class="text-xs text-gray-500 mt-1 font-normal">
-            {{ taskboard.completedTasks }} COMPLETED
-          </div>
-        </div>
-        <div class="flex-1 p-4 flex items-center gap-6">
-          <div class="flex items-center gap-3">
-            <span class="text-sm font-bold text-gray-700">TOTAL EFFORT:</span>
-            <span class="text-sm font-semibold bg-white px-2 py-1 rounded border border-gray-300">
-              {{ taskboard.completedHours }}h / {{ taskboard.totalHours }}h
-            </span>
-          </div>
-          <div class="flex-1 max-w-sm">
-            <div class="flex items-center gap-3">
-              <div class="flex-1 h-3 bg-gray-300 rounded-full overflow-hidden shadow-inner">
-                <div 
-                  class="h-full bg-green-500 shadow-sm transition-all duration-500"
-                  :style="{ width: `${overallProgress}%` }"
-                />
-              </div>
-              <span class="text-sm font-bold text-gray-700 w-10 text-right">{{ Math.round(overallProgress) }}%</span>
-            </div>
-          </div>
-        </div>
-      </div>
+
     </div>
   </div>
 </template>
@@ -103,9 +68,8 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  'edit-workitem': [workItem: any]
+  'view-details': [id: number]
   'add-task': [parentId: number]
-  'edit-task': [task: TaskboardTask]
   'delete-task': [taskId: number]
   'update-task-status': [task: TaskboardTask, newStatus: string]
 }>()

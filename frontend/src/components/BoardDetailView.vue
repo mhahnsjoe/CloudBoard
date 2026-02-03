@@ -31,7 +31,7 @@
         :board="board"
         :boardId="boardId"
         :projectBoards="boardStore.boards"
-        :workItems="workItems"
+        :workItems="displayWorkItems"
         :sprints="sprintStore.sprints"
         :selectedSprintId="selectedSprintId"
         @switch-board="switchBoard"
@@ -44,12 +44,13 @@
         @complete-sprint="handleCompleteSprint"
         @edit-sprint="editSprint"
         @delete-sprint="handleDeleteSprint"
-        @create-workitem="openCreateModalWithStatus"
+        @create-workitem="openBoardAddItemModal"
         @edit-workitem="editWorkItem"
         @delete-workitem="handleDelete"
         @update-status="handleUpdateWorkItemStatus"
         @return-to-backlog="handleReturnToBacklog"
         @add-child-task="handleAddChildTask"
+        @view-details="handleViewDetails"
       />
 
       <!-- Kanban Board (for Kanban and Backlog boards) -->
@@ -58,16 +59,18 @@
         :board="board"
         :boardId="boardId"
         :projectBoards="boardStore.boards"
-        :workItems="workItems"
+        :workItems="displayWorkItems"
         @switch-board="switchBoard"
         @create-board="openCreateBoardModal"
         @edit-board="editCurrentBoard"
         @delete-board="handleDeleteCurrentBoard"
-        @create-workitem="openCreateModalWithStatus"
+        @create-workitem="openBoardAddItemModal"
         @edit-workitem="editWorkItem"
         @delete-workitem="handleDelete"
         @update-status="handleUpdateWorkItemStatus"
         @return-to-backlog="handleReturnToBacklog"
+        @add-child-task="handleAddChildTask"
+        @view-details="handleViewDetails"
       />
     </div>
 
@@ -129,6 +132,31 @@
       @close="closeSprintModal"
       @save="handleSaveSprint"
     />
+
+    <!-- New Components -->
+    <BoardAddItemModal
+      v-if="showBoardAddItemModal"
+      :boardId="boardId"
+      :defaultStatus="defaultStatus"
+      :workItems="workItems"
+      :availableStatuses="availableStatuses"
+      :sprintId="selectedSprintId"
+      :parentPreselected="defaultParentId || undefined"
+      @close="closeBoardAddItemModal"
+      @create="handleCreateBoardItem"
+    />
+
+    <WorkItemDetailPanel
+      v-if="showDetailPanel"
+      :details="detailWorkItem"
+      :loading="detailLoading"
+      @close="closeDetailPanel"
+      @navigate="handleViewDetails"
+      @edit="onEditFromDetails"
+      @add-child="onAddChildFromDetails"
+      @delete="handleDelete"
+      @return-to-backlog="handleReturnToBacklog"
+    />
   </div>
 </template>
 
@@ -136,16 +164,18 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem, returnWorkItemToBacklog } from '@/services/api';
+import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem, returnWorkItemToBacklog, getWorkItemDetails } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useSprintStore } from '@/stores/sprint';
 import { useBoardStore } from '@/stores/boards';
 import { useToast } from '@/composables/useToast';
 import type { Board, BoardColumn } from '@/types/Project';
-import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
+import type { WorkItem, WorkItemCreate, WorkItemDetailDto, WorkItemType } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
 import { BOARD_TYPES, getStatusesFromBoard } from '@/types/Project';
 import WorkItemModal from './workItem/WorkItemModal.vue';
+import BoardAddItemModal from './workItem/BoardAddItemModal.vue';
+import WorkItemDetailPanel from './workItem/WorkItemDetailPanel.vue';
 import Modal from './common/Modal.vue';
 import SprintModal from './sprint/SprintModal.vue';
 import SprintBoardView from './sprint/SprintBoardView.vue';
@@ -161,6 +191,8 @@ export default defineComponent({
   name: 'BoardDetailView',
   components: {
     WorkItemModal,
+    BoardAddItemModal,
+    WorkItemDetailPanel,
     Modal,
     SprintModal,
     LoadingIcon,
@@ -203,13 +235,19 @@ export default defineComponent({
     // Sprint Management
     const showSprintModal = ref(false);
     const selectedSprintId = ref<number | null>(null);
+
+    // New workflow components state
+    const showBoardAddItemModal = ref(false);
+    const showDetailPanel = ref(false);
+    const detailWorkItem = ref<WorkItemDetailDto | null>(null);
+    const detailLoading = ref(false);
     
     const selectedSprint = computed(() => {
       if (selectedSprintId.value === null) return undefined;
       return sprintStore.sprints.find(s => s.id === selectedSprintId.value);
     });
 
-    const filteredWorkItems = computed(() => {
+    const displayWorkItems = computed(() => {
       if (selectedSprintId.value === null) {
         // Show backlog items (items without sprint)
         return workItems.value.filter(item => !item.sprintId);
@@ -334,10 +372,79 @@ export default defineComponent({
       }
     };
 
+    const handleViewDetails = async (id: number) => {
+      showDetailPanel.value = true;
+      detailLoading.value = true;
+      try {
+        const response = await getWorkItemDetails(id);
+        detailWorkItem.value = response.data;
+      } catch (err) {
+        console.error('Failed to fetch work item details:', err);
+        toastError('Failed to load details');
+        showDetailPanel.value = false;
+      } finally {
+        detailLoading.value = false;
+      }
+    };
+
+    const refreshOpenDetails = async () => {
+      if (showDetailPanel.value && detailWorkItem.value) {
+        await handleViewDetails(detailWorkItem.value.id);
+      }
+    };
+
     const openCreateModalWithStatus = (status: string) => {
       selectedWorkItem.value = null;
       defaultStatus.value = status;
       showWorkItemModal.value = true;
+    };
+
+    const openBoardAddItemModal = (status: string) => {
+      defaultStatus.value = status;
+      showBoardAddItemModal.value = true;
+    };
+
+    const closeBoardAddItemModal = () => {
+      showBoardAddItemModal.value = false;
+      defaultParentId.value = null;
+    };
+
+    const handleCreateBoardItem = async (data: WorkItemCreate) => {
+      try {
+        await createWorkItem(boardId.value, data);
+        closeBoardAddItemModal();
+        
+        await Promise.all([
+          fetchBoard(),
+          fetchSprints(),
+          refreshOpenDetails()
+        ]);
+
+        success('Item created successfully');
+      } catch (err) {
+        console.error('Failed to create board item:', err);
+        toastError('Failed to create item');
+      }
+    };
+
+    const closeDetailPanel = () => {
+      showDetailPanel.value = false;
+      detailWorkItem.value = null;
+    };
+
+    const onEditFromDetails = (details: WorkItemDetailDto) => {
+      // Convert DTO to WorkItem for the modal (rough conversion as partials are fine)
+      const workItem = workItems.value.find(w => w.id === details.id);
+      if (workItem) {
+        editWorkItem(workItem);
+      }
+    };
+
+    const onAddChildFromDetails = (details: WorkItemDetailDto) => {
+      const parent = workItems.value.find(w => w.id === details.id);
+      if (parent) {
+        handleAddChildTask(parent);
+      }
     };
 
     const editWorkItem = (workItem: WorkItem) => {
@@ -346,12 +453,10 @@ export default defineComponent({
     };
 
     const handleAddChildTask = (parentWorkItem: WorkItem) => {
-      // info('Debug: Add Child Task called'); 
       selectedWorkItem.value = null;
       defaultParentId.value = parentWorkItem.id;
       defaultStatus.value = parentWorkItem.status;
-      defaultType.value = 'Task'; // Always create tasks as children
-      showWorkItemModal.value = true;
+      showBoardAddItemModal.value = true;
     };
 
     const closeWorkItemModal = () => {
@@ -369,8 +474,14 @@ export default defineComponent({
           await createWorkItem(boardId.value, workItemData as WorkItemCreate);
         }
         closeWorkItemModal();
-        await fetchBoard();
-        await fetchSprints();
+        
+        await Promise.all([
+          fetchBoard(),
+          fetchSprints(),
+          refreshOpenDetails()
+        ]);
+        
+        success('Item saved');
       } catch (error) {
         console.error('Failed to save WorkItem:', error);
       }
@@ -380,8 +491,17 @@ export default defineComponent({
       if (confirm('Are you sure you want to delete this WorkItem?')) {
         try {
           await deleteWorkItem(boardId.value, id);
-          await fetchBoard();
-          await fetchSprints();
+          
+          // If the deleted item was the one in the detail panel, close it
+          if (detailWorkItem.value?.id === id) {
+            closeDetailPanel();
+          }
+
+          await Promise.all([
+            fetchBoard(),
+            fetchSprints(),
+            refreshOpenDetails()
+          ]);
         } catch (error) {
           console.error('Failed to delete WorkItem:', error);
         }
@@ -478,22 +598,38 @@ export default defineComponent({
           ...workItem,
           status: newStatus
         });
-        await fetchBoard();
+        
+        await Promise.all([
+          fetchBoard(),
+          refreshOpenDetails()
+        ]);
       } catch (error) {
         console.error('Failed to update WorkItem status:', error);
       }
     };
 
+    const handleMoveToBacklog = async (workItem: WorkItem) => {
+      try {
+        await returnWorkItemToBacklog(workItem.id);
+        
+        await Promise.all([
+          fetchBoard(),
+          refreshOpenDetails()
+        ]);
+
+        if (detailWorkItem.value?.id === workItem.id) {
+          closeDetailPanel();
+        }
+        success('Item returned to backlog');
+      } catch (error) {
+        console.error('Failed to return work item to backlog:', error);
+        toastError('Failed to return item to backlog');
+      }
+    };
+
     const handleReturnToBacklog = async (workItem: WorkItem) => {
       if (confirm('Return this item to the backlog? It will be removed from this board.')) {
-        try {
-          await returnWorkItemToBacklog(workItem.id)
-          await fetchBoard()
-          success('Item returned to backlog')
-        } catch (err) {
-          console.error('Failed to return to backlog:', err)
-          toastError('Failed to return item to backlog')
-        }
+        await handleMoveToBacklog(workItem);
       }
     }
 
@@ -545,7 +681,7 @@ export default defineComponent({
       selectedSprintId,
       selectedSprint,
       BOARD_TYPES,
-      filteredWorkItems,
+      displayWorkItems,
       availableStatuses,
       switchBoard,
       handleSprintSelect,
@@ -570,7 +706,18 @@ export default defineComponent({
       handleReturnToBacklog,
       handleAddChildTask,
       defaultParentId,
-      defaultType
+      defaultType,
+      showBoardAddItemModal,
+      showDetailPanel,
+      detailWorkItem,
+      detailLoading,
+      openBoardAddItemModal,
+      closeBoardAddItemModal,
+      handleCreateBoardItem,
+      handleViewDetails,
+      closeDetailPanel,
+      onEditFromDetails,
+      onAddChildFromDetails
     };
   }
 });

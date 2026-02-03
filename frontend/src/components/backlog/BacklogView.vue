@@ -424,11 +424,11 @@ export default defineComponent({
       workItemToMove.value = null
     }
 
-    const handleMoveToBoard = async (workItemId: number, boardId: number) => {
+    const handleMoveToBoard = async (workItemId: number, boardId: number, sprintId?: number) => {
       if (!workItemToMove.value) return
       
       try {
-        await moveToBoard(workItemId, boardId)
+        await moveToBoard(workItemId, boardId, sprintId)
         closeMoveToBoardModal()
         await fetchBacklogItems() // Refresh - item will disappear from backlog
       } catch (error) {

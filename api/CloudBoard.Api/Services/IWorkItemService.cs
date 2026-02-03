@@ -19,8 +19,9 @@ namespace CloudBoard.Api.Services
         Task AssignToSprintAsync(int sprintId, AssignSprintDto dto, int userId);
         Task<IEnumerable<WorkItem>> GetPathToRootAsync(int itemId);
         Task<IEnumerable<WorkItem>> GetBacklogItemsAsync(int projectId, CancellationToken ct = default);
-        Task MoveToBoardAsync(int workItemId, int? boardId, int userId);
+        Task MoveToBoardAsync(int workItemId, int? boardId, int? sprintId, int userId);
         Task ReturnToBacklogAsync(int workItemId, int userId);
         Task ReorderBacklogItemsAsync(int projectId, List<Controllers.ItemOrder> itemOrders, int userId);
+        Task<WorkItemDetailDto> GetDetailsAsync(int workItemId, int userId);
     }
 }

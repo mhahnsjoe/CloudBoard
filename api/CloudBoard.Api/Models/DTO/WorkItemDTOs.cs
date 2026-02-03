@@ -42,5 +42,6 @@ namespace CloudBoard.Api.Models.DTO
     public class MoveToBoardDto
     {
         public int? BoardId { get; set; }  // null = move to backlog
+        public int? SprintId { get; set; }
     }
 }
