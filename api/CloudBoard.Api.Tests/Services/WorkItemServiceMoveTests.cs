@@ -63,7 +63,7 @@ public class WorkItemServiceMoveTests
         _boardRepoMock.Setup(r => r.GetByIdAsync(10, default)).ReturnsAsync(board);
 
         // Act
-        await _service.MoveToBoardAsync(1, 10, 1);
+        await _service.MoveToBoardAsync(1, 10, null, 1);
 
         // Assert
         pbi.BoardId.Should().Be(10);
@@ -91,7 +91,7 @@ public class WorkItemServiceMoveTests
         _projectRepoMock.Setup(r => r.GetByIdAsync(1, default)).ReturnsAsync(project);
 
         // Act & Assert
-        var act = () => _service.MoveToBoardAsync(1, 10, 1);
+        var act = () => _service.MoveToBoardAsync(1, 10, null, 1);
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*Only PBI and Bug*");
     }
@@ -115,7 +115,7 @@ public class WorkItemServiceMoveTests
         _projectRepoMock.Setup(r => r.GetByIdAsync(1, default)).ReturnsAsync(project);
 
         // Act & Assert
-        var act = () => _service.MoveToBoardAsync(1, 10, 1);
+        var act = () => _service.MoveToBoardAsync(1, 10, null, 1);
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*Only PBI and Bug*");
     }
@@ -141,7 +141,7 @@ public class WorkItemServiceMoveTests
         _boardRepoMock.Setup(r => r.GetByIdAsync(10, default)).ReturnsAsync(board);
 
         // Act
-        await _service.MoveToBoardAsync(1, 10, 1);
+        await _service.MoveToBoardAsync(1, 10, null, 1);
 
         // Assert
         bug.BoardId.Should().Be(10);
@@ -171,7 +171,7 @@ public class WorkItemServiceMoveTests
         _boardRepoMock.Setup(r => r.GetByIdAsync(10, default)).ReturnsAsync(board);
 
         // Act
-        await _service.MoveToBoardAsync(1, 10, 1);
+        await _service.MoveToBoardAsync(1, 10, null, 1);
 
         // Assert
         pbi.ParentId.Should().Be(5); // Parent link preserved!
@@ -217,7 +217,7 @@ public class WorkItemServiceMoveTests
         _boardRepoMock.Setup(r => r.GetByIdAsync(10, default)).ReturnsAsync(board);
 
         // Act
-        await _service.MoveToBoardAsync(1, 10, 1);
+        await _service.MoveToBoardAsync(1, 10, null, 1);
 
         // Assert
         pbi.BoardId.Should().Be(10);
