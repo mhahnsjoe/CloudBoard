@@ -627,9 +627,9 @@ export default defineComponent({
       }
     };
 
-    const handleReturnToBacklog = async (workItem: WorkItem) => {
+    const handleReturnToBacklog = async (workItem: { id: number }) => {
       if (confirm('Return this item to the backlog? It will be removed from this board.')) {
-        await handleMoveToBacklog(workItem);
+        await handleMoveToBacklog(workItem as WorkItem);
       }
     }
 

@@ -9,6 +9,7 @@ export interface TaskboardRow {
     remainingHours: number
     progressPercentage: number
     tasks: TaskboardTask[]
+    assignedToName?: string | null
 }
 
 export interface TaskboardTask {

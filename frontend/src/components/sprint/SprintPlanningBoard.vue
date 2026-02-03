@@ -43,7 +43,7 @@
       <SprintPlanningColumn
         :title="selectedSprint?.name || 'Select a Sprint'"
         :items="sprintItems"
-        :capacity="sprintCapacity"
+        :capacity="sprintCapacity || undefined"
         :emptyMessage="selectedSprintId ? 'Drop items to add to sprint' : 'Select a sprint first'"
         @item-drop="handleMoveToSprint"
         @item-dragstart="setDraggingItem"

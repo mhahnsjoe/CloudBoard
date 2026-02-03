@@ -86,7 +86,7 @@ const chartOptions = {
       display: false
     },
     tooltip: {
-      mode: 'index',
+      mode: 'index' as const,
       intersect: false
     }
   },

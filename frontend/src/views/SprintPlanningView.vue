@@ -37,7 +37,7 @@
     <!-- Sprint Modal -->
     <SprintModal
       v-if="showSprintModal"
-      :sprint="editingSprint"
+      :sprint="editingSprint || undefined"
       :boardId="boardId"
       @close="showSprintModal = false"
       @save="handleSaveSprint"
@@ -135,7 +135,7 @@ const fetchPlanningContext = async () => {
           const planSprint = context.sprints.find(s => s.status === 'Planning')
           if (planSprint) {
             selectedSprintId.value = planSprint.id
-          } else if (context.sprints.length > 0) {
+          } else if (context.sprints.length > 0 && context.sprints[0]) {
             selectedSprintId.value = context.sprints[0].id
           }
         }

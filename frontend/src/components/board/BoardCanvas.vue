@@ -4,6 +4,7 @@
       v-for="column in orderedColumns"
       :key="column.id"
       class="flex flex-col bg-gray-100 h-full border-r border-gray-200 last:border-r-0"
+      data-testid="board-column"
     >
       <!-- Column Header -->
       <div class="flex items-center justify-between p-4 bg-white border-b border-gray-200">
@@ -11,16 +12,20 @@
           {{ column.name }}
         </h2>
         <div class="flex items-center gap-2">
-          <span class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+          <span 
+            class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full"
+            data-testid="column-count-badge"
+          >
             {{ getWorkItemsByStatus(column.name).length }}
           </span>
         </div>
       </div>
 
       <!-- New Item Button (Leftmost Column Only) -->
-      <div v-if="column.order === 0 && allowCreate" class="px-3 pt-3">
+      <div v-if="column.order === 0 && allowCreate" class="px-3 pt-3" data-testid="new-item-container">
         <button
           @click="$emit('create-workitem', column.name)"
+          data-testid="new-item-button"
           class="w-full py-2 px-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center gap-2 bg-white/50"
         >
           <PlusIcon className="w-4 h-4" />
@@ -34,6 +39,7 @@
         @dragover.prevent
         @dragenter.prevent
         class="flex-1 p-3 space-y-3 min-h-[500px]"
+        data-testid="board-column-dropzone"
       >
         <KanbanCard
           v-for="workItem in getWorkItemsByStatus(column.name)"
@@ -43,8 +49,6 @@
           @dragstart="onDragStart($event, workItem)"
           @dragend="onDragEnd"
           @edit="$emit('edit-workitem', $event)"
-          @delete="$emit('delete-workitem', workItem.id)"
-          @return-to-backlog="$emit('return-to-backlog', workItem)"
           @add-child-task="$emit('add-child-task', $event)"
           @view-details="$emit('view-details', $event)"
         />
@@ -81,9 +85,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'create-workitem': [status: string]
   'edit-workitem': [workItem: WorkItem]
-  'delete-workitem': [id: number]
   'update-status': [workItem: WorkItem, newStatus: string]
-  'return-to-backlog': [workItem: WorkItem]
   'add-child-task': [parentWorkItem: WorkItem]
   'view-details': [workItemId: number]
 }>()
@@ -111,10 +113,10 @@ const getWorkItemsByStatus = (status: string) => {
 
 const isDragging = ref(false)
 
-const onDragStart = (event: DragEvent, workItem: WorkItem) => {
+const onDragStart = (event: any, workItem: WorkItem) => {
   isDragging.value = true
   draggedWorkItem.value = workItem
-  if (event.dataTransfer) {
+  if (event && event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move'
   }
 }

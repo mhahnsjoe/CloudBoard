@@ -1,3 +1,5 @@
+import type { WorkItemType } from './WorkItem'
+
 export interface Sprint {
   id: number
   name: string
@@ -62,7 +64,7 @@ export interface SprintPlanningContext {
 export interface WorkItemSummary {
   id: number
   title: string
-  type: string
+  type: WorkItemType
   status: string
   priority: string
   estimatedHours: number | null
