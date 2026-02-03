@@ -19,6 +19,7 @@ namespace CloudBoard.Api.Models
         public DateTime? DueDate { get; set; }
         public decimal? EstimatedHours { get; set; }
         public decimal? ActualHours { get; set; }
+        public decimal? RemainingHours { get; set; }
         public int? BacklogOrder { get; set; }
         #endregion
 
@@ -73,6 +74,16 @@ namespace CloudBoard.Api.Models
         /// Calculates completion percentage based on children
         /// </summary>
         public decimal CompletionPercentage => CalculateCompletionPercentage();
+
+        /// <summary>
+        /// Calculates completed hours from children marked as Done
+        /// </summary>
+        public decimal CompletedChildHours => CalculateCompletedChildHours();
+
+        /// <summary>
+        /// Calculates remaining hours from children not Done
+        /// </summary>
+        public decimal RemainingChildHours => CalculateRemainingChildHours();
         #endregion
 
         #region Private Calculation Methods
@@ -113,6 +124,22 @@ namespace CloudBoard.Api.Models
 
             var completedChildren = Children.Count(c => c.Status == "Done");
             return Children.Count == 0 ? 0 : (decimal)completedChildren / Children.Count * 100;
+        }
+
+        private decimal CalculateCompletedChildHours()
+        {
+            if (!HasChildren)
+                return Status == "Done" ? (EstimatedHours ?? 0) : 0;
+
+            return Children.Sum(c => c.CompletedChildHours);
+        }
+
+        private decimal CalculateRemainingChildHours()
+        {
+            if (!HasChildren)
+                return Status == "Done" ? 0 : (EstimatedHours ?? 0);
+
+            return Children.Sum(c => c.RemainingChildHours);
         }
         #endregion
     }

@@ -26,6 +26,8 @@ public class SprintRepository : Repository<Sprint>, ISprintRepository
             .Include(s => s.WorkItems)
             .Include(s => s.Board)
                 .ThenInclude(b => b.Project)
+            .Include(s => s.Board)
+                .ThenInclude(b => b.Columns)
             .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 

@@ -9,6 +9,21 @@ namespace CloudBoard.Api.Models
         public string? Goal { get; set; }
         public SprintStatus Status { get; set; } = SprintStatus.Planning;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Team capacity in hours for this sprint
+        /// </summary>
+        public decimal? CapacityHours { get; set; }
+
+        /// <summary>
+        /// Sprint retrospective notes (markdown supported)
+        /// </summary>
+        public string? Retrospective { get; set; }
+
+        /// <summary>
+        /// Date retrospective was completed
+        /// </summary>
+        public DateTime? RetrospectiveDate { get; set; }
         
         // Foreign Key
         public int BoardId { get; set; }
@@ -24,6 +39,11 @@ namespace CloudBoard.Api.Models
         public decimal TotalEstimatedHours => WorkItems?.Sum(w => w.EstimatedHours ?? 0) ?? 0;
         public decimal CompletedEstimatedHours => WorkItems?.Where(w => w.Status == "Done").Sum(w => w.EstimatedHours ?? 0) ?? 0;
         public int DaysRemaining => (EndDate.Date - DateTime.UtcNow.Date).Days;
+
+        public decimal CapacityUtilization => 
+            CapacityHours.HasValue && CapacityHours.Value > 0 
+                ? (TotalEstimatedHours / CapacityHours.Value) * 100 
+                : 0;
     }
 
     public enum SprintStatus

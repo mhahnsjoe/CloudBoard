@@ -46,6 +46,16 @@ export function getPriorityBadgeClass(priority: string): string {
   return classes[priority] || 'bg-gray-100 text-gray-600'
 }
 
+export function getPriorityClass(priority: string): string {
+  const classes: Record<string, string> = {
+    'Low': 'text-gray-500',
+    'Medium': 'text-yellow-600',
+    'High': 'text-orange-600',
+    'Critical': 'text-red-600'
+  }
+  return classes[priority] || 'text-gray-500'
+}
+
 export function getBoardTypeClass(type: string): string {
   const classes: Record<string, string> = {
     'Kanban': 'bg-blue-100 text-blue-700',

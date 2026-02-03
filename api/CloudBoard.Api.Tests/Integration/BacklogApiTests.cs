@@ -78,7 +78,7 @@ public class BacklogApiTests : IntegrationTestBase
         var createResponse = await Client.PostAsJsonAsync($"/api/v1/projects/{projectId}/backlog", new
         {
             Title = "Move Me",
-            Type = "Task",
+            Type = "PBI",
             Status = "To Do",
             Priority = "Medium"
         });

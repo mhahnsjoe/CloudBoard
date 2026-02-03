@@ -2,7 +2,20 @@ import axios from "axios";
 import type { WorkItem, WorkItemCreate, WorkItemEdit } from "../types/WorkItem";
 import type { Project, ProjectCreate, Board, BoardCreate } from "../types/Project";
 import type { AuthResponse, User } from "../stores/auth";
-import type { Sprint, CreateSprintDto, UpdateSprintDto, SprintStats, BurndownPoint } from "../types/Sprint";
+import type {
+  Sprint,
+  CreateSprintDto,
+  UpdateSprintDto,
+  SprintStats,
+  BurndownPoint,
+  SprintPlanningContext,
+  BulkOperationResult,
+  BoardVelocity,
+
+  SprintCapacity
+} from "../types/Sprint";
+import type { Taskboard } from "../types/Taskboard";
+import type { WorkItemDetailDto } from "../types/WorkItem";
 
 // Auth types
 export interface LoginCredentials {
@@ -94,12 +107,40 @@ export const completeSprint = (sprintId: number) => api.patch<{ movedToBacklog: 
 export const deleteSprint = (sprintId: number) => api.delete(`/sprints/${sprintId}`);
 export const getSprintStats = (sprintId: number) => api.get<SprintStats>(`/sprints/${sprintId}/stats`);
 export const getSprintBurndown = (sprintId: number) => api.get<BurndownPoint[]>(`/sprints/${sprintId}/burndown`);
+export const getSprintTaskboard = (sprintId: number) => api.get<Taskboard>(`/sprints/${sprintId}/taskboard`);
 export const assignWorkItemToSprint = (workItemId: number, sprintId: number | null) => api.patch(`/workitems/${workItemId}/assign-sprint`, { sprintId });
 
+// Sprint Planning
+export const getSprintPlanningContext = (boardId: number) =>
+  api.get<SprintPlanningContext>(`/boards/${boardId}/sprint-planning`)
+
+export const bulkAssignToSprint = (sprintId: number, workItemIds: number[]) =>
+  api.post<BulkOperationResult>(`/sprints/${sprintId}/items/assign`, { workItemIds })
+
+export const bulkUnassignFromSprint = (sprintId: number, workItemIds: number[]) =>
+  api.post<BulkOperationResult>(`/sprints/${sprintId}/items/unassign`, { workItemIds })
+
+// Velocity & Capacity
+export const getBoardVelocity = (boardId: number, count: number = 6) =>
+  api.get<BoardVelocity>(`/boards/${boardId}/velocity`, { params: { count } })
+
+export const getSprintCapacity = (sprintId: number) =>
+  api.get<SprintCapacity>(`/sprints/${sprintId}/capacity`)
+
+export const setSprintCapacity = (sprintId: number, capacityHours: number) =>
+  api.put(`/sprints/${sprintId}/capacity`, { capacityHours })
+
+// Retrospective
+export const updateSprintRetrospective = (sprintId: number, retrospective: string) =>
+  api.put(`/sprints/${sprintId}/retrospective`, { retrospective })
+
 // Backlog endpoints
-export const getProjectBacklog = (projectId: number) =>  api.get<WorkItem[]>(`/projects/${projectId}/backlog`);
+export const getProjectBacklog = (projectId: number) => api.get<WorkItem[]>(`/projects/${projectId}/backlog`);
 export const createBacklogItem = (projectId: number, workItem: WorkItemCreate) => api.post<WorkItem>(`/projects/${projectId}/backlog`, workItem);
-export const moveToBoard = (workItemId: number, boardId: number | null) => api.patch(`/workitems/${workItemId}/move-to-board`, { boardId });
+export const moveToBoard = (workItemId: number, boardId: number | null, sprintId?: number | null) => api.patch(`/workitems/${workItemId}/move-to-board`, { boardId, sprintId });
 export const returnWorkItemToBacklog = (workItemId: number) => api.patch(`/workitems/${workItemId}/return-to-backlog`);
 export const reorderBacklogItems = (projectId: number, itemOrders: Array<{ itemId: number; order: number }>) =>
   api.patch(`/projects/${projectId}/backlog/reorder`, { itemOrders });
+
+export const getWorkItemDetails = (workItemId: number) =>
+  api.get<WorkItemDetailDto>(`/workitems/${workItemId}/details`);

@@ -31,7 +31,7 @@
         :board="board"
         :boardId="boardId"
         :projectBoards="boardStore.boards"
-        :workItems="workItems"
+        :workItems="displayWorkItems"
         :sprints="sprintStore.sprints"
         :selectedSprintId="selectedSprintId"
         @switch-board="switchBoard"
@@ -44,11 +44,13 @@
         @complete-sprint="handleCompleteSprint"
         @edit-sprint="editSprint"
         @delete-sprint="handleDeleteSprint"
-        @create-workitem="openCreateModalWithStatus"
+        @create-workitem="openBoardAddItemModal"
         @edit-workitem="editWorkItem"
         @delete-workitem="handleDelete"
         @update-status="handleUpdateWorkItemStatus"
         @return-to-backlog="handleReturnToBacklog"
+        @add-child-task="handleAddChildTask"
+        @view-details="handleViewDetails"
       />
 
       <!-- Kanban Board (for Kanban and Backlog boards) -->
@@ -57,16 +59,18 @@
         :board="board"
         :boardId="boardId"
         :projectBoards="boardStore.boards"
-        :workItems="workItems"
+        :workItems="displayWorkItems"
         @switch-board="switchBoard"
         @create-board="openCreateBoardModal"
         @edit-board="editCurrentBoard"
         @delete-board="handleDeleteCurrentBoard"
-        @create-workitem="openCreateModalWithStatus"
+        @create-workitem="openBoardAddItemModal"
         @edit-workitem="editWorkItem"
         @delete-workitem="handleDelete"
         @update-status="handleUpdateWorkItemStatus"
         @return-to-backlog="handleReturnToBacklog"
+        @add-child-task="handleAddChildTask"
+        @view-details="handleViewDetails"
       />
     </div>
 
@@ -76,8 +80,11 @@
       :workItem="selectedWorkItem"
       :boardId="boardId"
       :defaultStatus="defaultStatus"
+      :defaultType="defaultType"
+      :parentId="defaultParentId"
       :sprintId="selectedSprintId"
       :availableStatuses="availableStatuses"
+      :availableParents="workItems"
       @close="closeWorkItemModal"
       @save="handleSaveWorkItem"
     />
@@ -125,6 +132,31 @@
       @close="closeSprintModal"
       @save="handleSaveSprint"
     />
+
+    <!-- New Components -->
+    <BoardAddItemModal
+      v-if="showBoardAddItemModal"
+      :boardId="boardId"
+      :defaultStatus="defaultStatus"
+      :workItems="workItems"
+      :availableStatuses="availableStatuses"
+      :sprintId="selectedSprintId"
+      :parentPreselected="defaultParentId || undefined"
+      @close="closeBoardAddItemModal"
+      @create="handleCreateBoardItem"
+    />
+
+    <WorkItemDetailPanel
+      v-if="showDetailPanel"
+      :details="detailWorkItem"
+      :loading="detailLoading"
+      @close="closeDetailPanel"
+      @navigate="handleViewDetails"
+      @edit="onEditFromDetails"
+      @add-child="onAddChildFromDetails"
+      @delete="handleDelete"
+      @return-to-backlog="handleReturnToBacklog"
+    />
   </div>
 </template>
 
@@ -132,15 +164,18 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem, returnWorkItemToBacklog } from '@/services/api';
+import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem, returnWorkItemToBacklog, getWorkItemDetails } from '@/services/api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useSprintStore } from '@/stores/sprint';
 import { useBoardStore } from '@/stores/boards';
+import { useToast } from '@/composables/useToast';
 import type { Board, BoardColumn } from '@/types/Project';
-import type { WorkItem, WorkItemCreate } from '@/types/WorkItem';
+import type { WorkItem, WorkItemCreate, WorkItemDetailDto, WorkItemType } from '@/types/WorkItem';
 import type { Sprint, CreateSprintDto, UpdateSprintDto } from '@/types/Sprint';
 import { BOARD_TYPES, getStatusesFromBoard } from '@/types/Project';
 import WorkItemModal from './workItem/WorkItemModal.vue';
+import BoardAddItemModal from './workItem/BoardAddItemModal.vue';
+import WorkItemDetailPanel from './workItem/WorkItemDetailPanel.vue';
 import Modal from './common/Modal.vue';
 import SprintModal from './sprint/SprintModal.vue';
 import SprintBoardView from './sprint/SprintBoardView.vue';
@@ -156,6 +191,8 @@ export default defineComponent({
   name: 'BoardDetailView',
   components: {
     WorkItemModal,
+    BoardAddItemModal,
+    WorkItemDetailPanel,
     Modal,
     SprintModal,
     LoadingIcon,
@@ -173,6 +210,7 @@ export default defineComponent({
     const { confirm } = useConfirm();
     const sprintStore = useSprintStore();
     const boardStore = useBoardStore();
+    const { success, error: toastError, info } = useToast();
 
     const board = ref<Board | null>(null);
     const workItems = ref<WorkItem[]>([]);
@@ -182,6 +220,8 @@ export default defineComponent({
     const showWorkItemModal = ref(false);
     const selectedWorkItem = ref<WorkItem | null>(null);
     const defaultStatus = ref<string>('To Do');
+    const defaultParentId = ref<number | null>(null);
+    const defaultType = ref<WorkItemType>('Task');
 
     // Board Management
     const showBoardModal = ref(false);
@@ -195,13 +235,19 @@ export default defineComponent({
     // Sprint Management
     const showSprintModal = ref(false);
     const selectedSprintId = ref<number | null>(null);
+
+    // New workflow components state
+    const showBoardAddItemModal = ref(false);
+    const showDetailPanel = ref(false);
+    const detailWorkItem = ref<WorkItemDetailDto | null>(null);
+    const detailLoading = ref(false);
     
     const selectedSprint = computed(() => {
       if (selectedSprintId.value === null) return undefined;
       return sprintStore.sprints.find(s => s.id === selectedSprintId.value);
     });
 
-    const filteredWorkItems = computed(() => {
+    const displayWorkItems = computed(() => {
       if (selectedSprintId.value === null) {
         // Show backlog items (items without sprint)
         return workItems.value.filter(item => !item.sprintId);
@@ -233,6 +279,14 @@ export default defineComponent({
       if (!boardId.value) return;
       try {
         await sprintStore.fetchSprints(boardId.value);
+        
+        // Auto-select active sprint if one exists and nothing is selected
+        if (selectedSprintId.value === null) {
+          const activeSprint = sprintStore.sprints.find(s => s.status === 'Active');
+          if (activeSprint) {
+            selectedSprintId.value = activeSprint.id;
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch sprints:', error);
       }
@@ -271,9 +325,10 @@ export default defineComponent({
         }
         closeSprintModal();
         await fetchSprints();
-      } catch (error) {
-        console.error('Failed to save sprint:', error);
-        alert('Failed to save sprint');
+        success('Sprint saved successfully');
+      } catch (err) {
+        console.error('Failed to save sprint:', err);
+        toastError('Failed to save sprint');
       }
     };
 
@@ -281,9 +336,10 @@ export default defineComponent({
       try {
         await sprintStore.startSprint(sprintId);
         await fetchSprints();
-      } catch (error) {
-        console.error('Failed to start sprint:', error);
-        alert('Failed to start sprint. Make sure no other sprint is active.');
+        success('Sprint started!');
+      } catch (err) {
+        console.error('Failed to start sprint:', err);
+        toastError('Failed to start sprint. Make sure no other sprint is active.');
       }
     };
 
@@ -293,10 +349,10 @@ export default defineComponent({
           const result = await sprintStore.completeSprint(sprintId);
           await fetchSprints();
           await fetchBoard();
-          alert(`Sprint completed! ${result.movedToBacklog} items moved to backlog.`);
-        } catch (error) {
-          console.error('Failed to complete sprint:', error);
-          alert('Failed to complete sprint');
+          success(`Sprint completed! ${result.movedToBacklog} items moved to backlog.`);
+        } catch (err) {
+          console.error('Failed to complete sprint:', err);
+          toastError('Failed to complete sprint');
         }
       }
     };
@@ -308,10 +364,32 @@ export default defineComponent({
           selectedSprintId.value = null;
           await fetchSprints();
           await fetchBoard();
-        } catch (error) {
-          console.error('Failed to delete sprint:', error);
-          alert('Failed to delete sprint');
+          success('Sprint deleted');
+        } catch (err) {
+          console.error('Failed to delete sprint:', err);
+          toastError('Failed to delete sprint');
         }
+      }
+    };
+
+    const handleViewDetails = async (id: number) => {
+      showDetailPanel.value = true;
+      detailLoading.value = true;
+      try {
+        const response = await getWorkItemDetails(id);
+        detailWorkItem.value = response.data;
+      } catch (err) {
+        console.error('Failed to fetch work item details:', err);
+        toastError('Failed to load details');
+        showDetailPanel.value = false;
+      } finally {
+        detailLoading.value = false;
+      }
+    };
+
+    const refreshOpenDetails = async () => {
+      if (showDetailPanel.value && detailWorkItem.value) {
+        await handleViewDetails(detailWorkItem.value.id);
       }
     };
 
@@ -321,14 +399,71 @@ export default defineComponent({
       showWorkItemModal.value = true;
     };
 
+    const openBoardAddItemModal = (status: string) => {
+      defaultStatus.value = status;
+      showBoardAddItemModal.value = true;
+    };
+
+    const closeBoardAddItemModal = () => {
+      showBoardAddItemModal.value = false;
+      defaultParentId.value = null;
+    };
+
+    const handleCreateBoardItem = async (data: WorkItemCreate) => {
+      try {
+        await createWorkItem(boardId.value, data);
+        closeBoardAddItemModal();
+        
+        await Promise.all([
+          fetchBoard(),
+          fetchSprints(),
+          refreshOpenDetails()
+        ]);
+
+        success('Item created successfully');
+      } catch (err) {
+        console.error('Failed to create board item:', err);
+        toastError('Failed to create item');
+      }
+    };
+
+    const closeDetailPanel = () => {
+      showDetailPanel.value = false;
+      detailWorkItem.value = null;
+    };
+
+    const onEditFromDetails = (details: WorkItemDetailDto) => {
+      // Convert DTO to WorkItem for the modal (rough conversion as partials are fine)
+      const workItem = workItems.value.find(w => w.id === details.id);
+      if (workItem) {
+        editWorkItem(workItem);
+      }
+    };
+
+    const onAddChildFromDetails = (details: WorkItemDetailDto) => {
+      const parent = workItems.value.find(w => w.id === details.id);
+      if (parent) {
+        handleAddChildTask(parent);
+      }
+    };
+
     const editWorkItem = (workItem: WorkItem) => {
       selectedWorkItem.value = workItem;
       showWorkItemModal.value = true;
     };
 
+    const handleAddChildTask = (parentWorkItem: WorkItem) => {
+      selectedWorkItem.value = null;
+      defaultParentId.value = parentWorkItem.id;
+      defaultStatus.value = parentWorkItem.status;
+      showBoardAddItemModal.value = true;
+    };
+
     const closeWorkItemModal = () => {
       showWorkItemModal.value = false;
       selectedWorkItem.value = null;
+      defaultParentId.value = null;
+      defaultType.value = 'Task';
     };
 
     const handleSaveWorkItem = async (workItemData: WorkItem | WorkItemCreate) => {
@@ -339,8 +474,14 @@ export default defineComponent({
           await createWorkItem(boardId.value, workItemData as WorkItemCreate);
         }
         closeWorkItemModal();
-        await fetchBoard();
-        await fetchSprints();
+        
+        await Promise.all([
+          fetchBoard(),
+          fetchSprints(),
+          refreshOpenDetails()
+        ]);
+        
+        success('Item saved');
       } catch (error) {
         console.error('Failed to save WorkItem:', error);
       }
@@ -350,8 +491,17 @@ export default defineComponent({
       if (confirm('Are you sure you want to delete this WorkItem?')) {
         try {
           await deleteWorkItem(boardId.value, id);
-          await fetchBoard();
-          await fetchSprints();
+          
+          // If the deleted item was the one in the detail panel, close it
+          if (detailWorkItem.value?.id === id) {
+            closeDetailPanel();
+          }
+
+          await Promise.all([
+            fetchBoard(),
+            fetchSprints(),
+            refreshOpenDetails()
+          ]);
         } catch (error) {
           console.error('Failed to delete WorkItem:', error);
         }
@@ -384,7 +534,7 @@ export default defineComponent({
 
     const submitBoardForm = async () => {
       if (!boardForm.value.name.trim()) {
-        alert('Board name is required');
+        toastError('Board name is required');
         return;
       }
 
@@ -408,11 +558,12 @@ export default defineComponent({
           });
           // Navigate to the newly created board
           router.push(`/projects/${projectId.value}/boards/${newBoard.id}`);
+          success('Board created');
         }
         closeBoardModal();
-      } catch (error) {
-        console.error('Failed to save board:', error);
-        alert('Failed to save board');
+      } catch (err) {
+        console.error('Failed to save board:', err);
+        toastError('Failed to save board');
       }
     };
 
@@ -433,9 +584,10 @@ export default defineComponent({
             board.value = null;
             workItems.value = [];
           }
-        } catch (error) {
-          console.error('Failed to delete board:', error);
-          alert('Failed to delete board');
+          success('Board deleted');
+        } catch (err) {
+          console.error('Failed to delete board:', err);
+          toastError('Failed to delete board');
         }
       }
     };
@@ -446,21 +598,38 @@ export default defineComponent({
           ...workItem,
           status: newStatus
         });
-        await fetchBoard();
+        
+        await Promise.all([
+          fetchBoard(),
+          refreshOpenDetails()
+        ]);
       } catch (error) {
         console.error('Failed to update WorkItem status:', error);
       }
     };
 
-    const handleReturnToBacklog = async (workItem: WorkItem) => {
-      if (confirm('Return this item to the backlog? It will be removed from this board.')) {
-        try {
-          await returnWorkItemToBacklog(workItem.id)
-          await fetchBoard() // Refresh board - item will disappear
-        } catch (error) {
-          console.error('Failed to return to backlog:', error)
-          alert('Failed to return item to backlog')
+    const handleMoveToBacklog = async (workItem: WorkItem) => {
+      try {
+        await returnWorkItemToBacklog(workItem.id);
+        
+        await Promise.all([
+          fetchBoard(),
+          refreshOpenDetails()
+        ]);
+
+        if (detailWorkItem.value?.id === workItem.id) {
+          closeDetailPanel();
         }
+        success('Item returned to backlog');
+      } catch (error) {
+        console.error('Failed to return work item to backlog:', error);
+        toastError('Failed to return item to backlog');
+      }
+    };
+
+    const handleReturnToBacklog = async (workItem: { id: number }) => {
+      if (confirm('Return this item to the backlog? It will be removed from this board.')) {
+        await handleMoveToBacklog(workItem as WorkItem);
       }
     }
 
@@ -512,7 +681,7 @@ export default defineComponent({
       selectedSprintId,
       selectedSprint,
       BOARD_TYPES,
-      filteredWorkItems,
+      displayWorkItems,
       availableStatuses,
       switchBoard,
       handleSprintSelect,
@@ -534,7 +703,21 @@ export default defineComponent({
       submitBoardForm,
       handleDeleteCurrentBoard,
       handleUpdateWorkItemStatus,
-      handleReturnToBacklog
+      handleReturnToBacklog,
+      handleAddChildTask,
+      defaultParentId,
+      defaultType,
+      showBoardAddItemModal,
+      showDetailPanel,
+      detailWorkItem,
+      detailLoading,
+      openBoardAddItemModal,
+      closeBoardAddItemModal,
+      handleCreateBoardItem,
+      handleViewDetails,
+      closeDetailPanel,
+      onEditFromDetails,
+      onAddChildFromDetails
     };
   }
 });

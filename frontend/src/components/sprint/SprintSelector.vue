@@ -23,7 +23,7 @@
     <div
       v-if="isOpen"
       @click.stop
-      class="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50"
+      class="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50"
     >
       <!-- Backlog Option 
       <button
@@ -98,6 +98,16 @@
       <div v-if="!activeSprint && planningSprints.length === 0 && completedSprints.length === 0" class="px-4 py-3 text-sm text-gray-500 text-center">
         No sprints yet. Create one to get started!
       </div>
+      <!-- Create Sprint Action -->
+      <div class="border-t border-gray-200 mt-1 p-1">
+        <button
+          @click="createSprint"
+          class="w-full text-left px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-colors flex items-center gap-2"
+        >
+          <PlusIcon class="w-4 h-4" />
+          Create New Sprint
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -106,6 +116,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { Sprint } from '@/types/Sprint'
 import { formatDateRange } from '@/utils/dates';
+import { PlusIcon } from '@/components/icons';
 
 interface Props {
   sprints: Sprint[]
@@ -115,6 +126,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   select: [sprintId: number | null]
+  create: []
 }>()
 
 const isOpen = ref(false)
@@ -148,6 +160,11 @@ function toggleDropdown() {
 
 function selectOption(sprintId: number | null) {
   emit('select', sprintId)
+  isOpen.value = false
+}
+
+function createSprint() {
+  emit('create')
   isOpen.value = false
 }
 

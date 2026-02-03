@@ -136,6 +136,7 @@ builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IBoardRepository, BoardRepository>();
 builder.Services.AddScoped<IWorkItemRepository, WorkItemRepository>();
 builder.Services.AddScoped<ISprintRepository, SprintRepository>();
+builder.Services.AddScoped<IWorkItemHistoryRepository, WorkItemHistoryRepository>();
 
 // Services
 builder.Services.AddScoped<IWorkItemValidationService, WorkItemValidationService>();

@@ -14,6 +14,7 @@ namespace CloudBoard.Api.Models.DTO
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string? Goal { get; set; }
+        public SprintStatus? Status { get; set; }
     }
 
     public class SprintDto
@@ -32,6 +33,10 @@ namespace CloudBoard.Api.Models.DTO
         public decimal TotalEstimatedHours { get; set; }
         public decimal CompletedEstimatedHours { get; set; }
         public int DaysRemaining { get; set; }
+        public decimal? CapacityHours { get; set; }
+        public decimal CapacityUtilization { get; set; }
+        public string? Retrospective { get; set; }
+        public DateTime? RetrospectiveDate { get; set; }
     }
 
     public class SprintStatsDto
@@ -50,5 +55,15 @@ namespace CloudBoard.Api.Models.DTO
         public DateTime Date { get; set; }
         public decimal RemainingHours { get; set; }
         public decimal IdealRemainingHours { get; set; }
+    }
+
+    public class SetSprintCapacityDto
+    {
+        public decimal CapacityHours { get; set; }
+    }
+
+    public class UpdateRetrospectiveDto
+    {
+        public string Retrospective { get; set; } = null!;
     }
 }

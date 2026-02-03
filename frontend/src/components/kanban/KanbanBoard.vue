@@ -21,6 +21,8 @@
       @delete-workitem="$emit('delete-workitem', $event)"
       @update-status="(workItem, newStatus) => $emit('update-status', workItem, newStatus)"
       @return-to-backlog="$emit('return-to-backlog', $event)"
+      @add-child-task="$emit('add-child-task', $event)"
+      @view-details="$emit('view-details', $event)"
     />
   </div>
 </template>
@@ -50,5 +52,7 @@ defineEmits<{
   'delete-workitem': [id: number]
   'update-status': [workItem: WorkItem, newStatus: string]
   'return-to-backlog': [workItem: WorkItem]
+  'add-child-task': [parentWorkItem: WorkItem]
+  'view-details': [workItemId: number]
 }>()
 </script>

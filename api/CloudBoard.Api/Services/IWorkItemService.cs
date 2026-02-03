@@ -10,7 +10,7 @@ namespace CloudBoard.Api.Services
     public interface IWorkItemService
     {
         Task<WorkItem> CreateAsync(WorkItemCreateDto dto, int createdById);
-        Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto);
+        Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto, int userId);
         Task DeleteAsync(int id);
         Task<WorkItem?> GetByIdAsync(int id, bool includeHierarchy = false);
         Task<IEnumerable<WorkItem>> GetByBoardAsync(int boardId, bool includeHierarchy = false);
@@ -19,8 +19,9 @@ namespace CloudBoard.Api.Services
         Task AssignToSprintAsync(int sprintId, AssignSprintDto dto, int userId);
         Task<IEnumerable<WorkItem>> GetPathToRootAsync(int itemId);
         Task<IEnumerable<WorkItem>> GetBacklogItemsAsync(int projectId, CancellationToken ct = default);
-        Task MoveToBoardAsync(int workItemId, int? boardId, int userId);
+        Task MoveToBoardAsync(int workItemId, int? boardId, int? sprintId, int userId);
         Task ReturnToBacklogAsync(int workItemId, int userId);
         Task ReorderBacklogItemsAsync(int projectId, List<Controllers.ItemOrder> itemOrders, int userId);
+        Task<WorkItemDetailDto> GetDetailsAsync(int workItemId, int userId);
     }
 }

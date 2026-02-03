@@ -32,6 +32,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         var boardRepo = new BoardRepository(context);
         var projectRepo = new ProjectRepository(context);
         var sprintRepo = new SprintRepository(context);
+        var historyRepo = new WorkItemHistoryRepository(context);
         var mockValidation = validation ?? new Mock<IWorkItemValidationService>().Object;
 
         return new WorkItemService(
@@ -39,6 +40,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
             boardRepo,
             projectRepo,
             sprintRepo,
+            historyRepo,
             mockValidation,
             NullLogger<WorkItemService>.Instance);
     }
@@ -103,6 +105,58 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         // Assert
         result.BacklogOrder.Should().NotBeNull();
         result.BacklogOrder.Should().Be(0); // First item starts at 0
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithEstimatedHours_SetsInitialRemainingHours()
+    {
+        // Arrange
+        using var context = _fixture.CreateContext();
+        await SeedBasicData(context);
+
+        var service = CreateService(context);
+
+        var dto = new WorkItemCreateDto
+        {
+            Title = "Task with Hours",
+            Type = WorkItemType.Task,
+            BoardId = 1,
+            EstimatedHours = 5,
+            Status = "To Do",
+            Priority = "Medium"
+        };
+
+        // Act
+        var result = await service.CreateAsync(dto, 1);
+
+        // Assert
+        result.RemainingHours.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithStatusDone_SetsRemainingHoursToZero()
+    {
+        // Arrange
+        using var context = _fixture.CreateContext();
+        await SeedBasicData(context);
+
+        var service = CreateService(context);
+
+        var dto = new WorkItemCreateDto
+        {
+            Title = "Done Task",
+            Type = WorkItemType.Task,
+            BoardId = 1,
+            EstimatedHours = 5,
+            Status = "Done",
+            Priority = "Medium"
+        };
+
+        // Act
+        var result = await service.CreateAsync(dto, 1);
+
+        // Assert
+        result.RemainingHours.Should().Be(0);
     }
 
     [Fact]
@@ -269,7 +323,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         };
 
         // Act
-        var result = await service.UpdateAsync(100, dto);
+        var result = await service.UpdateAsync(100, dto, 1);
 
         // Assert
         result.Title.Should().Be("Updated Title");
@@ -277,6 +331,105 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         result.Priority.Should().Be("High");
         result.Description.Should().Be("New description");
         result.EstimatedHours.Should().Be(8);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToDone_ResetsRemainingHoursToZero()
+    {
+        // Arrange
+        using var context = _fixture.CreateContext();
+        await SeedBasicData(context);
+        
+        var workItem = new WorkItem
+        {
+            Id = 100,
+            Title = "Task",
+            Type = WorkItemType.Task,
+            BoardId = 1,
+            ProjectId = 1,
+            EstimatedHours = 5,
+            RemainingHours = 5,
+            Status = "To Do",
+            Priority = "Medium",
+            CreatedById = 1
+        };
+        context.WorkItems.Add(workItem);
+        await context.SaveChangesAsync();
+
+        var mockValidation = new Mock<IWorkItemValidationService>();
+        mockValidation.Setup(v => v.ValidateNoCycle(It.IsAny<int>(), It.IsAny<int?>()))
+            .ReturnsAsync(ValidationResult.Success());
+        mockValidation.Setup(v => v.ValidateTypeChange(It.IsAny<WorkItem>(), It.IsAny<WorkItemType>()))
+            .Returns(ValidationResult.Success());
+
+        var service = CreateService(context, mockValidation.Object);
+
+        var dto = new WorkItemUpdateDto
+        {
+            Title = "Task",
+            Status = "Done",
+            Priority = "Medium",
+            Type = WorkItemType.Task,
+            EstimatedHours = 5,
+            BoardId = 1
+        };
+
+        // Act
+        var result = await service.UpdateAsync(100, dto, 1);
+
+        // Assert
+        result.Status.Should().Be("Done");
+        result.RemainingHours.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedBackFromDone_DoesNotAutomaticallyRestoreHours()
+    {
+        // Arrange
+        using var context = _fixture.CreateContext();
+        await SeedBasicData(context);
+        
+        var workItem = new WorkItem
+        {
+            Id = 100,
+            Title = "Task",
+            Type = WorkItemType.Task,
+            BoardId = 1,
+            ProjectId = 1,
+            EstimatedHours = 5,
+            RemainingHours = 0,
+            Status = "Done",
+            Priority = "Medium",
+            CreatedById = 1
+        };
+        context.WorkItems.Add(workItem);
+        await context.SaveChangesAsync();
+
+        var mockValidation = new Mock<IWorkItemValidationService>();
+        mockValidation.Setup(v => v.ValidateNoCycle(It.IsAny<int>(), It.IsAny<int?>()))
+            .ReturnsAsync(ValidationResult.Success());
+        mockValidation.Setup(v => v.ValidateTypeChange(It.IsAny<WorkItem>(), It.IsAny<WorkItemType>()))
+            .Returns(ValidationResult.Success());
+
+        var service = CreateService(context, mockValidation.Object);
+
+        var dto = new WorkItemUpdateDto
+        {
+            Title = "Task",
+            Status = "In Progress",
+            Priority = "Medium",
+            Type = WorkItemType.Task,
+            EstimatedHours = 5,
+            BoardId = 1
+        };
+
+        // Act
+        var result = await service.UpdateAsync(100, dto, 1);
+
+        // Assert
+        result.Status.Should().Be("In Progress");
+        // RemainingHours remains 0 unless explicitly set in DTO
+        result.RemainingHours.Should().Be(0);
     }
 
     [Fact]
@@ -289,7 +442,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         var dto = new WorkItemUpdateDto { Title = "Test", BoardId = 1 };
 
         // Act & Assert
-        await FluentActions.Invoking(() => service.UpdateAsync(999, dto))
+        await FluentActions.Invoking(() => service.UpdateAsync(999, dto, 1))
             .Should().ThrowAsync<KeyNotFoundException>();
     }
 
@@ -319,7 +472,7 @@ public class WorkItemServiceTests : IClassFixture<DbContextFixture>
         };
 
         // Act & Assert
-        await FluentActions.Invoking(() => service.UpdateAsync(100, dto))
+        await FluentActions.Invoking(() => service.UpdateAsync(100, dto, 1))
             .Should().ThrowAsync<InvalidOperationException>();
     }
 

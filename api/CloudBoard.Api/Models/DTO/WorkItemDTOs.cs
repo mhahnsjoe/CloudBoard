@@ -9,6 +9,7 @@ namespace CloudBoard.Api.Models.DTO
         public string? Description { get; set; }
         public DateTime? DueDate { get; set; }
         public decimal? EstimatedHours { get; set; }
+        public decimal? RemainingHours { get; set; }
         public int? BoardId { get; set; }
         public int? ParentId { get; set; }
         public int? AssignedToId { get; set; }
@@ -27,6 +28,7 @@ namespace CloudBoard.Api.Models.DTO
         public DateTime? DueDate { get; set; }
         public decimal? EstimatedHours { get; set; }
         public decimal? ActualHours { get; set; }
+        public decimal? RemainingHours { get; set; }
         public int BoardId { get; set; }
         public int? ParentId { get; set; }
         public int? AssignedToId { get; set; }
@@ -40,5 +42,6 @@ namespace CloudBoard.Api.Models.DTO
     public class MoveToBoardDto
     {
         public int? BoardId { get; set; }  // null = move to backlog
+        public int? SprintId { get; set; }
     }
 }

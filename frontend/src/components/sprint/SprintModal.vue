@@ -56,6 +56,22 @@
               placeholder="What do you want to achieve in this sprint?"
             />
           </div>
+
+          <!-- Status (Edit Mode Only) -->
+          <div v-if="isEdit">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              v-model="formData.status"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Planning">Planning</option>
+              <option value="Active">Active</option>
+              <option value="Completed">Completed</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-500">
+              Change status manually if needed (e.g. revert to Planning).
+            </p>
+          </div>
         </div>
 
         <!-- Error Message -->
@@ -87,7 +103,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { Sprint } from '@/types/Sprint'
+import type { Sprint, SprintStatus } from '@/types/Sprint'
 
 interface Props {
   sprint?: Sprint
@@ -96,7 +112,7 @@ const error = ref<string | null>(null);
 const props = defineProps<Props>()
 const emit = defineEmits<{
   close: []
-  save: [data: { name: string; startDate: string; endDate: string; goal?: string }]
+  save: [data: { name: string; startDate: string; endDate: string; goal?: string; status?: SprintStatus }]
 }>()
 
 const isEdit = computed(() => !!props.sprint)
@@ -105,7 +121,8 @@ const formData = ref({
   name: '',
   startDate: '',
   endDate: '',
-  goal: ''
+  goal: '',
+  status: 'Planning' as SprintStatus
 })
 
 const loading = ref(false)
@@ -123,7 +140,17 @@ watch(() => props.sprint, (sprint) => {
       name: sprint.name,
       startDate: getDatePart(sprint.startDate),
       endDate: getDatePart(sprint.endDate),
-      goal: sprint.goal || ''
+      goal: sprint.goal || '',
+      status: sprint.status
+    }
+  } else {
+    // Reset for create mode
+    formData.value = {
+      name: '',
+      startDate: '',
+      endDate: '',
+      goal: '',
+      status: 'Planning'
     }
   }
 }, { immediate: true })
@@ -144,7 +171,8 @@ async function handleSubmit() {
         name: formData.value.name,
         startDate: formData.value.startDate,
         endDate: formData.value.endDate,
-        goal: formData.value.goal || undefined
+        goal: formData.value.goal || undefined,
+        status: isEdit.value ? formData.value.status : undefined
     })
 } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to save sprint'

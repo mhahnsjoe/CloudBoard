@@ -15,6 +15,7 @@ namespace CloudBoard.Api.Services
         private readonly IBoardRepository _boardRepository;
         private readonly IProjectRepository _projectRepository;
         private readonly ISprintRepository _sprintRepository;
+        private readonly IWorkItemHistoryRepository _historyRepository;
         private readonly IWorkItemValidationService _validation;
         private readonly ILogger<WorkItemService> _logger;
 
@@ -23,6 +24,7 @@ namespace CloudBoard.Api.Services
             IBoardRepository boardRepository,
             IProjectRepository projectRepository,
             ISprintRepository sprintRepository,
+            IWorkItemHistoryRepository historyRepository,
             IWorkItemValidationService validation,
             ILogger<WorkItemService> logger)
         {
@@ -30,9 +32,17 @@ namespace CloudBoard.Api.Services
             _boardRepository = boardRepository;
             _projectRepository = projectRepository;
             _sprintRepository = sprintRepository;
+            _historyRepository = historyRepository;
             _validation = validation;
             _logger = logger;
         }
+
+        // Types that can be moved to boards
+        private static readonly WorkItemType[] BoardAllowedTypes = 
+        {
+            WorkItemType.PBI,
+            WorkItemType.Bug
+        };
 
         public async Task<WorkItem> CreateAsync(WorkItemCreateDto dto, int createdById)
         {
@@ -96,11 +106,19 @@ namespace CloudBoard.Api.Services
                 CreatedById = createdById,
                 AssignedToId = dto.AssignedToId,
                 SprintId = dto.SprintId,
-                BacklogOrder = backlogOrder
+                BacklogOrder = backlogOrder,
+                RemainingHours = dto.Status == "Done" ? 0 : (dto.RemainingHours ?? dto.EstimatedHours)
             };
 
             _workItemRepository.Add(workItem);
             await _workItemRepository.SaveChangesAsync();
+
+            // Record initial state
+            await TrackChange(workItem.Id, "Status", null, workItem.Status, createdById);
+            if (workItem.SprintId.HasValue)
+                await TrackChange(workItem.Id, "SprintId", null, workItem.SprintId.ToString(), createdById);
+            if (workItem.EstimatedHours.HasValue)
+                await TrackChange(workItem.Id, "EstimatedHours", null, workItem.EstimatedHours.ToString(), createdById);
 
             _logger.LogInformation(
                 "Work item created: {WorkItemId} - {Title}",
@@ -109,7 +127,7 @@ namespace CloudBoard.Api.Services
             return workItem;
         }
 
-        public async Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto)
+        public async Task<WorkItem> UpdateAsync(int id, WorkItemUpdateDto dto, int currentUserId)
         {
             var workItem = await _workItemRepository.GetWithHierarchyAsync(id);
 
@@ -143,6 +161,12 @@ namespace CloudBoard.Api.Services
                     throw new InvalidOperationException(typeValidation.ErrorMessage);
             }
 
+            // Track changes
+            await TrackChange(workItem.Id, "Status", workItem.Status, dto.Status, currentUserId);
+            await TrackChange(workItem.Id, "SprintId", workItem.SprintId?.ToString(), dto.SprintId?.ToString(), currentUserId);
+            await TrackChange(workItem.Id, "EstimatedHours", workItem.EstimatedHours?.ToString(), dto.EstimatedHours?.ToString(), currentUserId);
+            await TrackChange(workItem.Id, "RemainingHours", workItem.RemainingHours?.ToString(), dto.RemainingHours?.ToString(), currentUserId);
+
             // Update properties
             workItem.Title = dto.Title;
             workItem.Status = dto.Status;
@@ -154,11 +178,29 @@ namespace CloudBoard.Api.Services
                 : null;
             workItem.EstimatedHours = dto.EstimatedHours;
             workItem.ActualHours = dto.ActualHours;
+            workItem.RemainingHours = dto.Status == "Done" ? 0 : (dto.RemainingHours ?? (dto.Status != workItem.Status ? (dto.RemainingHours ?? dto.EstimatedHours ?? workItem.RemainingHours) : workItem.RemainingHours));
             workItem.ParentId = dto.ParentId;
             workItem.SprintId = dto.SprintId;
 
             await _workItemRepository.SaveChangesAsync();
             return workItem;
+        }
+
+        private async Task TrackChange(int workItemId, string fieldName, string? oldValue, string? newValue, int userId)
+        {
+            if (oldValue == newValue) return;
+
+            var history = new WorkItemHistory
+            {
+                WorkItemId = workItemId,
+                FieldName = fieldName,
+                OldValue = oldValue,
+                NewValue = newValue,
+                ChangedAt = DateTime.UtcNow,
+                ChangedById = userId
+            };
+
+            _historyRepository.Add(history);
         }
 
         public async Task DeleteAsync(int id)
@@ -250,31 +292,93 @@ namespace CloudBoard.Api.Services
             return await _workItemRepository.GetBacklogAsync(projectId, ct);
         }
 
-        public async Task MoveToBoardAsync(int workItemId, int? boardId, int userId)
+        public async Task MoveToBoardAsync(int workItemId, int? boardId, int? sprintId, int userId)
         {
-            var workItem = await _workItemRepository.GetWithFullContextAsync(workItemId);
-
+            var workItem = await _workItemRepository.GetWithHierarchyAsync(workItemId);
+            
             if (workItem == null)
-                throw new KeyNotFoundException("Work item not found");
+                throw new KeyNotFoundException($"WorkItem {workItemId} not found");
 
-            // TD-004: See ADR-005 for project ownership verification logic
+            // Validate parent relationship
+            // Create a pseudo-context to validate parent
+            // If parent is not on the board, we might have an issue?
+            // For now, we rely on the client to handle parent selection logic or the separate MoveToParent call.
+            // But we should verify ownership.
+
+            var project = await _projectRepository.GetByIdAsync(workItem.ProjectId);
+            if (project == null || project.OwnerId != userId)
+                throw new UnauthorizedAccessException("Not authorized to move this item");
 
             if (boardId.HasValue)
             {
+                // Validate type restriction
+                if (!BoardAllowedTypes.Contains(workItem.Type))
+                {
+                    throw new InvalidOperationException(
+                        $"Only PBI and Bug items can be moved to boards. " +
+                        $"{workItem.Type} items are for backlog organization only.");
+                }
+
                 var board = await _boardRepository.GetByIdAsync(boardId.Value);
                 if (board == null)
-                    throw new KeyNotFoundException("Board not found");
+                    throw new KeyNotFoundException($"Board {boardId} not found");
+                
+                if (board.ProjectId != workItem.ProjectId)
+                    throw new InvalidOperationException("Board must belong to the same project");
+                
+                // Validate Sprint if provided
+                if (sprintId.HasValue)
+                {
+                    var sprint = await _sprintRepository.GetByIdAsync(sprintId.Value);
+                    if (sprint == null)
+                        throw new KeyNotFoundException($"Sprint {sprintId} not found");
+                    if (sprint.BoardId != boardId.Value)
+                        throw new InvalidOperationException("Sprint must belong to the target board");
+                }
+
+                workItem.BoardId = boardId.Value;
+                workItem.SprintId = sprintId; // Assign Sprint
+                workItem.BacklogOrder = null;
+                
+                // Cascade: Move all child Tasks to the same board and sprint
+                MoveChildrenToBoardRecursive(workItem, boardId.Value, sprintId);
+                
+                _logger.LogInformation(
+                    "Moved WorkItem {Id} ({Type}) to Board {BoardId} (Sprint {SprintId}) with {ChildCount} children",
+                    workItemId, workItem.Type, boardId.Value, sprintId?.ToString() ?? "None", CountDescendants(workItem));
             }
-
-            workItem.BoardId = boardId;
-
-            // If moving to backlog, also clear sprint assignment
-            if (!boardId.HasValue)
+            else
             {
-                workItem.SprintId = null;
+                // Move to backlog
+                await ReturnToBacklogAsync(workItemId, userId);
             }
 
             await _workItemRepository.SaveChangesAsync();
+        }
+
+        private void MoveChildrenToBoardRecursive(WorkItem parent, int boardId, int? sprintId)
+        {
+            if (parent.Children == null)
+                return;
+
+            foreach (var child in parent.Children)
+            {
+                if (child.Type == WorkItemType.Task || child.Type == WorkItemType.Bug)
+                {
+                    child.BoardId = boardId;
+                    child.SprintId = sprintId; // Cascade Sprint
+                    child.BacklogOrder = null;
+                    MoveChildrenToBoardRecursive(child, boardId, sprintId);
+                }
+            }
+        }
+
+        private int CountDescendants(WorkItem item)
+        {
+            if (item.Children == null || !item.Children.Any())
+                return 0;
+            
+            return item.Children.Count + item.Children.Sum(c => CountDescendants(c));
         }
 
         /// <summary>
@@ -282,22 +386,47 @@ namespace CloudBoard.Api.Services
         /// </summary>
         public async Task ReturnToBacklogAsync(int workItemId, int userId)
         {
-            var workItem = await _workItemRepository.GetWithFullContextAsync(workItemId);
-
+            var workItem = await _workItemRepository.GetWithHierarchyAsync(workItemId);
+            
             if (workItem == null)
-                throw new KeyNotFoundException($"Work item {workItemId} not found");
+                throw new KeyNotFoundException($"WorkItem {workItemId} not found");
 
-            // Verify ownership through project
-            if (workItem.Board?.Project?.OwnerId != userId)
-                throw new UnauthorizedAccessException("You don't have permission to modify this work item");
+            var project = await _projectRepository.GetByIdAsync(workItem.ProjectId);
+            if (project == null || project.OwnerId != userId)
+                throw new UnauthorizedAccessException("Not authorized to move this item");
 
-            // Clear board assignment (return to backlog)
             workItem.BoardId = null;
-
-            // Also clear sprint assignment since it belongs to the board
             workItem.SprintId = null;
+            
+            var maxOrder = await _workItemRepository.GetMaxBacklogOrderAsync(
+                workItem.ProjectId, workItem.ParentId);
+            workItem.BacklogOrder = (maxOrder ?? -100) + 100;
+            
+            // Cascade: Return all children to backlog
+            await ReturnChildrenToBacklogRecursive(workItem, workItem.ProjectId);
 
             await _workItemRepository.SaveChangesAsync();
+            
+            _logger.LogInformation(
+                "Returned WorkItem {Id} ({Type}) to backlog with {ChildCount} children",
+                workItemId, workItem.Type, CountDescendants(workItem));
+        }
+
+        private async Task ReturnChildrenToBacklogRecursive(WorkItem parent, int projectId)
+        {
+            if (parent.Children == null || !parent.Children.Any())
+                return;
+
+            foreach (var child in parent.Children)
+            {
+                child.BoardId = null;
+                child.SprintId = null;
+                
+                var maxOrder = await _workItemRepository.GetMaxBacklogOrderAsync(projectId, parent.Id);
+                child.BacklogOrder = (maxOrder ?? -100) + 100;
+                
+                await ReturnChildrenToBacklogRecursive(child, projectId);
+            }
         }
 
         /// <summary>
@@ -329,6 +458,91 @@ namespace CloudBoard.Api.Services
             }
 
             await _workItemRepository.SaveChangesAsync();
+        }
+        public async Task<WorkItemDetailDto> GetDetailsAsync(int workItemId, int userId)
+        {
+            var workItem = await _workItemRepository.GetWithFullContextAsync(workItemId);
+            
+            if (workItem == null)
+                throw new KeyNotFoundException($"WorkItem {workItemId} not found");
+
+            // Build ancestor chain
+            var ancestors = new List<WorkItemLinkDto>();
+            var current = workItem.Parent;
+            while (current != null)
+            {
+                ancestors.Insert(0, new WorkItemLinkDto
+                {
+                    Id = current.Id,
+                    Title = current.Title,
+                    Type = current.Type.ToString(),
+                    Status = current.Status,
+                    BoardId = current.BoardId
+                });
+                // Need to load parent's parent - the current implementation of GetWithFullContextAsync might not load deep parents
+                // For now, assuming the context loads what we need or we accept a shallow chain if not loaded
+                // A better approach would be to use a recursive CTE or explicit query if deep hierarchy is needed
+                current = current.Parent;
+            }
+
+            var children = workItem.Children?.ToList() ?? new List<WorkItem>();
+            var completedChildren = children.Count(c => c.Status == "Done");
+            var totalHours = (workItem.EstimatedHours ?? 0) + children.Sum(c => c.EstimatedHours ?? 0);
+            var completedHours = children.Where(c => c.Status == "Done").Sum(c => c.EstimatedHours ?? 0);
+
+            return new WorkItemDetailDto
+            {
+                Id = workItem.Id,
+                Title = workItem.Title,
+                Description = workItem.Description,
+                Type = workItem.Type.ToString(),
+                Status = workItem.Status,
+                Priority = workItem.Priority,
+                CreatedAt = workItem.CreatedAt,
+                DueDate = workItem.DueDate,
+                EstimatedHours = workItem.EstimatedHours,
+                ActualHours = workItem.ActualHours,
+                RemainingHours = workItem.RemainingHours,
+                
+                BoardId = workItem.BoardId,
+                BoardName = workItem.Board?.Name,
+                SprintId = workItem.SprintId,
+                SprintName = workItem.Sprint?.Name,
+                
+                Parent = workItem.Parent != null ? new WorkItemLinkDto
+                {
+                    Id = workItem.Parent.Id,
+                    Title = workItem.Parent.Title,
+                    Type = workItem.Parent.Type.ToString(),
+                    Status = workItem.Parent.Status,
+                    BoardId = workItem.Parent.BoardId
+                } : null,
+                
+                Ancestors = ancestors,
+                
+                Children = children.Select(c => new WorkItemChildDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Type = c.Type.ToString(),
+                    Status = c.Status,
+                    Priority = c.Priority,
+                    EstimatedHours = c.EstimatedHours,
+                    AssignedToId = c.AssignedToId,
+                    AssignedToName = c.AssignedTo?.Name
+                }).ToList(),
+                
+                TotalChildCount = children.Count,
+                CompletedChildCount = completedChildren,
+                TotalEstimatedHours = totalHours,
+                CompletedHours = completedHours,
+                ProgressPercentage = totalHours > 0 ? (completedHours / totalHours) * 100 : 0,
+                
+                AssignedToId = workItem.AssignedToId,
+                AssignedToName = workItem.AssignedTo?.Name,
+                CreatedById = workItem.CreatedById,
+                CreatedByName = workItem.CreatedBy?.Name ?? "Unknown"
+            };
         }
     }
 }

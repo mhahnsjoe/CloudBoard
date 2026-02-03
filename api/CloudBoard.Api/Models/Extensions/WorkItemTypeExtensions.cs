@@ -13,7 +13,7 @@ namespace CloudBoard.Api.Models.Extensions
                 { WorkItemType.Feature, new[] { WorkItemType.PBI, WorkItemType.Bug } },
                 { WorkItemType.PBI, new[] { WorkItemType.Task, WorkItemType.Bug } },
                 { WorkItemType.Task, Array.Empty<WorkItemType>() },
-                { WorkItemType.Bug, Array.Empty<WorkItemType>() }
+                { WorkItemType.Bug, new[] { WorkItemType.Task } }
             };
 
         private static readonly IReadOnlyDictionary<WorkItemType, int> HierarchyLevels = 
