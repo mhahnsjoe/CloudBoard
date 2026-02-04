@@ -9,45 +9,55 @@ public class ProjectService : IProjectService
 {
     private readonly IProjectRepository _projectRepository;
     private readonly IBoardRepository _boardRepository;
+    private readonly ITeamRepository _teamRepository;
     private readonly ILogger<ProjectService> _logger;
 
     public ProjectService(
         IProjectRepository projectRepository,
         IBoardRepository boardRepository,
+        ITeamRepository teamRepository,
         ILogger<ProjectService> logger)
     {
         _projectRepository = projectRepository;
         _boardRepository = boardRepository;
+        _teamRepository = teamRepository;
         _logger = logger;
     }
 
-    public async Task<Result<List<Project>>> GetProjectsAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<ProjectDto>>> GetProjectsAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var projects = await _projectRepository.GetByOwnerWithBoardsAsync(userId, cancellationToken);
-        return Result<List<Project>>.Success(projects);
+        var projects = await _projectRepository.GetAccessibleByUserAsync(userId, cancellationToken);
+        var dtos = projects.Select(MapToDto).ToList();
+        return Result<List<ProjectDto>>.Success(dtos);
     }
 
-    public async Task<Result<Project>> GetProjectByIdAsync(int id, int userId, CancellationToken cancellationToken = default)
+    public async Task<Result<ProjectDto>> GetProjectByIdAsync(int id, int userId, CancellationToken cancellationToken = default)
     {
         var project = await _projectRepository.GetWithBoardsAndWorkItemsAsync(id, cancellationToken);
 
         if (project == null)
-            return Result<Project>.NotFound($"Project {id} not found");
+            return Result<ProjectDto>.NotFound($"Project {id} not found");
 
-        if (project.OwnerId != userId)
-            return Result<Project>.Forbidden("You don't have access to this project");
+        // Check team membership for access
+        if (!await _teamRepository.IsMemberAsync(project.TeamId, userId, cancellationToken))
+            return Result<ProjectDto>.Forbidden("You don't have access to this project");
 
-        return Result<Project>.Success(project);
+        return Result<ProjectDto>.Success(MapToDto(project));
     }
 
-    public async Task<Result<Project>> CreateProjectAsync(ProjectCreateDto projectDto, int userId, CancellationToken cancellationToken = default)
+    public async Task<Result<ProjectDto>> CreateProjectAsync(ProjectCreateDto projectDto, int userId, CancellationToken cancellationToken = default)
     {
+        // Verify user is member of the specified team
+        if (!await _teamRepository.IsMemberAsync(projectDto.TeamId, userId, cancellationToken))
+            return Result<ProjectDto>.Forbidden("You are not a member of this team");
+
         var project = new Project
         {
             Name = projectDto.Name,
             Description = projectDto.Description,
             CreatedAt = DateTime.UtcNow,
-            OwnerId = userId
+            OwnerId = userId,
+            TeamId = projectDto.TeamId
         };
 
         _projectRepository.Add(project);
@@ -79,7 +89,36 @@ public class ProjectService : IProjectService
 
         _logger.LogInformation("Created project {ProjectId} for user {UserId}", project.Id, userId);
 
-        return Result<Project>.Success(createdProject!);
+        return Result<ProjectDto>.Success(MapToDto(createdProject!));
+    }
+
+    private static ProjectDto MapToDto(Project project)
+    {
+        return new ProjectDto
+        {
+            Id = project.Id,
+            Name = project.Name,
+            Description = project.Description,
+            CreatedAt = project.CreatedAt,
+            TeamId = project.TeamId,
+            TeamName = project.Team?.Name,
+            Boards = project.Boards?.Select(b => new BoardDto
+            {
+                Id = b.Id,
+                Name = b.Name,
+                Description = b.Description,
+                Type = b.Type,
+                ProjectId = b.ProjectId,
+                Columns = b.Columns?.OrderBy(c => c.Order).Select(c => new BoardColumnDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Order = c.Order,
+                    Category = c.Category
+                }).ToList(),
+                WorkItemCount = b.WorkItems?.Count ?? 0
+            }).ToList()
+        };
     }
 
     public async Task<Result> UpdateProjectAsync(int id, ProjectUpdateDto projectDto, int userId, CancellationToken cancellationToken = default)
@@ -89,7 +128,8 @@ public class ProjectService : IProjectService
         if (project == null)
             return Result.NotFound($"Project {id} not found");
 
-        if (project.OwnerId != userId)
+        // Check team membership for access
+        if (!await _teamRepository.IsMemberAsync(project.TeamId, userId, cancellationToken))
             return Result.Forbidden("You don't have access to this project");
 
         project.Name = projectDto.Name;
@@ -108,8 +148,9 @@ public class ProjectService : IProjectService
         if (project == null)
             return Result.NotFound($"Project {id} not found");
 
-        if (project.OwnerId != userId)
-            return Result.Forbidden("You don't have access to this project");
+        // Only team admins/owners can delete projects
+        if (!await _teamRepository.HasRoleOrHigherAsync(project.TeamId, userId, TeamRole.Admin, cancellationToken))
+            return Result.Forbidden("You must be a team admin to delete projects");
 
         _projectRepository.Remove(project);
         await _projectRepository.SaveChangesAsync(cancellationToken);

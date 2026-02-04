@@ -1,4 +1,3 @@
-using CloudBoard.Api.Models;
 using CloudBoard.Api.Models.DTO;
 using CloudBoard.Api.Services;
 using CloudBoard.Api.Common;
@@ -32,7 +31,7 @@ public class ProjectsController : ControllerBase
     /// Gets all projects for the current user
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<Project>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<ProjectDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetProjects()
     {
         var userId = GetCurrentUserId();
@@ -44,7 +43,7 @@ public class ProjectsController : ControllerBase
     /// Gets a specific project by ID
     /// </summary>
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(Project), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProjectDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetProject(int id)
@@ -58,7 +57,7 @@ public class ProjectsController : ControllerBase
     /// Creates a new project
     /// </summary>
     [HttpPost]
-    [ProducesResponseType(typeof(Project), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProjectDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateProject(ProjectCreateDto projectDto)
     {

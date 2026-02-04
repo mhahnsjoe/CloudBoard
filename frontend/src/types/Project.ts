@@ -43,12 +43,15 @@ export interface Project {
   id: number;
   name: string;
   description: string;
+  teamId: number;
+  teamName?: string;
   boards?: Board[];
 }
 
 export interface ProjectCreate {
   name: string;
   description: string;
+  teamId: number;
 }
 
 export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;

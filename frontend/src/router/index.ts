@@ -52,6 +52,24 @@ const routes = [
     name: 'SprintSummary',
     component: () => import('@/views/SprintSummaryView.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/teams',
+    name: 'Teams',
+    component: () => import('@/views/TeamsView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/teams/:id',
+    name: 'TeamDetail',
+    component: () => import('@/views/TeamDetailView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/invitations/accept',
+    name: 'AcceptInvitation',
+    component: () => import('@/views/AcceptInvitationView.vue'),
+    meta: { requiresAuth: true }
   }
 ];
 

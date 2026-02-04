@@ -16,6 +16,17 @@ import type {
 } from "../types/Sprint";
 import type { Taskboard } from "../types/Taskboard";
 import type { WorkItemDetailDto } from "../types/WorkItem";
+import type {
+  Team,
+  TeamDetail,
+  TeamMember,
+  TeamInvitation,
+  CreateTeamDto,
+  UpdateTeamDto,
+  InviteMemberDto,
+  UpdateMemberRoleDto,
+  AcceptInvitationDto
+} from "../types/Team";
 
 // Auth types
 export interface LoginCredentials {
@@ -144,3 +155,26 @@ export const reorderBacklogItems = (projectId: number, itemOrders: Array<{ itemI
 
 export const getWorkItemDetails = (workItemId: number) =>
   api.get<WorkItemDetailDto>(`/workitems/${workItemId}/details`);
+
+// Teams
+export const getTeams = () => api.get<Team[]>('/teams');
+export const getTeam = (id: number) => api.get<TeamDetail>(`/teams/${id}`);
+export const createTeam = (dto: CreateTeamDto) => api.post<Team>('/teams', dto);
+export const updateTeam = (id: number, dto: UpdateTeamDto) => api.put(`/teams/${id}`, dto);
+export const deleteTeam = (id: number) => api.delete(`/teams/${id}`);
+
+// Team Members
+export const inviteMember = (teamId: number, dto: InviteMemberDto) =>
+  api.post<TeamInvitation>(`/teams/${teamId}/invitations`, dto);
+export const cancelInvitation = (teamId: number, invitationId: number) =>
+  api.delete(`/teams/${teamId}/invitations/${invitationId}`);
+export const updateMemberRole = (teamId: number, memberId: number, dto: UpdateMemberRoleDto) =>
+  api.put(`/teams/${teamId}/members/${memberId}/role`, dto);
+export const removeMember = (teamId: number, memberId: number) =>
+  api.delete(`/teams/${teamId}/members/${memberId}`);
+export const leaveTeam = (teamId: number) =>
+  api.post(`/teams/${teamId}/leave`);
+
+// Invitations
+export const acceptInvitation = (dto: AcceptInvitationDto) =>
+  api.post<TeamMember>('/invitations/accept', dto);
