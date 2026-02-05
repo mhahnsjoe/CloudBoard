@@ -6,7 +6,7 @@
         <slot></slot>
         <div class="modal-actions">
           <button class="btn btn-light" @click="$emit('close')">{{ cancelText }}</button>
-          <button class="btn btn-primary" @click="$emit('submit')">{{ submitText }}</button>
+          <button class="btn btn-primary" @click="$emit('submit')" :disabled="submitDisabled" :class="{'opacity-50 cursor-not-allowed': submitDisabled}">{{ submitText }}</button>
         </div>
       </div>
     </div>
@@ -34,6 +34,10 @@ export default defineComponent({
     cancelText: {
       type: String,
       default: 'Cancel'
+    },
+    submitDisabled: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['close', 'submit']

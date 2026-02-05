@@ -51,6 +51,7 @@
           @edit="$emit('edit-workitem', $event)"
           @add-child-task="$emit('add-child-task', $event)"
           @view-details="$emit('view-details', $event)"
+          @work-item-updated="$emit('work-item-updated', $event)"
         />
         <!-- Empty State -->
         <div
@@ -68,7 +69,7 @@
 import { ref, computed } from 'vue'
 import type { WorkItem } from '@/types/WorkItem'
 import type { BoardColumn } from '@/types/Project'
-import { getStatusIconClass } from '@/utils/badges'
+
 import KanbanCard from '../kanban/KanbanCard.vue'
 import { PlusIcon } from '@/components/icons'
 
@@ -88,6 +89,7 @@ const emit = defineEmits<{
   'update-status': [workItem: WorkItem, newStatus: string]
   'add-child-task': [parentWorkItem: WorkItem]
   'view-details': [workItemId: number]
+  'work-item-updated': [workItem: WorkItem]
 }>()
 
 const draggedWorkItem = ref<WorkItem | null>(null)
@@ -113,7 +115,7 @@ const getWorkItemsByStatus = (status: string) => {
 
 const isDragging = ref(false)
 
-const onDragStart = (event: any, workItem: WorkItem) => {
+const onDragStart = (event: DragEvent, workItem: WorkItem) => {
   isDragging.value = true
   draggedWorkItem.value = workItem
   if (event && event.dataTransfer) {

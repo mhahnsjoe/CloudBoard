@@ -61,7 +61,7 @@
 
 <script setup lang="ts">
 import type { TaskboardTask } from '@/types/Taskboard'
-import { ClockIcon } from '@/components/icons'
+
 
 interface Props {
   task: TaskboardTask
@@ -69,7 +69,7 @@ interface Props {
 
 defineProps<Props>()
 
-const emit = defineEmits<{
+defineEmits<{
   dragstart: [event: DragEvent]
   'view-details': [taskId: number]
 }>()

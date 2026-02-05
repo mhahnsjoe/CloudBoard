@@ -41,6 +41,7 @@ export interface WorkItemCreate {
   projectId?: number;       //for backlog items
   parentId?: number;
   sprintId?: number | null;
+  assignedToId?: number | null;
 }
 
 export interface WorkItemEdit {
@@ -57,6 +58,7 @@ export interface WorkItemEdit {
   boardId: number;
   parentId?: number;  // Added for hierarchy support
   sprintId?: number | null;
+  assignedToId?: number | null;
 }
 
 export type WorkItemType = 'Task' | 'Bug' | 'PBI' | 'Feature' | 'Epic';

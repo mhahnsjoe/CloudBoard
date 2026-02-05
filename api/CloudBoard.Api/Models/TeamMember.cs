@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CloudBoard.Api.Models;
 
 /// <summary>
@@ -26,6 +28,7 @@ public class TeamMember
 /// Role hierarchy for team members.
 /// Higher values have more permissions.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum TeamRole
 {
     /// <summary>

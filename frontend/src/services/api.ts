@@ -119,7 +119,8 @@ export const deleteSprint = (sprintId: number) => api.delete(`/sprints/${sprintI
 export const getSprintStats = (sprintId: number) => api.get<SprintStats>(`/sprints/${sprintId}/stats`);
 export const getSprintBurndown = (sprintId: number) => api.get<BurndownPoint[]>(`/sprints/${sprintId}/burndown`);
 export const getSprintTaskboard = (sprintId: number) => api.get<Taskboard>(`/sprints/${sprintId}/taskboard`);
-export const assignWorkItemToSprint = (workItemId: number, sprintId: number | null) => api.patch(`/workitems/${workItemId}/assign-sprint`, { sprintId });
+export const assignWorkItemToSprint = (boardId: number, workItemId: number, sprintId: number | null) => api.patch(`/boards/${boardId}/workitems/${workItemId}/assign-sprint`, { sprintId });
+export const assignWorkItem = (boardId: number, workItemId: number, assignedToId: number | null) => api.patch(`/boards/${boardId}/workitems/${workItemId}/assign`, { assignedToId });
 
 // Sprint Planning
 export const getSprintPlanningContext = (boardId: number) =>

@@ -55,6 +55,11 @@ const routes = [
   },
   {
     path: '/teams',
+    redirect: '/'
+  },
+  /*
+  {
+    path: '/teams',
     name: 'Teams',
     component: () => import('@/views/TeamsView.vue'),
     meta: { requiresAuth: true }
@@ -65,6 +70,7 @@ const routes = [
     component: () => import('@/views/TeamDetailView.vue'),
     meta: { requiresAuth: true }
   },
+  */
   {
     path: '/invitations/accept',
     name: 'AcceptInvitation',

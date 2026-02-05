@@ -23,6 +23,7 @@
       @return-to-backlog="$emit('return-to-backlog', $event)"
       @add-child-task="$emit('add-child-task', $event)"
       @view-details="$emit('view-details', $event)"
+      @work-item-updated="$emit('work-item-updated', $event)"
     />
   </div>
 </template>
@@ -54,5 +55,6 @@ defineEmits<{
   'return-to-backlog': [workItem: WorkItem]
   'add-child-task': [parentWorkItem: WorkItem]
   'view-details': [workItemId: number]
+  'work-item-updated': [workItem: WorkItem]
 }>()
 </script>

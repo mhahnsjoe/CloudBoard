@@ -71,24 +71,7 @@
     </div>
 
     <!-- Board Actions -->
-    <div class="flex items-center gap-2">
-
-      <button
-        @click="$emit('edit-board')"
-        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
-      >
-        <EditIcon className="w-4 h-4" />
-        Edit Board
-      </button>
-      <button
-        @click="$emit('delete-board')"
-        class="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all flex items-center gap-2"
-      >
-        <DeleteIcon className="w-4 h-4" />
-        Delete Board
-      </button>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -99,8 +82,6 @@ import { useClickOutside } from '@/composables/useClickOutside'
 import { getBoardTypeClass } from '@/utils/badges'
 import {
   PlusIcon,
-  EditIcon,
-  DeleteIcon,
   FolderIcon,
   ClipboardIcon
 } from '@/components/icons'

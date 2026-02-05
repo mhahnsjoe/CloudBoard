@@ -11,11 +11,10 @@ namespace CloudBoard.Api.Tests.Integration;
 [Collection("Integration")]
 public class WorkItemHistoryIntegrationTests : IntegrationTestBase
 {
-    private readonly IntegrationTestFactory _factory;
+
 
     public WorkItemHistoryIntegrationTests(IntegrationTestFactory factory) : base(factory)
     {
-        _factory = factory;
     }
 
     [Fact]
@@ -35,7 +34,7 @@ public class WorkItemHistoryIntegrationTests : IntegrationTestBase
             ProjectId = projectId
         });
         createResponse.EnsureSuccessStatusCode();
-        var workItem = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var workItem = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
         workItem.Should().NotBeNull();
 
         // 2. Act - Update work item status
@@ -52,7 +51,7 @@ public class WorkItemHistoryIntegrationTests : IntegrationTestBase
         updateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // 3. Assert - Check history records in database
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CloudBoard.Api.Data.CloudBoardContext>();
         
         var history = context.WorkItemHistories
@@ -80,7 +79,7 @@ public class WorkItemHistoryIntegrationTests : IntegrationTestBase
             EndDate = DateTime.UtcNow.AddDays(14)
         });
         sprintResponse.EnsureSuccessStatusCode();
-        var sprint = await sprintResponse.Content.ReadFromJsonAsync<SprintResponse>();
+        var sprint = await sprintResponse.Content.ReadFromJsonAsync<SprintResponse>(JsonOptions);
 
         // Create work item
         var createResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new WorkItemCreateDto
@@ -91,7 +90,7 @@ public class WorkItemHistoryIntegrationTests : IntegrationTestBase
             BoardId = boardId,
             ProjectId = projectId
         });
-        var workItem = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var workItem = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
 
         // 2. Act - Assign to sprint via bulk operation (Correct endpoint)
         var assignResponse = await Client.PostAsJsonAsync($"/api/v1/sprints/{sprint!.Id}/items/assign", new BulkSprintAssignmentDto 
@@ -101,7 +100,7 @@ public class WorkItemHistoryIntegrationTests : IntegrationTestBase
         assignResponse.EnsureSuccessStatusCode();
 
         // 3. Assert
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CloudBoard.Api.Data.CloudBoardContext>();
         
         var history = context.WorkItemHistories

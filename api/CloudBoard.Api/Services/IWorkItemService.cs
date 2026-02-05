@@ -23,5 +23,6 @@ namespace CloudBoard.Api.Services
         Task ReturnToBacklogAsync(int workItemId, int userId);
         Task ReorderBacklogItemsAsync(int projectId, List<Controllers.ItemOrder> itemOrders, int userId);
         Task<WorkItemDetailDto> GetDetailsAsync(int workItemId, int userId);
+        Task AssignAsync(int workItemId, int? assignedToId, int currentUserId);
     }
 }

@@ -80,7 +80,7 @@
     <nav class="flex-1 px-4 py-2 overflow-y-auto">
       <!-- Global Navigation -->
       <div class="mb-4">
-        <!-- Dashboard/Summary -->
+        <!-- Overview/Summary -->
         <router-link
           to="/"
           class="nav-item"
@@ -89,7 +89,7 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          <span>Dashboard</span>
+          <span>Overview</span>
         </router-link>
       </div>
 
@@ -243,9 +243,11 @@
           @click="userMenuDropdown.toggle"
           class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
         >
-          <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-            {{ userInitials }}
-          </div>
+          <UserAvatar
+            :name="authStore.user?.name || 'User'"
+            :userId="authStore.user?.id"
+            size="md"
+          />
           <div class="flex-1 text-left min-w-0">
             <div class="text-sm font-medium text-white truncate">{{ authStore.user?.name || 'User' }}</div>
             <div class="text-xs text-gray-400 truncate">{{ authStore.user?.email }}</div>
@@ -345,8 +347,8 @@ import { defineComponent, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FolderIcon, PlusIcon, ClipboardIcon, UsersIcon } from '@/components/icons'
 import Modal from '@/components/common/Modal.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import logo from '@/assets/cb.png'
-import type { Project } from '@/types/Project'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/boards'
 import { useProjectStore } from '@/stores/projects'
@@ -362,7 +364,8 @@ export default defineComponent({
     PlusIcon,
     ClipboardIcon,
     UsersIcon,
-    Modal
+    Modal,
+    UserAvatar
   },
   setup() {
     const route = useRoute()
@@ -499,7 +502,7 @@ export default defineComponent({
       // Reset project selection when team changes
       selectedProjectId.value = null
 
-      // Navigate to dashboard when changing teams
+      // Navigate to Overview when changing teams
       if (route.path !== '/') {
         router.push('/')
       }

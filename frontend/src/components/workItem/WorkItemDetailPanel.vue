@@ -23,7 +23,7 @@
                 <div class="space-y-1">
                   <!-- Breadcrumbs -->
                   <div class="flex items-center text-xs text-gray-500 space-x-1 mb-2">
-                     <span v-for="(ancestor, index) in details.ancestors" :key="ancestor.id" class="flex items-center">
+                     <span v-for="ancestor in details.ancestors" :key="ancestor.id" class="flex items-center">
                         <button 
                           @click="$emit('navigate', ancestor.id)"
                           class="hover:text-blue-600 hover:underline"
@@ -155,12 +155,17 @@
                 <div class="sm:col-span-2 grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                   <div>
                     <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</dt>
-                    <dd class="mt-1 text-sm text-gray-900 flex items-center">
-                       <span class="text-xs bg-gray-200 rounded-full h-6 w-6 flex items-center justify-center mr-2">
-                          {{ details.assignedToName ? getInitials(details.assignedToName) : '?' }}
-                       </span>
-                       {{ details.assignedToName || 'Unassigned' }}
-                    </dd>
+                       <div class="flex-1">
+                          <AssigneeSelector
+                            v-if="projectTeamMembers.length > 0"
+                            :modelValue="details.assignedToId || null"
+                            :members="projectTeamMembers"
+                            @update:modelValue="updateAssignee"
+                          />
+                          <span v-else class="text-sm text-gray-500">
+                             {{ details.assignedToName || 'Unassigned' }}
+                          </span>
+                       </div>
                   </div>
                   <div>
                     <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</dt>
@@ -222,14 +227,21 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
 import type { WorkItemDetailDto, WorkItemType } from '@/types/WorkItem'
+import AssigneeSelector from '@/components/workItem/AssigneeSelector.vue'
+import { useTeamsStore } from '@/stores/teams'
+import { useWorkItemStore } from '@/stores/workItemsStore'
 
-defineProps<{
+const teamsStore = useTeamsStore()
+const workItemStore = useWorkItemStore()
+
+const props = defineProps<{
   details: WorkItemDetailDto | null
   loading: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'close'): void
   (e: 'navigate', id: number): void
   (e: 'edit', item: WorkItemDetailDto): void
@@ -237,6 +249,45 @@ defineEmits<{
   (e: 'delete', id: number): void
   (e: 'return-to-backlog', item: WorkItemDetailDto): void
 }>()
+
+const projectTeamMembers = ref<any[]>([])
+
+onMounted(async () => {
+   if (teamsStore.currentTeam) {
+      projectTeamMembers.value = teamsStore.currentTeam.members
+   } else {
+      // If we don't have currentTeam loaded (e.g. direct link), we might need to fetch it
+      // But for now, we rely on the store having it if we navigated from board
+      // Or we can try to fetch if we have project context.
+      // Ideally backend returns potential assignees in details or we fetch team by board.
+      // For now, let's use the store's getter if available
+      projectTeamMembers.value = await teamsStore.getProjectTeamMembers()
+   }
+})
+
+const updateAssignee = async (newAssigneeId: number | null) => {
+  if (!props.details || !props.details.boardId) return
+  
+  try {
+     await workItemStore.assignWorkItem(props.details.boardId, props.details.id, newAssigneeId)
+     // Optimistic update or refetch handled by parent usually, but we should emit update to parent
+     // or just mutate local prop if we want instant feedback if store doesn't trigger reactive update here immediately
+     // actually store update will trigger if we re-fetch details or if we use store data.
+     // But WorkItemDetailDto is passed as prop.
+     // So we should emit an event so parent can reload or we just reload details?
+     // Actually, we should probably just emit 'update' and let parent handle re-fetch
+     // BUT, for quick win:
+     if (props.details) {
+        props.details.assignedToId = newAssigneeId
+        const member = projectTeamMembers.value.find(m => m.userId === newAssigneeId)
+        props.details.assignedToName = member ? member.name : null
+     }
+  } catch (e) {
+     console.error('Failed to assign', e)
+  }
+}
+
+
 
 const getInitials = (name: string) => {
   return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()

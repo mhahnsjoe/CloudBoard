@@ -101,7 +101,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, watch, onMounted, type PropType } from 'vue'
+import { defineComponent, ref, computed, watch, type PropType } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Board } from '@/types/Project'
 import type { WorkItem } from '@/types/WorkItem'

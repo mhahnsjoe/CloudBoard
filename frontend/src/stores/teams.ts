@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as api from '@/services/api'
-import type { Team, TeamDetail, CreateTeamDto, UpdateTeamDto, InviteMemberDto, UpdateMemberRoleDto } from '@/types/Team'
+import type { Team, TeamDetail, TeamMember, CreateTeamDto, UpdateTeamDto, InviteMemberDto, UpdateMemberRoleDto } from '@/types/Team'
 
 export const useTeamsStore = defineStore('teams', () => {
   // State
@@ -253,6 +253,24 @@ export const useTeamsStore = defineStore('teams', () => {
     error.value = null
   }
 
+  async function getProjectTeamMembers(): Promise<TeamMember[]> {
+    if (currentTeam.value) {
+      return currentTeam.value.members || []
+    }
+
+    // Try to get selected team or fetch teams if none
+    if (!selectedTeamId.value) {
+      await fetchTeams()
+    }
+
+    if (selectedTeamId.value) {
+      await fetchTeam(selectedTeamId.value)
+    }
+
+    const team = currentTeam.value as TeamDetail | null
+    return team?.members || []
+  }
+
   return {
     // State
     teams,
@@ -279,6 +297,7 @@ export const useTeamsStore = defineStore('teams', () => {
     acceptInvitation,
     selectTeam,
     clearCurrentTeam,
-    clearError
+    clearError,
+    getProjectTeamMembers
   }
 })

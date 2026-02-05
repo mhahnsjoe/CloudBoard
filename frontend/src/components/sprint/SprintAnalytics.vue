@@ -97,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { 
   getSprintBurndown, 
   getBoardVelocity 
@@ -114,7 +114,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits<{
+defineEmits<{
   'update-sprint': [sprint: Sprint]
 }>()
 

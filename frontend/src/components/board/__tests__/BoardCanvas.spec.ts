@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import BoardCanvas from '../BoardCanvas.vue'
 import type { WorkItem } from '@/types/WorkItem'
@@ -159,6 +159,7 @@ describe('BoardCanvas.vue', () => {
       })
 
       // Empty state only shows when dragging
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const component = wrapper.vm as any
       component.isDragging = true
       await wrapper.vm.$nextTick()
@@ -175,6 +176,7 @@ describe('BoardCanvas.vue', () => {
         }
       })
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const component = wrapper.vm as any
       const toDoItems = component.getWorkItemsByStatus('To Do')
       const inProgressItems = component.getWorkItemsByStatus('In Progress')
@@ -186,17 +188,7 @@ describe('BoardCanvas.vue', () => {
     })
   })
 
-  /* New Item Button tests removed as functionality is shifting
-  describe('New Item Button', () => {
-    ...
-  })
-  */
 
-  /* Drag and Drop tests removed pending revamp
-  describe('Drag and Drop', () => {
-    ...
-  })
-  */
 
   describe('Event Emissions', () => {
     it('forwards edit-workitem event from KanbanCard', async () => {
@@ -230,6 +222,7 @@ describe('BoardCanvas.vue', () => {
         }
       })
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const component = wrapper.vm as any
       const ordered = component.orderedColumns
 

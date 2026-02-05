@@ -9,12 +9,12 @@ export const useSprintStore = defineStore('sprint', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const activeSprint = computed(() => 
-    sprints.value.find(s => s.status === 'Active') 
+  const activeSprint = computed(() =>
+    sprints.value.find(s => s.status === 'Active')
   )
 
   const planningSprints = computed(() =>
-    sprints.value.filter(s => s.status === 'Completed') 
+    sprints.value.filter(s => s.status === 'Completed')
   )
 
   const completedSprints = computed(() =>
@@ -74,11 +74,11 @@ export const useSprintStore = defineStore('sprint', () => {
     error.value = null
     try {
       await api.updateSprint(sprintId, data)
-      
+
       // Refetch the updated sprint to get complete data
       const response = await api.getSprint(sprintId)
       const updatedSprint = response.data
-      
+
       const index = sprints.value.findIndex(s => s.id === sprintId)
       if (index !== -1) {
         sprints.value[index] = updatedSprint
@@ -157,11 +157,11 @@ export const useSprintStore = defineStore('sprint', () => {
     }
   }
 
-  async function assignWorkItemToSprint(workItemId: number, sprintId: number | null) {
+  async function assignWorkItemToSprint(boardId: number, workItemId: number, sprintId: number | null) {
     loading.value = true
     error.value = null
     try {
-      await api.assignWorkItemToSprint(workItemId, sprintId)
+      await api.assignWorkItemToSprint(boardId, workItemId, sprintId)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to assign work item'
       error.value = message

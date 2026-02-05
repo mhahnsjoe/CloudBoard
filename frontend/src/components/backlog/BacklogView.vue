@@ -16,35 +16,14 @@
           </div>
           <div class="flex items-center gap-3">
             <!-- Quick Add Dropdown -->
-            <div class="relative" ref="addDropdownRef">
+            <div class="relative">
               <button
-                @click="addDropdownOpen = !addDropdownOpen"
+                @click="openCreateModal('Epic')"
                 class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
               >
                 <PlusIcon className="w-5 h-5" />
                 New Work Item
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
               </button>
-
-              <!-- Type Selection Dropdown -->
-              <div
-                v-if="addDropdownOpen"
-                class="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-50"
-              >
-                <div class="p-2">
-                  <button
-                    v-for="type in creatableTypes"
-                    :key="type"
-                    @click="openCreateModal(type)"
-                    class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <WorkItemTypeBadge :type="type" />
-                    <span class="text-sm text-gray-700">New {{ type }}</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -181,6 +160,7 @@
       :parentId="selectedParentId"
       :availableParents="availableParents"
       :boards="boards"
+      :teamMembers="projectTeamMembers"
       @close="closeWorkItemModal"
       @save="handleSaveWorkItem"
     />
@@ -200,6 +180,7 @@
 import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { VueDraggable } from 'vue-draggable-plus'
+import { useTeamsStore } from '@/stores/teams'
 import {
   getBoards,
   getProjectBacklog,
@@ -236,17 +217,17 @@ export default defineComponent({
   setup() {
     const route = useRoute()
     const { confirm } = useConfirm()
+    const teamsStore = useTeamsStore()
     const projectId = ref(Number(route.params.projectId))
     
     // Data
     const boards = ref<Board[]>([])
     const allWorkItems = ref<WorkItem[]>([])
+    const projectTeamMembers = ref<any[]>([])
     const loading = ref(false)
     const projectName = ref('Project')
     
     // UI State
-    const addDropdownOpen = ref(false)
-    const addDropdownRef = ref<HTMLElement | null>(null)
     const selectedItemId = ref<number | null>(null)
     
     // Work Item Modal State
@@ -330,12 +311,19 @@ export default defineComponent({
       }
     }
 
+    const fetchTeamMembers = async () => {
+      try {
+        projectTeamMembers.value = await teamsStore.getProjectTeamMembers()
+      } catch (error) {
+        console.error('Failed to fetch team members:', error)
+      }
+    }
+
     // =============================================
     // WORK ITEM MODAL HANDLERS
     // =============================================
 
     const openCreateModal = (type: WorkItemType) => {
-      addDropdownOpen.value = false
       selectedWorkItem.value = null
       selectedParentId.value = null
       defaultType.value = type
@@ -475,13 +463,6 @@ export default defineComponent({
       treeHelpers.clearFilters()
     }
 
-    // Close dropdown on click outside
-    const handleClickOutside = (event: MouseEvent) => {
-      if (addDropdownRef.value && !addDropdownRef.value.contains(event.target as Node)) {
-        addDropdownOpen.value = false
-      }
-    }
-
     // =============================================
     // DISPLAY ORDER AND CHILDREN
     // =============================================
@@ -517,7 +498,7 @@ export default defineComponent({
 
     onMounted(() => {
       fetchBacklogItems()
-      document.addEventListener('click', handleClickOutside)
+      fetchTeamMembers()
     })
 
     // Watch for route changes
@@ -532,10 +513,9 @@ export default defineComponent({
       loading,
       boards,
       allWorkItems,
+      projectTeamMembers,
       projectName,
       treeHelpers,
-      addDropdownOpen,
-      addDropdownRef,
       selectedItemId,
       // Work Item Modal
       showWorkItemModal,

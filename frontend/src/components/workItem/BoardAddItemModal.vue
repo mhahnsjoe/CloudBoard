@@ -150,6 +150,16 @@
                     />
                   </div>
 
+                  <!-- Assignee Selection -->
+                  <div class="space-y-1.5">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-0.5">Assigned To</label>
+                    <AssigneeSelector
+                      v-model="form.assignedToId"
+                      :members="teamMembers"
+                      class="!w-full"
+                    />
+                  </div>
+
                   <!-- Description -->
                   <div class="space-y-1.5">
                     <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-0.5">Description</label>
@@ -250,6 +260,8 @@ import { ref, computed, defineComponent, h } from 'vue'
 import type { WorkItem, WorkItemCreate, WorkItemType } from '@/types/WorkItem'
 import { onMounted } from 'vue'
 import WorkItemTypeBadge from './WorkItemTypeBadge.vue'
+import AssigneeSelector from './AssigneeSelector.vue'
+import type { TeamMember } from '@/types/Team'
 
 // Custom Functional Icon Components for consistency (Used in Step 1)
 const IconPBI = defineComponent({
@@ -283,6 +295,7 @@ const props = defineProps<{
   availableStatuses: string[]
   sprintId?: number | null
   parentPreselected?: number
+  teamMembers: TeamMember[]
 }>()
 
 const emit = defineEmits<{
@@ -312,7 +325,8 @@ const form = ref({
   description: '',
   status: props.defaultStatus || 'To Do',
   priority: 'Medium',
-  estimatedHours: undefined as number | undefined
+  estimatedHours: undefined as number | undefined,
+  assignedToId: null as number | null
 })
 
 const currentStep = computed(() => {
@@ -321,7 +335,7 @@ const currentStep = computed(() => {
   return 3
 })
 
-const activeTypeInfo = computed(() => types.find(t => t.id === itemType.value))
+
 
 const filteredParents = computed(() => {
   if (!props.workItems) return []
@@ -369,7 +383,8 @@ const handleSubmit = () => {
     remainingHours: form.value.estimatedHours, // Initialize remaining to estimate
     boardId: props.boardId,
     sprintId: props.sprintId ?? null,
-    parentId: parentId.value
+    parentId: parentId.value,
+    assignedToId: form.value.assignedToId
   }
 
   loading.value = true

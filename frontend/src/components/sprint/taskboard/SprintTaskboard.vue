@@ -55,8 +55,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+
 import type { Taskboard, TaskboardTask } from '@/types/Taskboard'
+import { useWorkItemStore } from '@/stores/workItemsStore'
 import TaskboardRow from './TaskboardRow.vue'
 import { LoadingIcon, ClipboardIcon } from '@/components/icons'
 
@@ -74,10 +75,7 @@ const emit = defineEmits<{
   'update-task-status': [task: TaskboardTask, newStatus: string]
 }>()
 
-const overallProgress = computed(() => {
-  if (!props.taskboard || props.taskboard.totalHours === 0) return 0
-  return (props.taskboard.completedHours / props.taskboard.totalHours) * 100
-})
+
 
 const getColumnTaskCount = (column: string) => {
   if (!props.taskboard) return 0

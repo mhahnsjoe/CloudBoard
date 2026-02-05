@@ -31,7 +31,7 @@ public class BacklogApiTests : IntegrationTestBase
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var item = await response.Content.ReadFromJsonAsync<BacklogItemResponse>();
+        var item = await response.Content.ReadFromJsonAsync<BacklogItemResponse>(JsonOptions);
         item!.BoardId.Should().BeNull();
         item.BacklogOrder.Should().NotBeNull();
     }
@@ -60,7 +60,7 @@ public class BacklogApiTests : IntegrationTestBase
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var items = await response.Content.ReadFromJsonAsync<List<BacklogItemResponse>>();
+        var items = await response.Content.ReadFromJsonAsync<List<BacklogItemResponse>>(JsonOptions);
         items.Should().HaveCount(3);
 
         // Verify ordering
@@ -82,7 +82,7 @@ public class BacklogApiTests : IntegrationTestBase
             Status = "To Do",
             Priority = "Medium"
         });
-        var item = await createResponse.Content.ReadFromJsonAsync<BacklogItemResponse>();
+        var item = await createResponse.Content.ReadFromJsonAsync<BacklogItemResponse>(JsonOptions);
 
         // Act
         var moveResponse = await Client.PatchAsJsonAsync(
@@ -96,7 +96,7 @@ public class BacklogApiTests : IntegrationTestBase
         var getResponse = await Client.GetAsync($"/api/v1/boards/{boardId}/workitems/{item.Id}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var movedItem = await getResponse.Content.ReadFromJsonAsync<BacklogItemResponse>();
+        var movedItem = await getResponse.Content.ReadFromJsonAsync<BacklogItemResponse>(JsonOptions);
         movedItem!.BoardId.Should().Be(boardId);
     }
 
