@@ -5,7 +5,11 @@
     <div 
       class="w-64 flex-shrink-0 p-2 bg-gray-50 border-r border-gray-200 sticky left-0 z-10 flex flex-col pt-3"
     >
+       <div v-if="row.type === 'Unparented'" class="p-3 bg-gray-100 rounded border border-gray-200 text-center">
+         <span class="text-sm font-semibold text-gray-600">Unparented Tasks</span>
+       </div>
        <KanbanCard 
+         v-else
          :workItem="rowAsWorkItem"
          class="mb-2"
          :showExpandable="false"
@@ -54,6 +58,7 @@
 import { ref, onMounted, computed } from 'vue'
 import type { TaskboardRow, TaskboardTask } from '@/types/Taskboard'
 import type { TeamMember } from '@/types/Team'
+import type { WorkItem } from '@/types/WorkItem'
 import KanbanCard from '@/components/kanban/KanbanCard.vue'
 import TaskboardTaskCard from './TaskboardTaskCard.vue'
 import { PlusIcon } from '@/components/icons'
@@ -74,7 +79,7 @@ const rowAsWorkItem = computed(() => {
     // (we want them in the cells).
     // So we should probably pass children: [] to KanbanCard so it looks like a leaf card (just the PBI).
     children: [] 
-  }
+  } as unknown as WorkItem
 })
 
 interface Props {

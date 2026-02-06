@@ -113,7 +113,7 @@ import { useTeamsStore } from '@/stores/teams'
 import type { Board } from '@/types/Project'
 import type { WorkItem } from '@/types/WorkItem'
 import type { Sprint } from '@/types/Sprint'
-import type { Taskboard, TaskboardTask } from '@/types/Taskboard'
+import type { Taskboard, TaskboardTask, TaskboardRow } from '@/types/Taskboard'
 import * as api from '@/services/api'
 import BoardHeader from '../board/BoardHeader.vue'
 import SprintInfoBar from '../sprint/SprintInfoBar.vue'
@@ -230,7 +230,7 @@ export default defineComponent({
     }
 
     const generateTaskboard = () => {
-      if (!props.selectedSprintId) return
+      if (!props.selectedSprintId || !props.board) return
       
       const sprintItems = props.workItems
       const columns = props.board.columns.map(c => c.name)
@@ -272,14 +272,14 @@ export default defineComponent({
                type: t.type as 'Task' | 'Bug',
                status: t.status,
                priority: t.priority,
-               estimatedHours: t.estimatedHours,
-               actualHours: t.actualHours,
-               remainingHours: t.remainingHours,
+               estimatedHours: t.estimatedHours ?? null,
+               actualHours: t.actualHours ?? null,
+               remainingHours: t.remainingHours ?? null,
                parentId: parent.id,
-               assignedToId: t.assignedToId,
-               assignedToName: t.assignedToName
+               assignedToId: t.assignedToId ?? null,
+               assignedToName: t.assignedToName ?? null
             }))
-         }
+         } as unknown as TaskboardRow
       })
 
       // Handle orphans
@@ -296,11 +296,8 @@ export default defineComponent({
             priority: 'N/A',
             // Mock required properties for WorkItem interface compatibility
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
             description: '',
             boardId: props.boardId,
-            projectId: props.board.projectId,
-            assignee: [],
             totalHours: orphanTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0),
             completedHours: orphanTasks.filter(t => t.status === 'Done').reduce((sum, t) => sum + (t.estimatedHours || 0), 0),
             remainingHours: orphanTasks.reduce((sum, t) => sum + (t.remainingHours || 0), 0),
@@ -311,14 +308,14 @@ export default defineComponent({
                type: t.type as 'Task' | 'Bug',
                status: t.status,
                priority: t.priority,
-               estimatedHours: t.estimatedHours,
-               actualHours: t.actualHours,
-               remainingHours: t.remainingHours,
+               estimatedHours: t.estimatedHours ?? null,
+               actualHours: t.actualHours ?? null,
+               remainingHours: t.remainingHours ?? null,
                parentId: 0,
-               assignedToId: t.assignedToId,
-               assignedToName: t.assignedToName
+               assignedToId: t.assignedToId ?? null,
+               assignedToName: t.assignedToName ?? null
             }))
-         })
+         } as unknown as TaskboardRow)
       }
 
       taskboardData.value = {
