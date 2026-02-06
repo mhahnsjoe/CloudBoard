@@ -101,6 +101,15 @@
             </div>
           </div>
 
+          <!-- Assignee Selector -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+            <AssigneeSelector
+              v-model="form.assignedToId"
+              :members="teamMembers"
+            />
+          </div>
+
           <!-- Row: Due Date, Estimated Hours -->
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -185,13 +194,16 @@ import { PRIORITIES, DEFAULT_STATUSES } from '@/types/Project'
 import { HIERARCHY_RULES } from '@/composables/useWorkItemTree'
 import WorkItemTypeBadge from './WorkItemTypeBadge.vue'
 import ParentSelector from './ParentSelector.vue'
+import AssigneeSelector from './AssigneeSelector.vue'
 import { ClockIcon, CalendarIcon } from '@/components/icons'
+import type { TeamMember } from '@/types/Team'
 
 export default defineComponent({
   name: 'WorkItemModal',
   components: {
     WorkItemTypeBadge,
     ParentSelector,
+    AssigneeSelector,
     ClockIcon,
     CalendarIcon
   },
@@ -231,6 +243,10 @@ export default defineComponent({
     availableStatuses: {
       type: Array as PropType<string[]>,
       default: () => [...DEFAULT_STATUSES]
+    },
+    teamMembers: {
+      type: Array as PropType<TeamMember[]>,
+      default: () => []
     }
   },
   emits: ['close', 'save'],
@@ -250,7 +266,8 @@ export default defineComponent({
       actualHours: props.workItem?.actualHours || null,
       boardId: props.workItem?.boardId || props.boardId,
       parentId: props.workItem?.parentId || props.parentId || null,
-      sprintId: props.workItem?.sprintId || props.sprintId || null
+      sprintId: props.workItem?.sprintId || props.sprintId || null,
+      assignedToId: (props.workItem?.assignedToId || null) as number | null
     })
 
     // Available types (all types can be created, but parent rules apply)
@@ -328,7 +345,8 @@ export default defineComponent({
           actualHours: newWorkItem.actualHours || null,
           boardId: newWorkItem.boardId,
           parentId: newWorkItem.parentId || null,
-          sprintId: newWorkItem.sprintId || null
+          sprintId: newWorkItem.sprintId || null,
+          assignedToId: newWorkItem.assignedToId || null
         }
       } else {
         isEditing.value = false
@@ -366,7 +384,8 @@ export default defineComponent({
         boardId: form.value.boardId,
         parentId: form.value.parentId || undefined,
         sprintId: form.value.sprintId,
-        createdAt: props.workItem?.createdAt || new Date().toISOString()
+        createdAt: props.workItem?.createdAt || new Date().toISOString(),
+        assignedToId: form.value.assignedToId ?? undefined
       }
 
       emit('save', workItemData)

@@ -33,7 +33,7 @@ public class WorkItemApiTests : IntegrationTestBase
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var workItem = await response.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var workItem = await response.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
         workItem.Should().NotBeNull();
         workItem!.Title.Should().Be("Integration Test Task");
         workItem.BoardId.Should().Be(boardId);
@@ -54,7 +54,7 @@ public class WorkItemApiTests : IntegrationTestBase
             Status = "To Do",
             Priority = "Medium"
         });
-        var epic = await epicResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var epic = await epicResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
 
         // Act - Create Feature under Epic
         var featureResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
@@ -69,7 +69,7 @@ public class WorkItemApiTests : IntegrationTestBase
         // Assert
         featureResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var feature = await featureResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var feature = await featureResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
         feature!.ParentId.Should().Be(epic.Id);
     }
 
@@ -88,7 +88,7 @@ public class WorkItemApiTests : IntegrationTestBase
             Status = "To Do",
             Priority = "Medium"
         });
-        var task = await taskResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var task = await taskResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
 
         // Act - Try to create PBI under Task (invalid)
         var pbiResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
@@ -118,7 +118,7 @@ public class WorkItemApiTests : IntegrationTestBase
             Status = "To Do",
             Priority = "Medium"
         });
-        var workItem = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var workItem = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
 
         // Act
         var updateResponse = await Client.PutAsJsonAsync(
@@ -138,7 +138,7 @@ public class WorkItemApiTests : IntegrationTestBase
 
         // Verify update by fetching the item
         var getResponse = await Client.GetAsync($"/api/v1/boards/{boardId}/workitems/{workItem.Id}");
-        var updated = await getResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var updated = await getResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
         updated!.Title.Should().Be("Updated Title");
         updated.Status.Should().Be("In Progress");
         updated.Priority.Should().Be("High");
@@ -158,7 +158,7 @@ public class WorkItemApiTests : IntegrationTestBase
             Status = "To Do",
             Priority = "Medium"
         });
-        var workItem = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var workItem = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
 
         // Act
         var deleteResponse = await Client.DeleteAsync(
@@ -198,7 +198,7 @@ public class WorkItemApiTests : IntegrationTestBase
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var workItems = await response.Content.ReadFromJsonAsync<List<WorkItemResponse>>();
+        var workItems = await response.Content.ReadFromJsonAsync<List<WorkItemResponse>>(JsonOptions);
         workItems.Should().HaveCount(3);
     }
 
@@ -217,7 +217,7 @@ public class WorkItemApiTests : IntegrationTestBase
             Status = "To Do",
             Priority = "High"
         });
-        var epic = await epicResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var epic = await epicResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
 
         var featureResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
@@ -227,7 +227,7 @@ public class WorkItemApiTests : IntegrationTestBase
             Priority = "Medium",
             ParentId = epic!.Id
         });
-        var feature = await featureResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var feature = await featureResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
 
         var pbiResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
@@ -237,7 +237,7 @@ public class WorkItemApiTests : IntegrationTestBase
             Priority = "Medium",
             ParentId = feature!.Id
         });
-        var pbi = await pbiResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        var pbi = await pbiResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
 
         var taskResponse = await Client.PostAsJsonAsync($"/api/v1/boards/{boardId}/workitems", new
         {
@@ -254,7 +254,7 @@ public class WorkItemApiTests : IntegrationTestBase
         // Verify hierarchy via GET with hierarchy
         var hierarchyResponse = await Client.GetAsync(
             $"/api/v1/boards/{boardId}/workitems/hierarchy");
-        var roots = await hierarchyResponse.Content.ReadFromJsonAsync<List<WorkItemResponse>>();
+        var roots = await hierarchyResponse.Content.ReadFromJsonAsync<List<WorkItemResponse>>(JsonOptions);
 
         roots.Should().HaveCount(1);
         roots![0].Title.Should().Be("Epic");

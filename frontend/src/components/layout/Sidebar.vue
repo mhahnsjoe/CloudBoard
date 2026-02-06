@@ -78,9 +78,9 @@
 
     <!-- Navigation -->
     <nav class="flex-1 px-4 py-2 overflow-y-auto">
-      <!-- Project-specific navigation -->
-      <div v-if="selectedProjectId">
-        <!-- Dashboard/Summary -->
+      <!-- Global Navigation -->
+      <div class="mb-4">
+        <!-- Overview/Summary -->
         <router-link
           to="/"
           class="nav-item"
@@ -89,8 +89,12 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          <span>Dashboard</span>
+          <span>Overview</span>
         </router-link>
+      </div>
+
+      <!-- Project-specific navigation -->
+      <div v-if="selectedProjectId">
 
         <!-- Backlog -->
         <router-link
@@ -164,16 +168,86 @@
       </div>
     </nav>
 
-     <!-- User Footer -->
-    <div class="p-4 border-t border-gray-700">
+    <!-- Team Selector -->
+    <div class="px-4 py-2 border-t border-gray-700">
+      <div class="relative" ref="teamSelectorRef">
+        <button
+          @click="teamDropdown.toggle"
+          class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+          :class="{ 'bg-gray-700': showTeamDropdown }"
+        >
+          <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+            {{ currentTeamInitial }}
+          </div>
+          <div class="flex-1 text-left min-w-0">
+            <div class="text-sm font-medium text-white truncate">{{ currentTeamName }}</div>
+            <div class="text-xs text-gray-400">{{ currentTeamRole }}</div>
+          </div>
+          <svg
+            class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform"
+            :class="{ 'rotate-180': showTeamDropdown }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- Team Dropdown Menu -->
+        <div
+          v-if="showTeamDropdown"
+          class="absolute bottom-full left-0 right-0 mb-2 rounded-lg shadow-xl border border-gray-600 py-2 z-50 bg-gray-700"
+        >
+          <!-- Team List -->
+          <div class="max-h-48 overflow-y-auto">
+            <button
+              v-for="team in teams"
+              :key="team.id"
+              @click="handleTeamChange(team.id)"
+              class="w-full text-left px-4 py-2 hover:bg-gray-600 transition-colors flex items-center gap-3"
+              :class="{ 'bg-gray-600': team.id === teamsStore.selectedTeamId }"
+            >
+              <div class="w-6 h-6 rounded bg-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                {{ team.name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm text-white truncate">{{ team.name }}</div>
+                <div class="text-xs text-gray-400">{{ team.currentUserRole }}</div>
+              </div>
+              <span v-if="team.id === teamsStore.selectedTeamId" class="text-xs text-blue-400">
+                Current
+              </span>
+            </button>
+          </div>
+
+          <!-- Manage Teams -->
+          <div class="border-t border-gray-600 mt-2 pt-2">
+            <router-link
+              to="/teams"
+              @click="teamDropdown.close"
+              class="w-full text-left px-4 py-2 hover:bg-gray-600 transition-colors flex items-center gap-3 text-blue-400"
+            >
+              <UsersIcon className="w-4 h-4" />
+              <span>Manage Teams</span>
+            </router-link>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Footer -->
+    <div class="px-4 py-3 border-t border-gray-700">
       <div class="relative" ref="userMenuRef">
         <button
           @click="userMenuDropdown.toggle"
           class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
         >
-          <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-            {{ userInitials }}
-          </div>
+          <UserAvatar
+            :name="authStore.user?.name || 'User'"
+            :userId="authStore.user?.id"
+            size="md"
+          />
           <div class="flex-1 text-left min-w-0">
             <div class="text-sm font-medium text-white truncate">{{ authStore.user?.name || 'User' }}</div>
             <div class="text-xs text-gray-400 truncate">{{ authStore.user?.email }}</div>
@@ -215,6 +289,18 @@
       @close="showAddProjectModal = false"
       @submit="handleCreateProject"
     >
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Team</label>
+        <select
+          v-model="newProjectTeamId"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+        >
+          <option v-for="team in teams" :key="team.id" :value="team.id">
+            {{ team.name }}
+          </option>
+        </select>
+        <p class="mt-1 text-xs text-gray-500">All team members will have access to this project.</p>
+      </div>
       <input
         v-model="newProjectName"
         type="text"
@@ -259,13 +345,14 @@
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { FolderIcon, PlusIcon, ClipboardIcon } from '@/components/icons'
+import { FolderIcon, PlusIcon, ClipboardIcon, UsersIcon } from '@/components/icons'
 import Modal from '@/components/common/Modal.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import logo from '@/assets/cb.png'
-import type { Project } from '@/types/Project'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/boards'
 import { useProjectStore } from '@/stores/projects'
+import { useTeamsStore } from '@/stores/teams'
 import { storeToRefs } from 'pinia'
 import { useDropdown } from '@/composables/useDropdown'
 import { useClickOutside } from '@/composables/useClickOutside'
@@ -276,7 +363,9 @@ export default defineComponent({
     FolderIcon,
     PlusIcon,
     ClipboardIcon,
-    Modal
+    UsersIcon,
+    Modal,
+    UserAvatar
   },
   setup() {
     const route = useRoute()
@@ -284,12 +373,15 @@ export default defineComponent({
     const authStore = useAuthStore()
     const boardStore = useBoardStore()
     const projectStore = useProjectStore()
+    const teamsStore = useTeamsStore()
     const { projects } = storeToRefs(projectStore)
+    const { teams } = storeToRefs(teamsStore)
     const selectedProjectId = ref<number | null>(null)
     const showAddProjectModal = ref(false)
     const showAddBoardModal = ref(false)
     const newProjectName = ref('')
     const newProjectDescription = ref('')
+    const newProjectTeamId = ref<number | null>(null)
     const newBoardName = ref('')
     const newBoardType = ref('Kanban')
     const isBoardsExpanded = ref(true)
@@ -297,19 +389,42 @@ export default defineComponent({
     // Dropdown management
     const projectSelectorRef = ref<HTMLElement | null>(null)
     const userMenuRef = ref<HTMLElement | null>(null)
+    const teamSelectorRef = ref<HTMLElement | null>(null)
     const projectDropdown = useDropdown()
     const userMenuDropdown = useDropdown()
+    const teamDropdown = useDropdown()
 
     useClickOutside(projectSelectorRef, projectDropdown.close)
     useClickOutside(userMenuRef, userMenuDropdown.close)
+    useClickOutside(teamSelectorRef, teamDropdown.close)
+
+    // Filter projects by selected team
+    const filteredProjects = computed(() => {
+      if (!teamsStore.selectedTeamId) return projects.value
+      return projects.value.filter(p => p.teamId === teamsStore.selectedTeamId)
+    })
 
     const currentProjectName = computed(() => {
-      const project = projects.value.find(p => p.id === selectedProjectId.value)
+      const project = filteredProjects.value.find(p => p.id === selectedProjectId.value)
       return project?.name || ''
     })
 
     const isOnProjectBoard = computed(() => {
       return route.path.includes('/projects/') && route.path.includes('/boards/')
+    })
+
+    // Team selector computed properties
+    const currentTeamName = computed(() => {
+      return teamsStore.selectedTeam?.name || 'Select Team'
+    })
+
+    const currentTeamInitial = computed(() => {
+      const name = teamsStore.selectedTeam?.name || ''
+      return name.charAt(0).toUpperCase() || 'T'
+    })
+
+    const currentTeamRole = computed(() => {
+      return teamsStore.selectedTeam?.currentUserRole || ''
     })
 
     const userInitials = computed(() => {
@@ -323,6 +438,7 @@ export default defineComponent({
     })
 
     const handleLogout = () => {
+      teamsStore.$reset()
       authStore.logout()
       router.push('/login')
     }
@@ -356,7 +472,7 @@ export default defineComponent({
 
     const handleProjectChange = async (projectId: number) => {
       projectDropdown.close()
-      
+
       if (projectId === selectedProjectId.value) {
         return
       }
@@ -375,9 +491,22 @@ export default defineComponent({
       }
     }
 
-    const openCreateProjectModal = () => {
-      projectDropdown.close()
-      showAddProjectModal.value = true
+    const handleTeamChange = async (teamId: number) => {
+      teamDropdown.close()
+
+      if (teamId === teamsStore.selectedTeamId) {
+        return
+      }
+
+      teamsStore.selectTeam(teamId)
+
+      // Reset project selection when team changes
+      selectedProjectId.value = null
+
+      // Navigate to Overview when changing teams
+      if (route.path !== '/') {
+        router.push('/')
+      }
     }
 
     const openCreateBoardModal = () => {
@@ -390,14 +519,21 @@ export default defineComponent({
         return
       }
 
+      if (!newProjectTeamId.value) {
+        alert('Please select a team')
+        return
+      }
+
       try {
         const newProject = await projectStore.createProject({
           name: newProjectName.value,
-          description: newProjectDescription.value
+          description: newProjectDescription.value,
+          teamId: newProjectTeamId.value
         })
 
         newProjectName.value = ''
         newProjectDescription.value = ''
+        newProjectTeamId.value = null
         showAddProjectModal.value = false
 
         if (newProject && newProject.boards && newProject.boards.length > 0) {
@@ -450,37 +586,60 @@ export default defineComponent({
     }, { immediate: true })
 
     onMounted(async () => {
+      await teamsStore.fetchTeams()
       await fetchProjects()
       if (selectedProjectId.value) {
         await boardStore.fetchBoards(selectedProjectId.value)
       }
     })
 
+    // When opening the create project modal, default to the selected team
+    const openCreateProjectModal = () => {
+      projectDropdown.close()
+      // Default to selected team
+      if (teamsStore.selectedTeamId) {
+        newProjectTeamId.value = teamsStore.selectedTeamId
+      } else if (teams.value.length > 0) {
+        newProjectTeamId.value = teams.value[0]!.id
+      }
+      showAddProjectModal.value = true
+    }
+
     return {
       route,
       authStore,
       boardStore,
-      projects,
+      teamsStore,
+      projects: filteredProjects,
+      teams,
       selectedProjectId,
       currentProjectName,
       isOnProjectBoard,
       userInitials,
+      currentTeamName,
+      currentTeamInitial,
+      currentTeamRole,
       showAddProjectModal,
       showAddBoardModal,
       showProjectDropdown: projectDropdown.isOpen,
       showUserMenu: userMenuDropdown.isOpen,
+      showTeamDropdown: teamDropdown.isOpen,
       projectSelectorRef,
       userMenuRef,
+      teamSelectorRef,
       newProjectName,
       newProjectDescription,
+      newProjectTeamId,
       newBoardName,
       newBoardType,
       projectDropdown,
       userMenuDropdown,
+      teamDropdown,
       isBoardsExpanded,
       toggleBoards,
       getBoardTypeBadgeClass,
       handleProjectChange,
+      handleTeamChange,
       handleLogout,
       openCreateProjectModal,
       openCreateBoardModal,

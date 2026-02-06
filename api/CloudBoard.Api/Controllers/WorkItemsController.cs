@@ -240,6 +240,25 @@ namespace CloudBoard.Api.Controllers
                 return Forbid();
             }
         }
+
+        [HttpPatch("{id}/assign")]
+        public async Task<IActionResult> AssignWorkItem(int boardId, int id, [FromBody] AssignWorkItemDto dto)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                await _workItemService.AssignAsync(id, dto.AssignedToId, userId);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+        }
         //Get all backlog items for a project (items without a board)
         [HttpGet("/api/v{version:apiVersion}/projects/{projectId}/backlog")]
         public async Task<ActionResult<IEnumerable<WorkItem>>> GetProjectBacklog(int projectId)

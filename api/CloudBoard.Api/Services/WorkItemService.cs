@@ -166,6 +166,7 @@ namespace CloudBoard.Api.Services
             await TrackChange(workItem.Id, "SprintId", workItem.SprintId?.ToString(), dto.SprintId?.ToString(), currentUserId);
             await TrackChange(workItem.Id, "EstimatedHours", workItem.EstimatedHours?.ToString(), dto.EstimatedHours?.ToString(), currentUserId);
             await TrackChange(workItem.Id, "RemainingHours", workItem.RemainingHours?.ToString(), dto.RemainingHours?.ToString(), currentUserId);
+            await TrackChange(workItem.Id, "AssignedToId", workItem.AssignedToId?.ToString(), dto.AssignedToId?.ToString(), currentUserId);
 
             // Update properties
             workItem.Title = dto.Title;
@@ -181,9 +182,23 @@ namespace CloudBoard.Api.Services
             workItem.RemainingHours = dto.Status == "Done" ? 0 : (dto.RemainingHours ?? (dto.Status != workItem.Status ? (dto.RemainingHours ?? dto.EstimatedHours ?? workItem.RemainingHours) : workItem.RemainingHours));
             workItem.ParentId = dto.ParentId;
             workItem.SprintId = dto.SprintId;
+            workItem.AssignedToId = dto.AssignedToId;
 
             await _workItemRepository.SaveChangesAsync();
             return workItem;
+        }
+
+        public async Task AssignAsync(int workItemId, int? assignedToId, int currentUserId)
+        {
+            var workItem = await _workItemRepository.GetByIdAsync(workItemId);
+            if (workItem == null)
+                throw new KeyNotFoundException($"WorkItem {workItemId} not found");
+
+            var oldValue = workItem.AssignedToId?.ToString();
+            workItem.AssignedToId = assignedToId;
+            
+            await TrackChange(workItemId, "AssignedToId", oldValue, assignedToId?.ToString(), currentUserId);
+            await _workItemRepository.SaveChangesAsync();
         }
 
         private async Task TrackChange(int workItemId, string fieldName, string? oldValue, string? newValue, int userId)

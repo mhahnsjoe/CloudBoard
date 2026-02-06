@@ -48,4 +48,29 @@ public class ProjectRepository : Repository<Project>, IProjectRepository
     {
         return await DbSet.AnyAsync(p => p.Id == projectId && p.OwnerId == userId, ct);
     }
+
+    public async Task<List<Project>> GetByTeamAsync(int teamId, CancellationToken ct = default)
+    {
+        return await DbSet
+            .Where(p => p.TeamId == teamId)
+            .Include(p => p.Boards)
+                .ThenInclude(b => b.Columns.OrderBy(c => c.Order))
+            .Include(p => p.Team)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Project>> GetAccessibleByUserAsync(int userId, CancellationToken ct = default)
+    {
+        return await DbSet
+            .Where(p => p.Team.Members.Any(m => m.UserId == userId))
+            .Include(p => p.Boards)
+                .ThenInclude(b => b.WorkItems)
+            .Include(p => p.Boards)
+                .ThenInclude(b => b.Columns.OrderBy(c => c.Order))
+            .Include(p => p.Team)
+            .Include(p => p.Owner)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+    }
 }

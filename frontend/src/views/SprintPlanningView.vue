@@ -83,7 +83,7 @@ import { LoadingIcon } from '@/components/icons'
 import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
-const { error: toastError, success: toastSuccess } = useToast()
+const { error: toastError } = useToast()
 const projectId = computed(() => Number(route.params.projectId))
 const boardId = computed(() => Number(route.params.boardId))
 
@@ -250,6 +250,7 @@ const handleStartSprint = async (sprintId: number) => {
   try {
     await startSprint(sprintId)
     await fetchPlanningContext()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Failed to start sprint:', error)
     toastError(error.response?.data || 'Failed to start sprint. Another sprint might be active.')

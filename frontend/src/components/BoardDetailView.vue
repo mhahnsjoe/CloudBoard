@@ -51,6 +51,7 @@
         @return-to-backlog="handleReturnToBacklog"
         @add-child-task="handleAddChildTask"
         @view-details="handleViewDetails"
+        @work-item-updated="handleWorkItemUpdated"
       />
 
       <!-- Kanban Board (for Kanban and Backlog boards) -->
@@ -71,6 +72,7 @@
         @return-to-backlog="handleReturnToBacklog"
         @add-child-task="handleAddChildTask"
         @view-details="handleViewDetails"
+        @work-item-updated="handleWorkItemUpdated"
       />
     </div>
 
@@ -85,6 +87,7 @@
       :sprintId="selectedSprintId"
       :availableStatuses="availableStatuses"
       :availableParents="workItems"
+      :teamMembers="projectTeamMembers"
       @close="closeWorkItemModal"
       @save="handleSaveWorkItem"
     />
@@ -142,6 +145,7 @@
       :availableStatuses="availableStatuses"
       :sprintId="selectedSprintId"
       :parentPreselected="defaultParentId || undefined"
+      :teamMembers="projectTeamMembers"
       @close="closeBoardAddItemModal"
       @create="handleCreateBoardItem"
     />
@@ -168,6 +172,7 @@ import { getBoard, createWorkItem, updateWorkItem, deleteWorkItem, returnWorkIte
 import { useConfirm } from '@/composables/useConfirm';
 import { useSprintStore } from '@/stores/sprint';
 import { useBoardStore } from '@/stores/boards';
+import { useTeamsStore } from '@/stores/teams';
 import { useToast } from '@/composables/useToast';
 import type { Board, BoardColumn } from '@/types/Project';
 import type { WorkItem, WorkItemCreate, WorkItemDetailDto, WorkItemType } from '@/types/WorkItem';
@@ -210,10 +215,12 @@ export default defineComponent({
     const { confirm } = useConfirm();
     const sprintStore = useSprintStore();
     const boardStore = useBoardStore();
-    const { success, error: toastError, info } = useToast();
+    const teamsStore = useTeamsStore();
+    const { success, error: toastError } = useToast();
 
     const board = ref<Board | null>(null);
     const workItems = ref<WorkItem[]>([]);
+    const projectTeamMembers = ref<any[]>([])
     const loading = ref(false);
     
     // WorkItem Modal
@@ -280,11 +287,30 @@ export default defineComponent({
       try {
         await sprintStore.fetchSprints(boardId.value);
         
-        // Auto-select active sprint if one exists and nothing is selected
+        // Auto-select sprint with hierarchy: Active > Planning > Latest Completed
         if (selectedSprintId.value === null) {
-          const activeSprint = sprintStore.sprints.find(s => s.status === 'Active');
+          const sprints = sprintStore.sprints;
+          
+          // Priority 1: Active sprint
+          const activeSprint = sprints.find(s => s.status === 'Active');
           if (activeSprint) {
             selectedSprintId.value = activeSprint.id;
+            return;
+          }
+          
+          // Priority 2: First planning sprint
+          const planningSprint = sprints.find(s => s.status === 'Planning');
+          if (planningSprint) {
+            selectedSprintId.value = planningSprint.id;
+            return;
+          }
+          
+          // Priority 3: Latest completed sprint
+          const completedSprints = sprints
+            .filter(s => s.status === 'Completed')
+            .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime());
+          if (completedSprints.length > 0) {
+            selectedSprintId.value = completedSprints[0]!.id;
           }
         }
       } catch (error) {
@@ -314,6 +340,14 @@ export default defineComponent({
     const closeSprintModal = () => {
       showSprintModal.value = false;
     };
+
+    const fetchTeamMembers = async () => {
+      try {
+        projectTeamMembers.value = await teamsStore.getProjectTeamMembers()
+      } catch (error) {
+        console.error('Failed to fetch team members:', error)
+      }
+    }
 
     const handleSaveSprint = async (sprintData: CreateSprintDto | UpdateSprintDto) => {
       try {
@@ -608,6 +642,18 @@ export default defineComponent({
       }
     };
 
+    const handleWorkItemUpdated = async (updatedItem: WorkItem) => {
+      const index = workItems.value.findIndex(w => w.id === updatedItem.id);
+      if (index !== -1) {
+        workItems.value[index] = updatedItem;
+      }
+      
+      // Also refresh details panel if open
+      if (detailWorkItem.value?.id === updatedItem.id) {
+         await refreshOpenDetails();
+      }
+    };
+
     const handleMoveToBacklog = async (workItem: WorkItem) => {
       try {
         await returnWorkItemToBacklog(workItem.id);
@@ -638,6 +684,7 @@ export default defineComponent({
       await boardStore.fetchBoards(projectId.value);
       await fetchBoard();
       await fetchSprints();
+      await fetchTeamMembers();
     });
 
     watch(
@@ -668,6 +715,7 @@ export default defineComponent({
       boardId,
       board,
       workItems,
+      projectTeamMembers,
       loading,
       showWorkItemModal,
       selectedWorkItem,
@@ -703,6 +751,7 @@ export default defineComponent({
       submitBoardForm,
       handleDeleteCurrentBoard,
       handleUpdateWorkItemStatus,
+      handleWorkItemUpdated,
       handleReturnToBacklog,
       handleAddChildTask,
       defaultParentId,

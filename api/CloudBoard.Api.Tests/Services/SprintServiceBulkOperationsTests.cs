@@ -22,11 +22,17 @@ public class SprintServiceBulkOperationsTests
         _boardRepoMock = new Mock<IBoardRepository>();
         _workItemRepoMock = new Mock<IWorkItemRepository>();
         _historyRepoMock = new Mock<IWorkItemHistoryRepository>();
+        
+        var teamRepoMock = new Mock<ITeamRepository>();
+        teamRepoMock.Setup(r => r.IsMemberAsync(It.IsAny<int>(), It.IsAny<int>(), default))
+            .ReturnsAsync(true);
+
         _service = new SprintService(
             _sprintRepoMock.Object, 
             _boardRepoMock.Object, 
             _workItemRepoMock.Object,
-            _historyRepoMock.Object);
+            _historyRepoMock.Object,
+            teamRepoMock.Object);
     }
 
     [Fact]

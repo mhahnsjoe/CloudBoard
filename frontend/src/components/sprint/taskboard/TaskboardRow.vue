@@ -1,43 +1,21 @@
 <template>
   <div class="taskboard-row flex bg-gray-100 rounded-sm shadow-sm">
     <!-- Row Header (PBI/Bug info) -->
+    <!-- Row Header (Work Item Card) -->
     <div 
-      class="w-64 flex-shrink-0 p-3 bg-gray-50 border-r border-gray-200 sticky left-0 z-10 flex flex-col justify-between"
+      class="w-64 flex-shrink-0 p-2 bg-gray-50 border-r border-gray-200 sticky left-0 z-10 flex flex-col pt-3"
     >
-      <div>
-        <!-- PBI Type, ID, Title Combined -->
-        <div class="flex items-center gap-2 mb-2">
-           <WorkItemTypeBadge :type="row.type === 'Bug' ? 'Bug' : 'PBI'" :iconOnly="true" class="flex-shrink-0" />
-           <span class="text-xs font-bold text-gray-900 flex-shrink-0">{{ row.id }}</span>
-           <button
-              @click="$emit('view-details', row.id)"
-              class="text-xs font-normal text-gray-900 hover:text-blue-600 truncate text-left min-w-0"
-              :title="row.title"
-           >
-             {{ row.title }}
-           </button>
-        </div>
-
-        <!-- Assignee -->
-        <div class="flex items-center gap-1.5 min-w-0 mt-3">
-           <div v-if="row.assignedToName" class="flex items-center gap-1.5 min-w-0" :title="row.assignedToName">
-              <div class="w-5 h-5 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-[10px] font-medium border border-blue-200 flex-shrink-0">
-                {{ getInitials(row.assignedToName) }}
-              </div>
-              <span class="text-xs text-gray-600 font-medium truncate max-w-[140px]">{{ row.assignedToName }}</span>
-           </div>
-           <div v-else class="flex items-center gap-1.5 min-w-0" title="Unassigned">
-              <div class="w-5 h-5 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-              </div>
-              <span class="text-xs text-gray-400 italic">Unassigned</span>
-           </div>
-        </div>
-      </div>
-      
-
-      
-
+       <div v-if="row.type === 'Unparented'" class="p-3 bg-gray-100 rounded border border-gray-200 text-center">
+         <span class="text-sm font-semibold text-gray-600">Unparented Tasks</span>
+       </div>
+       <KanbanCard 
+         v-else
+         :workItem="rowAsWorkItem"
+         class="mb-2"
+         :showExpandable="false"
+         @view-details="$emit('view-details', $event)"
+         @work-item-updated="$emit('work-item-updated', $event)"
+       />
     </div>
 
     <!-- Task Cells (one per column) -->
@@ -55,9 +33,11 @@
           v-for="task in getTasksByStatus(column)"
           :key="task.id"
           :task="task"
+          :boardId="boardId"
           @dragstart="onDragStart($event, task)"
           @view-details="$emit('view-details', $event)"
           @delete="$emit('delete-task', $event)"
+          @work-item-updated="$emit('work-item-updated', $event)"
         />
       </div>
 
@@ -75,14 +55,37 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
 import type { TaskboardRow, TaskboardTask } from '@/types/Taskboard'
-import WorkItemTypeBadge from '@/components/workItem/WorkItemTypeBadge.vue'
+import type { TeamMember } from '@/types/Team'
+import type { WorkItem } from '@/types/WorkItem'
+import KanbanCard from '@/components/kanban/KanbanCard.vue'
 import TaskboardTaskCard from './TaskboardTaskCard.vue'
 import { PlusIcon } from '@/components/icons'
+
+// ...
+
+const rowAsWorkItem = computed(() => {
+  return {
+    ...props.row,
+    boardId: props.boardId, // Ensure boardId is passed for internal logic
+    // Add any missing fields if necessary, but row + tasks roughly matches WorkItem shape for display
+    // KanbanCard expects children for tasks if expandable, but here we just show the PBI card.
+    // If we want the KanbanCard to NOT show children (since they are in the row), we might need to mask them 
+    // or the KanbanCard handles it. 
+    // Actually, KanbanCard shows children if present. 
+    // In TaskboardRow, the 'tasks' are the children.
+    // If we pass 'tasks' as 'children', KanbanCard might render them inside the card which is NOT what we want 
+    // (we want them in the cells).
+    // So we should probably pass children: [] to KanbanCard so it looks like a leaf card (just the PBI).
+    children: [] 
+  } as unknown as WorkItem
+})
 
 interface Props {
   row: TaskboardRow
   columns: string[]
+  boardId: number
 }
 
 const props = defineProps<Props>()
@@ -92,7 +95,13 @@ const emit = defineEmits<{
   'add-task': [parentId: number]
   'delete-task': [taskId: number]
   'update-task-status': [task: TaskboardTask, newStatus: string]
+  'work-item-updated': [updatedItem: any]
 }>()
+
+// Stores and ref for project members might still be needed if other parts use it, 
+// but currently only updateRowAssignee used them. 
+// TaskboardTaskCard handles its own.
+// So we can remove them.
 
 const getTasksByStatus = (status: string) => {
   return props.row.tasks.filter(t => t.status === status)
@@ -129,7 +138,4 @@ const onDragLeave = (event: DragEvent) => {
   target.classList.remove('bg-blue-50/50')
 }
 
-const getInitials = (name: string) => {
-  return name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : ''
-}
 </script>

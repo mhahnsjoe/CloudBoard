@@ -6,7 +6,9 @@ class DataTransferPolyfill {
   data: Record<string, string> = {}
   effectAllowed: string = 'all'
   dropEffect: string = 'none'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   files: FileList = [] as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   items: DataTransferItemList = [] as any
   types: string[] = []
 
@@ -26,7 +28,7 @@ class DataTransferPolyfill {
     this.data[format] = data
   }
 
-  setDragImage(): void {}
+  setDragImage(): void { }
 }
 
 class DragEventPolyfill extends Event {
@@ -34,15 +36,18 @@ class DragEventPolyfill extends Event {
 
   constructor(type: string, eventInitDict?: EventInit & { dataTransfer?: DataTransfer }) {
     super(type, eventInitDict)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.dataTransfer = eventInitDict?.dataTransfer || new DataTransferPolyfill() as any
   }
 }
 
 // Assign polyfills to global
 if (!global.DragEvent) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   global.DragEvent = DragEventPolyfill as any
 }
 if (!global.DataTransfer) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   global.DataTransfer = DataTransferPolyfill as any
 }
 

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import * as api from '@/services/api'
-import type { WorkItem, WorkItemCreate, WorkItemEdit } from '@/types/WorkItem'
+import * as api from '../services/api'
+import type { WorkItem, WorkItemCreate, WorkItemEdit } from '../types/WorkItem'
 
 export const useWorkItemStore = defineStore('workItems', () => {
   // State
@@ -98,6 +98,7 @@ export const useWorkItemStore = defineStore('workItems', () => {
           title: data.title,
           status: data.status,
           priority: data.priority,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           type: data.type as any,
           description: data.description,
           dueDate: data.dueDate,
@@ -135,6 +136,29 @@ export const useWorkItemStore = defineStore('workItems', () => {
       workItems.value = workItems.value.filter(w => w.id !== id)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to delete work item'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function assignWorkItem(boardId: number, workItemId: number, assignedToId: number | null) {
+    loading.value = true
+    error.value = null
+
+    try {
+      await api.assignWorkItem(boardId, workItemId, assignedToId)
+
+      // Update local state
+      const index = workItems.value.findIndex(w => w.id === workItemId)
+      if (index !== -1) {
+        workItems.value[index] = {
+          ...workItems.value[index]!,
+          assignedToId: assignedToId
+        }
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to assign work item'
       throw e
     } finally {
       loading.value = false
@@ -193,8 +217,10 @@ export const useWorkItemStore = defineStore('workItems', () => {
     createWorkItem,
     updateWorkItem,
     deleteWorkItem,
+    assignWorkItem,
     updateStatus,
     returnToBacklog,
     clearWorkItems
   }
 })
+// force update

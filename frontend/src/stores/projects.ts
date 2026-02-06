@@ -89,19 +89,17 @@ export const useProjectStore = defineStore('projects', () => {
       if (index !== -1) {
         const existing = projects.value[index]!
         projects.value[index] = {
-          id: existing.id,
+          ...existing,
           name: data.name,
-          description: data.description,
-          boards: existing.boards
+          description: data.description
         }
       }
 
       if (currentProject.value?.id === id) {
         currentProject.value = {
-          id: currentProject.value.id,
+          ...currentProject.value,
           name: data.name,
-          description: data.description,
-          boards: currentProject.value.boards
+          description: data.description
         }
       }
     } catch (e) {

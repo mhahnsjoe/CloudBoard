@@ -27,4 +27,14 @@ public interface IProjectRepository : IRepository<Project>
     /// Checks if user owns the project.
     /// </summary>
     Task<bool> IsOwnerAsync(int projectId, int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets all projects for a team
+    /// </summary>
+    Task<List<Project>> GetByTeamAsync(int teamId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets all projects accessible to a user (via their team memberships)
+    /// </summary>
+    Task<List<Project>> GetAccessibleByUserAsync(int userId, CancellationToken ct = default);
 }

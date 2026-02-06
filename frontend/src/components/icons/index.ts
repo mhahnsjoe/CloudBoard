@@ -10,3 +10,7 @@ export { default as ClipboardIcon } from './ClipboardIcon.vue';
 export { default as ClockIcon } from './ClockIcon.vue';
 export { default as CalendarIcon } from './CalendarIcon.vue';
 export { default as MenuIcon } from './MenuIcon.vue';
+export { default as UsersIcon } from './UsersIcon.vue';
+export { default as XIcon } from './XIcon.vue';export { default as UserIcon } from './UserIcon.vue';
+export { default as ChevronDownIcon } from './ChevronDownIcon.vue';
+export { default as CheckIcon } from './CheckIcon.vue';

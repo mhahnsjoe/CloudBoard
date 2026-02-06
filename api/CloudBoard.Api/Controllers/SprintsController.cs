@@ -221,25 +221,7 @@ namespace CloudBoard.Api.Controllers
             }
         }
 
-        // GET /api/sprints/{id}/taskboard
-        [HttpGet("sprints/{id}/taskboard")]
-        public async Task<ActionResult<TaskboardDto>> GetTaskboard(int id)
-        {
-            var userId = GetUserId();
-            try
-            {
-                var taskboard = await _sprintService.GetTaskboardAsync(id, userId);
-                return Ok(taskboard);
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Forbid();
-            }
-        }
+
 
         // GET /api/boards/{boardId}/sprint-planning
         [HttpGet("boards/{boardId}/sprint-planning")]

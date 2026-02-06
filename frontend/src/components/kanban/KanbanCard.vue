@@ -1,6 +1,6 @@
 <template> <!--TODO: RENAME TO WORKITEM CARD? BoardCanvas use this for both sprint & kanban-->
   <div 
-    class="bg-white rounded-lg shadow-sm border border-gray-200 border-l-[3px] overflow-hidden hover:shadow-md transition-all"
+    class="bg-white rounded-lg shadow-sm border border-gray-200 border-l-[3px] hover:shadow-md transition-all"
     :class="getBorderClass(workItem.type)"
   >
     <!-- Parent Item -->
@@ -38,17 +38,12 @@
       <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
         <!-- Left: Assignee -->
         <div class="flex items-center gap-1.5 text-xs text-gray-600 min-w-0">
-          <div v-if="workItem.assignedToName" class="flex items-center gap-1.5 min-w-0" :title="workItem.assignedToName">
-              <div class="w-5 h-5 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-[10px] font-medium border border-blue-200 flex-shrink-0">
-                {{ getInitials(workItem.assignedToName) }}
-              </div>
-              <span class="font-medium truncate max-w-[90px]">{{ workItem.assignedToName }}</span>
-          </div>
-          <div v-else class="flex items-center gap-1.5 text-gray-400 min-w-0" title="Unassigned">
-              <div class="w-5 h-5 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-              </div>
-              <span class="italic text-[10px]">Unassigned</span>
+          <div @click.stop class="flex items-center">
+             <AssigneeSelector
+               :modelValue="workItem.assignedToId || null"
+               :members="projectTeamMembers"
+               @update:modelValue="updateAssignee"
+             />
           </div>
         </div>
 
@@ -56,7 +51,7 @@
         <div class="flex items-center gap-2 text-xs text-gray-500 flex-shrink-0">
            <!-- Child Count Arrow -->
            <button 
-             v-if="hasChildren || workItem.type === 'PBI' || workItem.type === 'Feature' || workItem.type === 'Bug'"
+             v-if="showExpandable && (hasChildren || workItem.type === 'PBI' || workItem.type === 'Feature' || workItem.type === 'Bug')"
              @click.stop="toggleExpanded"
              class="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-[3px] hover:bg-yellow-100 transition-colors" 
              :class="{ 'bg-yellow-100 border-yellow-300 text-yellow-800': isExpanded }"
@@ -123,19 +118,22 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType, ref, computed } from 'vue';
+import { defineComponent, type PropType, ref, computed, onMounted } from 'vue';
 import type { WorkItem, WorkItemType } from '@/types/WorkItem';
 import type { BoardColumn } from '@/types/Project';
+import type { TeamMember } from '@/types/Team';
 import WorkItemTypeBadge from '../workItem/WorkItemTypeBadge.vue';
-import { DeleteIcon, CalendarIcon, ClockIcon } from '@/components/icons';
+import UserAvatar from '@/components/common/UserAvatar.vue'
+import AssigneeSelector from '@/components/workItem/AssigneeSelector.vue'
+import { useTeamsStore } from '@/stores/teams'
+import { useWorkItemStore } from '@/stores/workItemsStore'
 
 export default defineComponent({
   name: 'KanbanCard',
   components: {
     WorkItemTypeBadge,
-    DeleteIcon,
-    CalendarIcon,
-    ClockIcon
+    UserAvatar,
+    AssigneeSelector
   },
   props: {
     workItem: {
@@ -145,10 +143,14 @@ export default defineComponent({
     columns: {
       type: Array as PropType<BoardColumn[]>,
       default: () => []
+    },
+    showExpandable: {
+      type: Boolean,
+      default: true
     }
   },
-  emits: ['dragstart', 'click', 'delete', 'return-to-backlog', 'add-child-task', 'view-details'],
-  setup(props) {
+  emits: ['dragstart', 'click', 'delete', 'return-to-backlog', 'add-child-task', 'view-details', 'assign', 'work-item-updated'],
+  setup(props, { emit }) {
     const isExpanded = ref(false)
     
     const hasChildren = computed(() => {
@@ -167,11 +169,44 @@ export default defineComponent({
       isExpanded.value = !isExpanded.value
     }
     
+    const teamsStore = useTeamsStore()
+    const workItemStore = useWorkItemStore()
+    const projectTeamMembers = ref<TeamMember[]>([])
+
+    onMounted(async () => {
+       if (teamsStore.currentTeam) {
+          projectTeamMembers.value = teamsStore.currentTeam.members
+       } else {
+          projectTeamMembers.value = await teamsStore.getProjectTeamMembers()
+       }
+    })
+
+    const updateAssignee = async (newAssigneeId: number | null) => {
+      if (!props.workItem.boardId) return
+      
+      try {
+         await workItemStore.assignWorkItem(props.workItem.boardId, props.workItem.id, newAssigneeId)
+         
+         const member = projectTeamMembers.value.find(m => m.userId === newAssigneeId)
+         const updatedItem = { 
+            ...props.workItem, 
+            assignedToId: newAssigneeId,
+            assignedToName: member ? member.name : undefined
+         }
+         emit('work-item-updated', updatedItem)
+         
+      } catch (e) {
+         console.error('Failed to assign', e)
+      }
+    }
+    
     return {
       isExpanded,
       hasChildren,
       totalEstimatedHours,
-      toggleExpanded
+      toggleExpanded,
+      projectTeamMembers,
+      updateAssignee
     }
   },
   methods: {
