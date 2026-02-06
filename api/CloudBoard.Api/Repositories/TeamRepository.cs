@@ -113,4 +113,14 @@ public class TeamRepository : Repository<Team>, ITeamRepository
             .Include(i => i.Team)
             .FirstOrDefaultAsync(i => i.Id == invitationId, ct);
     }
+
+    public async Task<List<TeamInvitation>> GetInvitationsByEmailAsync(string email, CancellationToken ct = default)
+    {
+        return await Context.TeamInvitations
+            .Where(i => i.Email.ToLower() == email.ToLower() && i.AcceptedAt == null && i.ExpiresAt > DateTime.UtcNow)
+            .Include(i => i.Team)
+            .Include(i => i.InvitedBy)
+            .OrderByDescending(i => i.CreatedAt)
+            .ToListAsync(ct);
+    }
 }

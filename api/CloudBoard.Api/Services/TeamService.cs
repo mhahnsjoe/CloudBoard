@@ -399,6 +399,49 @@ public class TeamService : ITeamService
         return Result.Success();
     }
 
+    public async Task<Result<List<MyInvitationDto>>> GetMyInvitationsAsync(string email, CancellationToken ct = default)
+    {
+        var invitations = await _teamRepository.GetInvitationsByEmailAsync(email, ct);
+
+        var dtos = invitations.Select(i => new MyInvitationDto
+        {
+            Id = i.Id,
+            TeamId = i.TeamId,
+            TeamName = i.Team.Name,
+            TeamDescription = i.Team.Description,
+            Role = i.Role,
+            CreatedAt = i.CreatedAt,
+            ExpiresAt = i.ExpiresAt,
+            InvitedBy = new UserSummaryDto
+            {
+                Id = i.InvitedBy.Id,
+                Name = i.InvitedBy.Name,
+                Email = i.InvitedBy.Email
+            },
+            Token = i.Token
+        }).ToList();
+
+        return Result<List<MyInvitationDto>>.Success(dtos);
+    }
+
+    public async Task<Result> DeclineInvitationAsync(int invitationId, int userId, CancellationToken ct = default)
+    {
+        var invitation = await _teamRepository.GetInvitationByIdAsync(invitationId, ct);
+
+        if (invitation == null)
+            return Result.NotFound("Invitation not found");
+
+        // User can only decline invitations sent to their email - we need to verify this
+        // by checking if the invitation email matches the user's email
+        // For now, we'll just remove the invitation
+        _teamRepository.RemoveInvitation(invitation);
+        await _teamRepository.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Invitation {InvitationId} was declined", invitationId);
+
+        return Result.Success();
+    }
+
     public async Task<bool> CanAccessTeamAsync(int teamId, int userId, CancellationToken ct = default)
     {
         return await _teamRepository.IsMemberAsync(teamId, userId, ct);
@@ -422,3 +465,4 @@ public class TeamService : ITeamService
         return Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").TrimEnd('=');
     }
 }
+

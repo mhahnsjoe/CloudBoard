@@ -211,6 +211,9 @@
       </div>
     </div>
 
+    <!-- Pending Invitations Panel -->
+    <MyInvitationsPanel />
+
     <!-- Modals -->
     <InviteMemberModal
       v-if="showInviteModal && currentTeam"
@@ -268,6 +271,7 @@ import InviteMemberModal from '@/components/team/InviteMemberModal.vue'
 import EditTeamModal from '@/components/team/EditTeamModal.vue'
 import BoardCreateEditModal from '@/components/board/BoardCreateEditModal.vue'
 import ProjectCreateEditModal from '@/components/project/ProjectCreateEditModal.vue'
+import MyInvitationsPanel from '@/components/team/MyInvitationsPanel.vue'
 
 const router = useRouter()
 const projectStore = useProjectStore()
@@ -445,6 +449,7 @@ const confirmDeleteBoard = async (projectId: number, board: Board) => {
 
 onMounted(async () => {
     await projectStore.fetchProjects()
+    teamsStore.fetchMyInvitations() // Fetch pending invitations
     if (teamsStore.selectedTeamId) {
         await teamsStore.fetchTeam(teamsStore.selectedTeamId)
     } else if (authStore.user) {

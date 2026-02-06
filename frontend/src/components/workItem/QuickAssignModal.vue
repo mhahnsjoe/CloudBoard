@@ -39,7 +39,7 @@
             <button
               v-for="member in filteredMembers"
               :key="member.userId"
-              @click="assign(member.userId)"
+              @click="assign(member)"
               class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center gap-3"
               :class="{ 'bg-blue-50': workItem.assignedToId === member.userId }"
             >
@@ -70,7 +70,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  assign: [workItemId: number, assignedToId: number | null]
+  assign: [workItemId: number, member: TeamMember | null]
 }>()
 
 const searchQuery = ref('')
@@ -83,7 +83,7 @@ const filteredMembers = computed(() => {
   )
 })
 
-function assign(userId: number | null) {
-  emit('assign', props.workItem.id, userId)
+function assign(member: TeamMember | null) {
+  emit('assign', props.workItem.id, member)
 }
 </script>

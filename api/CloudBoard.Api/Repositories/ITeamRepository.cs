@@ -73,4 +73,9 @@ public interface ITeamRepository : IRepository<Team>
     /// Gets invitation by ID
     /// </summary>
     Task<TeamInvitation?> GetInvitationByIdAsync(int invitationId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets all pending invitations for an email address
+    /// </summary>
+    Task<List<TeamInvitation>> GetInvitationsByEmailAsync(string email, CancellationToken ct = default);
 }

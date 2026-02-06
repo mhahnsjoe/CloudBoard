@@ -32,10 +32,12 @@
           :key="row.id"
           :row="row"
           :columns="taskboard.columns"
+          :boardId="boardId"
           @view-details="$emit('view-details', $event)"
           @add-task="$emit('add-task', $event)"
           @delete-task="$emit('delete-task', $event)"
           @update-task-status="handleUpdateTaskStatus"
+          @work-item-updated="$emit('work-item-updated', $event)"
         />
       </div>
 
@@ -64,6 +66,7 @@ import { LoadingIcon, ClipboardIcon } from '@/components/icons'
 interface Props {
   taskboard: Taskboard | null
   loading: boolean
+  boardId: number
 }
 
 const props = defineProps<Props>()
@@ -73,6 +76,7 @@ const emit = defineEmits<{
   'add-task': [parentId: number]
   'delete-task': [taskId: number]
   'update-task-status': [task: TaskboardTask, newStatus: string]
+  'work-item-updated': [updatedItem: any]
 }>()
 
 
@@ -90,7 +94,8 @@ const handleUpdateTaskStatus = (task: TaskboardTask, newStatus: string) => {
 
 <style scoped>
 .sprint-taskboard {
-  max-height: calc(100vh - 250px);
+  /* Removed max-height to allow full page expansion */
+  height: 100%;
 }
 /* Ensure the row headers stay above cells when scrolling */
 .sticky-column {

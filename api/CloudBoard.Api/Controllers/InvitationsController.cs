@@ -27,6 +27,23 @@ public class InvitationsController : ControllerBase
         return int.Parse(userIdClaim!);
     }
 
+    private string GetCurrentUserEmail()
+    {
+        return User.FindFirstValue(ClaimTypes.Email)!;
+    }
+
+    /// <summary>
+    /// Gets all pending invitations for the current user
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(List<MyInvitationDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyInvitations()
+    {
+        var email = GetCurrentUserEmail();
+        var result = await _teamService.GetMyInvitationsAsync(email);
+        return result.ToActionResult();
+    }
+
     /// <summary>
     /// Accepts a team invitation using the token
     /// </summary>
@@ -40,4 +57,22 @@ public class InvitationsController : ControllerBase
         var result = await _teamService.AcceptInvitationAsync(dto.Token, userId);
         return result.ToActionResult();
     }
+
+    /// <summary>
+    /// Declines a team invitation
+    /// </summary>
+    [HttpPost("{invitationId}/decline")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeclineInvitation(int invitationId)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _teamService.DeclineInvitationAsync(invitationId, userId);
+
+        if (result.IsSuccess)
+            return NoContent();
+
+        return result.ToActionResult();
+    }
 }
+

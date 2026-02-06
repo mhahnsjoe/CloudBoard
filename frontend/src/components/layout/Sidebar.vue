@@ -438,6 +438,7 @@ export default defineComponent({
     })
 
     const handleLogout = () => {
+      teamsStore.$reset()
       authStore.logout()
       router.push('/login')
     }

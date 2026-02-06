@@ -1,5 +1,7 @@
 <template>
   <div class="container mx-auto px-4 py-6">
+    <MyInvitationsPanel />
+
     <TeamList
       :teams="teamsStore.sortedTeams"
       :loading="teamsStore.loading"
@@ -21,6 +23,7 @@ import { useRouter } from 'vue-router'
 import { useTeamsStore } from '@/stores/teams'
 import TeamList from '@/components/team/TeamList.vue'
 import CreateTeamModal from '@/components/team/CreateTeamModal.vue'
+import MyInvitationsPanel from '@/components/team/MyInvitationsPanel.vue'
 import type { Team } from '@/types/Team'
 
 const router = useRouter()
@@ -29,6 +32,7 @@ const showCreateModal = ref(false)
 
 onMounted(() => {
   teamsStore.fetchTeams()
+  teamsStore.fetchMyInvitations()
 })
 
 function navigateToTeam(team: Team) {
@@ -40,3 +44,4 @@ function handleCreated(team: Team) {
   navigateToTeam(team)
 }
 </script>
+

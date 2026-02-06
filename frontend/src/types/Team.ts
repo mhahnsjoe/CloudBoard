@@ -76,3 +76,16 @@ export interface UpdateMemberRoleDto {
 export interface AcceptInvitationDto {
   token: string
 }
+
+// Invitation from the invited user's perspective (includes team info)
+export interface MyInvitation {
+  id: number
+  teamId: number
+  teamName: string
+  teamDescription?: string
+  role: TeamRole
+  createdAt: string
+  expiresAt: string
+  invitedBy: UserSummary
+  token: string
+}

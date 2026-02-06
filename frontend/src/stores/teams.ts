@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as api from '@/services/api'
-import type { Team, TeamDetail, TeamMember, CreateTeamDto, UpdateTeamDto, InviteMemberDto, UpdateMemberRoleDto } from '@/types/Team'
+import type { Team, TeamDetail, TeamMember, CreateTeamDto, UpdateTeamDto, InviteMemberDto, UpdateMemberRoleDto, MyInvitation } from '@/types/Team'
 
 export const useTeamsStore = defineStore('teams', () => {
   // State
   const teams = ref<Team[]>([])
   const currentTeam = ref<TeamDetail | null>(null)
   const selectedTeamId = ref<number | null>(null)
+  const myInvitations = ref<MyInvitation[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -233,12 +234,45 @@ export const useTeamsStore = defineStore('teams', () => {
     error.value = null
     try {
       const response = await api.acceptInvitation({ token })
-      // Refresh teams list
+      // Refresh teams list and invitations
       await fetchTeams()
+      await fetchMyInvitations()
       return response.data
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } }
       error.value = err.response?.data?.error || 'Failed to accept invitation'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchMyInvitations() {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await api.getMyInvitations()
+      myInvitations.value = response.data
+      return myInvitations.value
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } }
+      error.value = err.response?.data?.error || 'Failed to fetch invitations'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function declineInvitation(invitationId: number) {
+    loading.value = true
+    error.value = null
+    try {
+      await api.declineInvitation(invitationId)
+      // Remove from local state
+      myInvitations.value = myInvitations.value.filter(i => i.id !== invitationId)
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } }
+      error.value = err.response?.data?.error || 'Failed to decline invitation'
       throw e
     } finally {
       loading.value = false
@@ -271,11 +305,21 @@ export const useTeamsStore = defineStore('teams', () => {
     return team?.members || []
   }
 
+  function $reset() {
+    teams.value = []
+    currentTeam.value = null
+    selectedTeamId.value = null
+    myInvitations.value = []
+    loading.value = false
+    error.value = null
+  }
+
   return {
     // State
     teams,
     currentTeam,
     selectedTeamId,
+    myInvitations,
     loading,
     error,
     // Getters
@@ -295,9 +339,13 @@ export const useTeamsStore = defineStore('teams', () => {
     removeMember,
     leaveTeam,
     acceptInvitation,
+    fetchMyInvitations,
+    declineInvitation,
     selectTeam,
     clearCurrentTeam,
     clearError,
-    getProjectTeamMembers
+    getProjectTeamMembers,
+    $reset
   }
 })
+

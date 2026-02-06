@@ -90,3 +90,19 @@ public class AcceptInvitationDto
 {
     public string Token { get; set; } = null!;
 }
+
+/// <summary>
+/// Invitation from the invited user's perspective (includes team info)
+/// </summary>
+public class MyInvitationDto
+{
+    public int Id { get; set; }
+    public int TeamId { get; set; }
+    public string TeamName { get; set; } = null!;
+    public string? TeamDescription { get; set; }
+    public TeamRole Role { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public UserSummaryDto InvitedBy { get; set; } = null!;
+    public string Token { get; set; } = null!;
+}

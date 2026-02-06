@@ -21,6 +21,10 @@ public interface ITeamService
     Task<Result> RemoveMemberAsync(int teamId, int targetUserId, int userId, CancellationToken ct = default);
     Task<Result> LeaveTeamAsync(int teamId, int userId, CancellationToken ct = default);
 
+    // User's invitations
+    Task<Result<List<MyInvitationDto>>> GetMyInvitationsAsync(string email, CancellationToken ct = default);
+    Task<Result> DeclineInvitationAsync(int invitationId, int userId, CancellationToken ct = default);
+
     // Authorization helpers
     Task<bool> CanAccessTeamAsync(int teamId, int userId, CancellationToken ct = default);
     Task<bool> CanManageMembersAsync(int teamId, int userId, CancellationToken ct = default);

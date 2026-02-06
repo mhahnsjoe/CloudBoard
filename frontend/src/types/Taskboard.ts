@@ -10,6 +10,7 @@ export interface TaskboardRow {
     progressPercentage: number
     tasks: TaskboardTask[]
     assignedToName?: string | null
+    assignedToId?: number | null
 }
 
 export interface TaskboardTask {

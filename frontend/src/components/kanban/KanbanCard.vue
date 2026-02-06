@@ -51,7 +51,7 @@
         <div class="flex items-center gap-2 text-xs text-gray-500 flex-shrink-0">
            <!-- Child Count Arrow -->
            <button 
-             v-if="hasChildren || workItem.type === 'PBI' || workItem.type === 'Feature' || workItem.type === 'Bug'"
+             v-if="showExpandable && (hasChildren || workItem.type === 'PBI' || workItem.type === 'Feature' || workItem.type === 'Bug')"
              @click.stop="toggleExpanded"
              class="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-[3px] hover:bg-yellow-100 transition-colors" 
              :class="{ 'bg-yellow-100 border-yellow-300 text-yellow-800': isExpanded }"
@@ -143,6 +143,10 @@ export default defineComponent({
     columns: {
       type: Array as PropType<BoardColumn[]>,
       default: () => []
+    },
+    showExpandable: {
+      type: Boolean,
+      default: true
     }
   },
   emits: ['dragstart', 'click', 'delete', 'return-to-backlog', 'add-child-task', 'view-details', 'assign', 'work-item-updated'],

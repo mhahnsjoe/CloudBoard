@@ -31,19 +31,12 @@
     <!-- Footer: Assignee & Hours -->
     <div class="flex items-center justify-between pt-2 border-t border-gray-50 mt-1">
       <!-- Assignee -->
-      <div class="flex items-center gap-1.5 min-w-0">
-         <div v-if="task.assignedToName" class="flex items-center gap-1.5 min-w-0" :title="task.assignedToName">
-            <div class="w-4 h-4 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-[9px] font-bold border border-blue-200 flex-shrink-0">
-              {{ getInitials(task.assignedToName) }}
-            </div>
-            <span class="text-[10px] text-gray-600 font-medium truncate max-w-[70px]">{{ task.assignedToName }}</span>
-         </div>
-         <div v-else class="flex items-center gap-1.5 min-w-0" title="Unassigned">
-            <div class="w-4 h-4 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0">
-              <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-            </div>
-            <span class="text-[10px] text-gray-400 italic">Unassigned</span>
-         </div>
+      <div class="flex items-center gap-1.5 min-w-0" @click.stop>
+         <AssigneeSelector
+           :modelValue="task.assignedToId || null"
+           :members="projectTeamMembers"
+           @update:modelValue="updateAssignee"
+         />
       </div>
 
       <!-- Hours -->
@@ -60,19 +53,57 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import type { TaskboardTask } from '@/types/Taskboard'
+import type { TeamMember } from '@/types/Team'
+import AssigneeSelector from '@/components/workItem/AssigneeSelector.vue'
+import { useTeamsStore } from '@/stores/teams'
+import { useWorkItemStore } from '@/stores/workItemsStore'
 
 
 interface Props {
   task: TaskboardTask
+  boardId: number
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
-defineEmits<{
+const emit = defineEmits<{
   dragstart: [event: DragEvent]
   'view-details': [taskId: number]
+  'work-item-updated': [updatedItem: any] // Using any here to match KanbanCard usage flexibility, or define a stricter type
 }>()
+
+const teamsStore = useTeamsStore()
+const workItemStore = useWorkItemStore()
+const projectTeamMembers = ref<TeamMember[]>([])
+
+onMounted(async () => {
+   if (teamsStore.currentTeam) {
+      projectTeamMembers.value = teamsStore.currentTeam.members
+   } else {
+      projectTeamMembers.value = await teamsStore.getProjectTeamMembers()
+   }
+})
+
+const updateAssignee = async (newAssigneeId: number | null) => {
+  try {
+     await workItemStore.assignWorkItem(props.boardId, props.task.id, newAssigneeId)
+     
+     const member = projectTeamMembers.value.find(m => m.userId === newAssigneeId)
+     
+     // Emit updated item structure expected by parent
+     const updatedItem = { 
+        ...props.task, 
+        assignedToId: newAssigneeId,
+        assignedToName: member ? member.name : undefined
+     }
+     emit('work-item-updated', updatedItem)
+     
+  } catch (e) {
+     console.error('Failed to assign', e)
+  }
+}
 
 const getTypeColor = (type: string) => {
   switch (type) {
