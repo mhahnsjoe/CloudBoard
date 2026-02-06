@@ -122,7 +122,6 @@ import BoardCanvas from '../board/BoardCanvas.vue'
 import SprintTaskboard from './taskboard/SprintTaskboard.vue'
 import SprintAnalytics from './SprintAnalytics.vue'
 import QuickAssignModal from '@/components/workItem/QuickAssignModal.vue'
-import { toWorkItem } from '@/types/WorkItem'
 
 export default defineComponent({
   name: 'SprintBoardView',
@@ -209,17 +208,6 @@ export default defineComponent({
 
 
 
-    const teamMembers = ref<any[]>([])
-
-    const fetchTeamMembers = async () => {
-      try {
-        const response = await api.getProjectTeam(props.board.projectId) // Assuming this API exists or usage of store
-        // Actually BoardDetailView fetches team members. We can use store or prop.
-        // Let's use TeamsStore since BoardDetailView injects it? No, using store is better.
-      } catch (e) {
-        console.error(e)
-      }
-    }
     
     
     const teamsStore = useTeamsStore()
@@ -233,7 +221,7 @@ export default defineComponent({
       if (!props.selectedSprintId || !props.board) return
       
       const sprintItems = props.workItems
-      const columns = props.board.columns.map(c => c.name)
+      const columns = (props.board!.columns || []).map(c => c.name)
 
       // Filter to PBI and standalone Bug as row headers
       // (PBI or Bug with NO parent)
@@ -319,7 +307,7 @@ export default defineComponent({
       }
 
       taskboardData.value = {
-         sprintId: props.selectedSprintId,
+         sprintId: props.selectedSprintId!,
          sprintName: props.sprints.find(s => s.id === props.selectedSprintId)?.name || '',
          columns: columns.length > 0 ? columns : ['To Do', 'In Progress', 'Done'],
          rows: rows,
@@ -397,7 +385,6 @@ export default defineComponent({
       handleUpdateTaskStatus,
       handleTaskboardItemUpdate,
       onAddTask,
-      teamMembers
     }
   }
 })
