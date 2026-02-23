@@ -12,7 +12,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Build Backend
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS backend-build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ COPY --from=frontend-build /app/frontend/dist ./api/CloudBoard.Api/wwwroot
 RUN dotnet publish ./api/CloudBoard.Api/CloudBoard.Api.csproj -c Release -o /app/publish
 
 # Runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 
 WORKDIR /app
 
